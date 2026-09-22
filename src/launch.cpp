@@ -1,0 +1,1 @@
+// Placeholder - requires Wayland headers

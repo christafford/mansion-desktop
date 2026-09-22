@@ -1,0 +1,23 @@
+# Mansion Desktop development environment
+FROM archlinux
+
+# Install dependencies
+RUN pacman -Sy --noconfirm \
+    wayland-devel \
+    libxkbcommon \
+    mesa \
+    wayland-egl \
+    meson \
+    weston \
+    git \
+    base-devel
+
+# Set up environment
+WORKDIR /src
+COPY . /src
+
+# Build
+RUN meson setup build --buildtype=debug
+
+# Run
+CMD ["meson", "compile", "-C", "build"]

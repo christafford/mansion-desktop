@@ -1,0 +1,14 @@
+[package]
+name = "mansion-desktop"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+smithay = "0.3"
+smithay-backend = { version = "0.3", features = ["wayland"] }
+wayland-client = "0.30"
+wayland-protocols = "0.30"
+anyhow = "1.0"
+envlogger = "0.4"
+log = "0.4"
+winit = "0.29"
