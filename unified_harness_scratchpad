@@ -1,0 +1,72 @@
+## Implementation Plan for Mansion Desktop
+
+### Current Status
+
+The Mansion Desktop project is a ambitious effort to create a 3D spatial desktop environment for Linux. The repository contains comprehensive design documents but no implementation yet. I've set up the development environment and build system to enable work to begin.
+
+### What I've Done
+
+1. **Created development setup documentation:**
+   - `DEVELOPMENT.md` - native and Docker setup instructions
+   - `GETTING_STARTED.md` - quick start guide
+   - `Dockerfile.dev` - container with all dependencies
+
+2. **Configured the build system:**
+   - `meson.build` - build configuration for C++ implementation
+   - `.gitignore` - standard ignore rules
+
+3. **Documented the technology stack:**
+   - `docs/decisions/01-stack.md` - decision to use C++/wlroots
+
+4. **Updated project status:**
+   - `docs/STATUS.md` - current state and next steps
+   - `docs/handoffs/01.md` - detailed task list for Project 1
+
+5. **Added utility scripts:**
+   - `check-deps.sh` - dependency verification script
+
+6. **Updated project overview:**
+   - `README.md` - now links to getting started guide
+
+### Next Steps
+
+Follow the [GETTING_STARTED.md](GETTING_STARTED.md) to set up your development environment, then begin implementing [Project 1: Nested compositor foundation](docs/handoffs/01.md).
+
+### Key Files Modified/Created
+
+- `README.md` (updated)
+- `DEVELOPMENT.md` (new)
+- `Dockerfile.dev` (new)
+- `GETTING_STARTED.md` (new)
+- `check-deps.sh` (new)
+- `.gitignore` (new)
+- `docs/STATUS.md` (updated)
+- `docs/handoffs/01.md` (updated)
+- `docs/decisions/01-stack.md` (new)
+
+### Implementation Approach
+n
+The project follows the roadmap in [PROJECT-ROADMAP.md](PROJECT-ROADMAP.md):
+
+1. **Project 1: Nested compositor foundation** - Implement a minimal Wayland compositor
+2. **Project 2: Live application surface in 3D** - Render a real client buffer on a 3D panel
+3. **Project 3: World/application input state machine** - Switch between world and application modes
+4. **Project 4: One-room end-to-end prototype** - Complete the first milestone (Milestone 1 from the concept)
+
+The first milestone proves the core interaction: a simple room with a desk, a monitor showing a live application, and the ability to switch between world and application modes.
+
+### Development Environment
+
+**Native:** Install wayland-devel, libxkbcommon, mesa, wayland-egl, and meson
+
+**Docker:** `docker build -f Dockerfile.dev` and run with host networking and volume mounted
+
+### Testing
+
+Initial testing will use `weston-terminal` as a sample client. When Mansion Desktop is running, you should be able to:
+- See the terminal on a monitor in the world
+- Select it to enter application mode
+- Type and interact with it normally
+- Press a key to return to world mode
+- Close the terminal
+- Exit Mansion Desktop cleanly

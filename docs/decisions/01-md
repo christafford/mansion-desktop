@@ -1,0 +1,38 @@
+# Decision 01: Initial technology stack
+
+## Context
+
+The roadmap suggested starting with Rust + Smithay, but the development environment has Rust unavailable. C++ is available.
+
+## Decision
+
+Begin with C++ and the Wayland C API.
+
+## Rationale
+
+- C++ is available in the development environment
+- The Wayland C API is the native interface
+- C++ allows for resource management with RAII
+- Weston and other reference compositors are C/C++, so examples are directly applicable
+- Smithay's GLES renderer uses the Wayland C API, so concepts transfer
+
+## Consequences
+
+- Use C++20 (available in GCC 11+)
+- Use the Wayland C API with `<unique>` for safety
+- Use EGL for rendering (GLES2 target)
+- Use xkbcommon for keyboard handling
+- Use Meson as build system (standard in Wayland ecosystem)
+- Implement everything from scratch (no compositor frameworks)
+
+## Alternatives considered
+
+1. **Rust + Smithay**: Preferred if Rust were available, but blocked by environment
+2. **C**: Would work, but C++ provides better RAII and standard library
+3. **JavaScript/Node.js**: Possible with `wlroots`, but not suitable for a production compositor
+
+## Notes
+
+- Re-evaluate the Rust vs C++ choice once the first milestone is complete
+- Keep the C++ code C-compatible in the public API to allow Rust bindings later
+- Follow Weston's error handling and memory management conventions
