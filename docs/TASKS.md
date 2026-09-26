@@ -90,18 +90,19 @@ itself is the human acceptance step.
   **Acceptance:** `meson test -C build client-frame` passes (both lines within
   2 seconds).
 
-- [ ] **P1-T05 Offscreen rendering and screenshots.** In headless mode create an
-  EGL display with `EGL_PLATFORM_SURFACELESS_MESA` (or `EGL_DEFAULT_DISPLAY`)
-  and a pbuffer surface; if EGL is unavailable, keep running without a renderer
-  and still fire frame callbacks. Fix the renderer to map pixel coordinates to
-  clip space, upload `ARGB8888`/`XRGB8888` shm buffers with `glTexImage2D`
-  (BGRA if `GL_EXT_texture_format_BGRA8888`, otherwise swizzle on the CPU), and
-  draw surfaces at their position. Add `--screenshot PATH` writing a binary PPM
-  of the framebuffer after the next rendered frame. Add `tests/ppm_pixel.py
-  FILE X Y RRGGBB [tolerance]`.
+- [x] **P1-T05 Offscreen rendering and screenshots.** In headless mode create an
+  EGL display with `EGL_PLATFORM_SURFACELESS_MESA` and a pbuffer surface; if EGL
+  is unavailable, keep running without a renderer and still fire frame callbacks.
+  Fix the renderer to map pixel coordinates to clip space, upload `ARGB8888`/
+  `XRGB8888` shm buffers with `glTexImage2D` (BGRA if
+  `GL_EXT_texture_format_BGRA8888`, otherwise swizzle on the CPU), and draw
+  surfaces at their position. Add `--screenshot PATH` writing a binary PPM of
+  the framebuffer after the next rendered frame. Keep surfaces alive after client
+  disconnect via an orphaned-surface list so the screenshot captures the last
+  rendered frame. Add `tests/ppm_pixel.py FILE X Y RRGGBB [tolerance]`.
   **Acceptance:** `meson test -C build render-shm` passes: a 200x100 red client
   buffer at the origin produces red at pixel (100,50) and the clear colour at
-  (600,500).
+  (600,500). (2026-09-26)
 
 - [ ] **P1-T06 Seat objects done properly.** Support several `wl_seat` binds and
   several `wl_keyboard`/`wl_pointer` objects per seat (keep lists, remove on

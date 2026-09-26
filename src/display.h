@@ -20,8 +20,8 @@ struct MansionDisplay {
 };
 
 struct MansionDisplay* create_display(struct MansionCompositor* compositor, struct wl_display* wl_display);
-/* Headless: no host window, no EGL context, no renderer. render() becomes a no-op.
- * Offscreen rendering for screenshots is a later task (docs/TASKS.md P1-T05). */
+/* Headless: tries EGL surfaceless Mesa for offscreen rendering; falls back to no
+ * renderer if EGL is unavailable. Frame callbacks always fire. */
 struct MansionDisplay* create_display_headless(struct MansionCompositor* compositor, struct wl_display* wl_display);
 void destroy_display(struct MansionDisplay* display);
 void swap_buffers(struct MansionDisplay* display);
@@ -31,3 +31,6 @@ EGLContext get_egl_context(struct MansionDisplay* display);
 bool init_renderer(struct MansionDisplay* display);
 void destroy_renderer(struct MansionDisplay* display);
 void render_surface(struct MansionDisplay* display, struct wl_resource* surface, int32_t x, int32_t y);
+/* Render one final frame and write the framebuffer as a binary PPM (P6) file.
+ * Returns false if EGL/renderer is unavailable. */
+bool take_screenshot(struct MansionDisplay* display, const char* path);

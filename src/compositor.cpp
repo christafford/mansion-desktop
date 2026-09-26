@@ -1,6 +1,7 @@
 #include <cstring>
 #include <iostream>
 
+#include <GLES2/gl2.h>
 #include <wayland-server-protocol.h>
 #include <wayland-util.h>
 
@@ -14,6 +15,7 @@
 static void surface_destroy_callback(struct wl_resource* resource) {
     auto* surface = static_cast<MansionSurface*>(wl_resource_get_user_data(resource));
     if (!surface) return;
+
     wl_list_remove(&surface->link);
 
     /* Clean up frame callbacks. */
@@ -23,7 +25,8 @@ static void surface_destroy_callback(struct wl_resource* resource) {
         wl_resource_destroy(cb);
     }
 
-    delete surface;
+    /* Keep MansionSurface alive for screenshot; move to orphaned list. */
+    wl_list_insert(surface->compositor->orphaned_surfaces.prev, &surface->link);
 }
 
 static void surface_destroy(struct wl_client* client, struct wl_resource* resource) {
@@ -37,6 +40,9 @@ static void buffer_destroy_notify(struct wl_listener* listener, void* data) {
         wl_container_of(listener, (MansionSurface*)NULL, buffer_destroy_listener);
     surface->buffer_destroyed = true;
     surface->buffer_resource = nullptr;
+
+    /* The GL texture is a pixel copy (glTexImage2D) and remains valid
+       even after the buffer is destroyed. */
 }
 
 static void surface_attach(struct wl_client* client, struct wl_resource* resource,
@@ -47,6 +53,11 @@ static void surface_attach(struct wl_client* client, struct wl_resource* resourc
     if (buffer_resource == nullptr) {
         surface->buffer_resource = nullptr;
         surface->buffer_destroyed = false;
+        /* Clean up the GL texture — no more buffer to render. */
+        if (surface->gl_texture) {
+            (void)glDeleteTextures(1, &surface->gl_texture);
+            surface->gl_texture = 0;
+        }
         /* Remove any previously registered destroy listener. */
         if (!wl_list_empty(&surface->buffer_destroy_listener.link))
             wl_list_remove(&surface->buffer_destroy_listener.link);
@@ -91,13 +102,9 @@ static void surface_commit(struct wl_client* client, struct wl_resource* resourc
         }
     }
 
-    /* For a simple headless compositor: release the buffer immediately
-     * after commit (it has been "presented" during this render tick). */
-    if (surface->buffer_resource) {
-        wl_buffer_send_release(surface->buffer_resource);
-        surface->buffer_resource = nullptr;
-    }
-
+    /* For a simple headless compositor: release the buffer after it has
+     * been rendered. We keep buffer_resource set and release in
+     * render_surface(). */
     surface->buffer_destroyed = false;
 
     /* Notify xdg-shell of commit (triggers configure). */
@@ -128,12 +135,12 @@ static void surface_set_input_region(struct wl_client* client, struct wl_resourc
 }
 
 static void surface_set_buffer_transform(struct wl_client* client, struct wl_resource* resource,
-                                          int32_t transform) {
+                                         int32_t transform) {
     (void)client; (void)resource; (void)transform;
 }
 
 static void surface_set_buffer_scale(struct wl_client* client, struct wl_resource* resource,
-                                      int32_t scale) {
+                                     int32_t scale) {
     (void)client; (void)resource; (void)scale;
 }
 
@@ -199,10 +206,13 @@ static void compositor_create_surface(struct wl_client* client, struct wl_resour
     wl_list_init(&surface->link);
     wl_list_insert(&compositor->surface_list, &surface->link);
 
+    surface->compositor = compositor;
+
     surface->xdg_surface = nullptr;
     surface->buffer_resource = nullptr;
     wl_list_init(&surface->buffer_destroy_listener.link);
     surface->buffer_destroyed = false;
+    surface->gl_texture = 0;
     surface->has_pending_position = false;
     surface->has_current_position = false;
     surface->width = 0;
@@ -249,6 +259,7 @@ static void compositor_bind(struct wl_client* client, void* data, uint32_t versi
 struct MansionCompositor* create_compositor(struct wl_display* display) {
     auto* compositor = new MansionCompositor;
     wl_list_init(&compositor->surface_list);
+    wl_list_init(&compositor->orphaned_surfaces);
 
     compositor->global = wl_global_create(display, &wl_compositor_interface, 4,
                                            compositor, compositor_bind);
@@ -278,6 +289,16 @@ void destroy_compositor(struct MansionCompositor* compositor) {
     struct MansionSurface *surface, *next;
     wl_list_for_each_safe(surface, next, &compositor->surface_list, link) {
         wl_resource_destroy(surface->resource);
+    }
+
+    /* Clean up orphaned surfaces (surfaces that survived client disconnect). */
+    wl_list_for_each_safe(surface, next, &compositor->orphaned_surfaces, link) {
+        wl_list_remove(&surface->link);
+        if (surface->gl_texture) {
+            (void)glDeleteTextures(1, &surface->gl_texture);
+            surface->gl_texture = 0;
+        }
+        delete surface;
     }
 
     delete compositor;

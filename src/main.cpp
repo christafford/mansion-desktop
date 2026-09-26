@@ -23,6 +23,7 @@ struct Options {
     std::string socket;      // empty: mansion-<pid>
     bool headless = false;   // no host window, no EGL, no host input
     long exit_after_ms = -1; // <0: run until a signal arrives
+    std::string screenshot;  // if set, write a PPM screenshot after the loop
 };
 
 void print_help() {
@@ -33,6 +34,7 @@ void print_help() {
         "  --socket NAME        Wayland socket name (default: mansion-<pid>)\n"
         "  --headless           no host window or input; for automated tests\n"
         "  --exit-after-ms N    exit with status 0 after N milliseconds\n"
+        "  --screenshot FILE    write a binary PPM screenshot after the loop\n"
         "  -h, --help           show this help\n"
         "The socket name is printed to stdout as MANSION_SOCKET=<name>.\n";
 }
@@ -88,6 +90,13 @@ bool parse_args(int argc, char** argv, Options& opts) {
                 return false;
             }
             opts.exit_after_ms = n;
+        } else if (name == "--screenshot") {
+            if (!take_value()) return false;
+            if (value.empty()) {
+                std::cerr << "Error: --screenshot requires a path\n";
+                return false;
+            }
+            opts.screenshot = value;
         } else {
             std::cerr << "Error: unknown argument " << arg << "\n";
             return false;
@@ -194,7 +203,9 @@ int main(int argc, char** argv) {
     // Scripts read this line to find the socket. Print it only once everything is listening.
     std::cout << "MANSION_SOCKET=" << socket_name << std::endl;
     std::cerr << "Mansion Desktop running on socket: " << socket_name
-              << (opts.headless ? " (headless)" : "") << std::endl;
+              << (opts.headless ? " (headless)" : "")
+              << (opts.screenshot.empty() ? "" : " [screenshot: " + opts.screenshot + "]")
+              << std::endl;
 
     for (const auto& cmd : opts.launch) {
         auto* app = launch_app(wl_display, socket_name.c_str(), cmd.c_str());
@@ -237,6 +248,18 @@ int main(int argc, char** argv) {
 
         render(display);
         frame_count++;
+    }
+
+    /* Take a screenshot if requested. */
+    if (!opts.screenshot.empty()) {
+        take_screenshot(display, opts.screenshot.c_str());
+        /* Give clients a few seconds to finish their event loops and exit
+         * cleanly before we destroy the display socket. */
+        auto wait_end = clock::now() + std::chrono::milliseconds(2000);
+        while (running && clock::now() < wait_end) {
+            if (wl_event_loop_dispatch(event_loop, 0) < 0) break;
+            wl_display_flush_clients(wl_display);
+        }
     }
 
     std::cerr << "Mansion Desktop exiting (frames: " << frame_count << ")" << std::endl;
