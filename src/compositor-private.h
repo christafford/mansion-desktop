@@ -4,6 +4,7 @@
 #include <wayland-server.h>
 
 struct MansionXdgSurface;
+struct MansionSeat;
 
 /* Per-surface frame callback */
 struct MansionFrameCallback {
@@ -48,4 +49,9 @@ struct MansionCompositor {
     struct wl_global* global;
     struct wl_list surface_list;
     struct wl_list orphaned_surfaces; /* surfaces that survived client disconnect */
+
+    /* Keyboard focus (P1-T06-C). */
+    struct MansionSeat* seat;
+    struct wl_resource* focused_surface_resource;
+    uint32_t keyboard_focus_serial;
 };

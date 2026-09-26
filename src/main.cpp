@@ -184,6 +184,9 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    /* Connect seat to compositor so focus tracking can send enter/leave. */
+    compositor_set_seat(compositor, seat);
+
     if (wl_display_add_socket(wl_display, socket_name.c_str()) < 0) {
         std::cerr << "Failed to add socket '" << socket_name << "': " << strerror(errno) << std::endl;
         cleanup();

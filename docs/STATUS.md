@@ -7,11 +7,10 @@ running the check that proves it.
 
 ## Next task
 
-**P1-T06-C Keyboard enter/leave + focus** — sub-task of P1-T06 in [TASKS.md](TASKS.md).
+**P1-T06-D Pointer enter/leave/motion + hit test** — sub-task of P1-T06 in [TASKS.md](TASKS.md).
 
-Send keyboard `enter` (with the damaged-surface's wl_resource in the regions
-array) and `leave` events. Track keyboard focus — the most recently mapped
-toplevel wins.
+Pointer `enter`/`leave` based on hit-testing surface rectangles against pointer position.
+Track pointer grab state. Maintain one increasing serial across all pointer/key events.
 
 ## Verified by automated test
 
@@ -36,7 +35,8 @@ Run `meson test -C build --print-errorlogs`.
   attaches and commits it, and receives `frame <time_ms>` and `release` within
   2 seconds. `meson test -C build client-frame` passes. The seat now sends
   xkb keymap via memfd, repeat_info (rate=25, delay=500), and modifier state
-  on each key event (P1-T06-B).
+  on each key event (P1-T06-B). Keyboard focus goes to the most recently
+  mapped toplevel via `wl_keyboard_send_enter`/`leave` (P1-T06-C).
 - `render-shm` (P1-T05): the compositor uses `EGL_PLATFORM_SURFACELESS_MESA`
   with a pbuffer surface to upload `wl_shm` buffers (ARGB8888) as OpenGL
   textures and draw them in screen position. `--screenshot PATH` reads the

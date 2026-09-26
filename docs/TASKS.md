@@ -135,11 +135,11 @@ itself is the human acceptance step.
   **Acceptance:** `meson test -C build client-frame` passes; headless compositor
   logs no xkb errors. (2026-09-26)
 
-- [ ] **P1-T06-C Keyboard enter/leave + focus.** Send keyboard `enter` (with
+- [x] **P1-T06-C Keyboard enter/leave + focus.** Send keyboard `enter` (with
   the damaged-surface's wl_resource in the regions array) and `leave` events.
   Track keyboard focus — the most recently mapped toplevel wins.
   **Acceptance:** `meson test -C build input-keyboard` passes (client reports
-  `kbd_enter`/`kbd_leave` on focus change).
+  `kbd_enter`/`kbd_leave` on focus change). (2026-09-26)
 
 - [ ] **P1-T06-D Pointer enter/leave/motion + hit test.** Pointer `enter`/`leave`
   based on hit-testing surface rectangles against pointer position. Track

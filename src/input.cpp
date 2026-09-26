@@ -13,7 +13,7 @@
 #include <wayland-server-protocol.h>
 #include <xkbcommon/xkbcommon.h>
 
-#include "compositor.h"
+#include "compositor-private.h"
 #include "display.h"
 #include "input.h"
 
@@ -55,6 +55,9 @@ struct MansionSeat {
 
     xkb_keymap* keymap;
     xkb_state*  xkbstate;
+
+    /* Keyboard focus (P1-T06-C). */
+    struct wl_resource* focused_surface_resource;
 };
 
 /* Evdev device detection helpers */
@@ -602,4 +605,50 @@ void destroy_seat(struct MansionSeat* seat) {
     }
 
     delete seat;
+}
+
+/* ---------- Keyboard focus (P1-T06-C) ---------- */
+
+void seat_set_keyboard_focus(struct MansionSeat* seat,
+                              struct wl_resource* surface,
+                              MansionCompositor* comp) {
+    if (!seat || !comp) return;
+
+    comp->keyboard_focus_serial++;
+
+    /* Send leave to the old focused surface. */
+    if (comp->focused_surface_resource) {
+        SeatKeyboardClient *kc, *kc_next;
+        wl_list_for_each_safe(kc, kc_next, &seat->keyboard_clients, destroy_listener.link) {
+            if (kc->resource) {
+                wl_keyboard_send_leave(kc->resource,
+                                       comp->keyboard_focus_serial,
+                                       comp->focused_surface_resource);
+            }
+        }
+    }
+
+    comp->focused_surface_resource = surface;
+    seat->focused_surface_resource = surface;
+
+    /* Send enter to the new surface. */
+    if (surface) {
+        struct wl_array keys;
+        wl_array_init(&keys);
+        SeatKeyboardClient *kc, *kc_next;
+        wl_list_for_each_safe(kc, kc_next, &seat->keyboard_clients, destroy_listener.link) {
+            if (kc->resource) {
+                wl_keyboard_send_enter(kc->resource,
+                                       comp->keyboard_focus_serial,
+                                       surface, &keys);
+            }
+        }
+        wl_array_release(&keys);
+    }
+}
+
+void compositor_set_seat(struct MansionCompositor* compositor,
+                          struct MansionSeat* seat) {
+    if (!compositor) return;
+    compositor->seat = seat;
 }

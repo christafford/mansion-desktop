@@ -8,6 +8,7 @@
 #include "compositor.h"
 #include "compositor-private.h"
 #include "display.h"
+#include "input.h"
 #include "xdg-shell.h"
 
 /* ---------- surface ---------- */
@@ -58,6 +59,10 @@ static void surface_attach(struct wl_client* client, struct wl_resource* resourc
             (void)glDeleteTextures(1, &surface->gl_texture);
             surface->gl_texture = 0;
         }
+        /* Clear keyboard focus if this surface was focused. */
+        if (surface->compositor->focused_surface_resource == surface->resource) {
+            seat_set_keyboard_focus(surface->compositor->seat, nullptr, surface->compositor);
+        }
         /* Remove any previously registered destroy listener. */
         if (!wl_list_empty(&surface->buffer_destroy_listener.link))
             wl_list_remove(&surface->buffer_destroy_listener.link);
@@ -100,6 +105,10 @@ static void surface_commit(struct wl_client* client, struct wl_resource* resourc
             surface->width = wl_shm_buffer_get_width(shm_buf);
             surface->height = wl_shm_buffer_get_height(shm_buf);
         }
+
+        /* Give keyboard focus to the most recently mapped toplevel. */
+        seat_set_keyboard_focus(surface->compositor->seat,
+                                 surface->resource, surface->compositor);
     }
 
     /* For a simple headless compositor: release the buffer after it has
