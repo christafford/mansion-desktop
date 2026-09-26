@@ -23,6 +23,12 @@ void seat_set_keyboard_focus(struct MansionSeat* seat,
 void compositor_set_seat(struct MansionCompositor* compositor,
                           struct MansionSeat* seat);
 
+/* Execute an input script file. Returns 0 on success, -1 on error,
+   1 if the script requested quit. */
+int input_execute_script(const char* filename,
+                          struct MansionSeat* seat,
+                          struct MansionCompositor* comp);
+
 /* Evdev input device handling */
 int input_init(void);
 void input_process(void);

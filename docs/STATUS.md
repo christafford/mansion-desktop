@@ -7,11 +7,13 @@ running the check that proves it.
 
 ## Next task
 
-**P1-T06-E Input script** — sub-task of P1-T06 in [TASKS.md](TASKS.md).
+**P1-T06-F Test client `--report-input` + input-routing test** — sub-task of
+P1-T06 in [TASKS.md](TASKS.md).
 
-Add `--input-script FILE` to main.cpp. Parse lines: `wait MS`, `key CODE
-press|release`, `motion X Y`, `button CODE press|release`, `focus lost|gained`,
-`quit`. Dispatch events through the input system during the event loop.
+Test client mode `--report-input` prints `kbd_enter`, `kbd_leave`, `key CODE
+STATE`, `ptr_enter`, `ptr_leave`, `motion X Y`, `button CODE STATE`. The
+`input-routing` test starts the compositor with a scripted input file, maps a
+client, and verifies event ordering.
 
 ## Verified by automated test
 

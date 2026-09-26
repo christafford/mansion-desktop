@@ -147,11 +147,11 @@ itself is the human acceptance step.
   events.
   **Acceptance:** `meson test -C build input-pointer` passes. (2026-09-26)
 
-- [ ] **P1-T06-E Input script.** Add `--input-script FILE` to main.cpp. Parse
+- [x] **P1-T06-E Input script.** Add `--input-script FILE` to main.cpp. Parse
   lines: `wait MS`, `key CODE press|release`, `motion X Y`, `button CODE
   press|release`, `focus lost|gained`, `quit`. Dispatch events through the
   input system during the event loop.
-  **Acceptance:** `meson test -C build input-script` passes.
+  **Acceptance:** `meson test -C build input-script` passes. (2026-09-26)
 
 - [ ] **P1-T06-F Test client `--report-input` + input-routing test.** Test client
   mode `--report-input` prints `kbd_enter`, `kbd_leave`, `key CODE STATE`,

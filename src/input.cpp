@@ -9,6 +9,7 @@
 #include <dirent.h>
 #include <unistd.h>
 #include <poll.h>
+#include <time.h>
 
 #include <wayland-server-protocol.h>
 #include <xkbcommon/xkbcommon.h>
@@ -442,6 +443,108 @@ void input_destroy(void) {
         }
     }
     input_device_count = 0;
+}
+
+/* ---------- Input script execution (P1-T06-E) ---------- */
+
+/* Execute an input script file. Returns 0 on success, -1 on error,
+   1 if the script requested quit. */
+int input_execute_script(const char* filename,
+                          struct MansionSeat* seat,
+                          struct MansionCompositor* comp) {
+    FILE* fp = fopen(filename, "r");
+    if (!fp) {
+        fprintf(stderr, "Failed to open input script: %s\n", filename);
+        return -1;
+    }
+
+    char line[256];
+    while (fgets(line, sizeof(line), fp)) {
+        /* Trim trailing newline. */
+        size_t len = strlen(line);
+        while (len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r')) {
+            line[--len] = '\0';
+        }
+        if (len == 0) continue;
+
+        /* Skip comments. */
+        if (line[0] == '#') continue;
+
+        if (strncmp(line, "wait ", 5) == 0) {
+            long ms = strtol(line + 5, nullptr, 10);
+            if (ms > 0) {
+                struct timespec ts = {ms / 1000, (ms % 1000) * 1000000L};
+                nanosleep(&ts, nullptr);
+            }
+        } else if (strncmp(line, "key ", 4) == 0) {
+            /* "key CODE press|release" — CODE is a Linux keycode (e.g. 30 = A). */
+            char code_str[16] = {};
+            char action[16] = {};
+            sscanf(line + 4, "%15s %15s", code_str, action);
+            int keycode = strtol(code_str, nullptr, 10);
+            uint32_t state = (strcmp(action, "press") == 0) ?
+                WL_KEYBOARD_KEY_STATE_PRESSED :
+                WL_KEYBOARD_KEY_STATE_RELEASED;
+            uint32_t serial = ++seat->serial;
+            uint32_t time = 0;
+
+            /* Update xkb state. */
+            if (seat->xkbstate) {
+                xkb_state_update_key(seat->xkbstate,
+                                     keycode + 8,
+                                     state == WL_KEYBOARD_KEY_STATE_PRESSED ?
+                                         XKB_KEY_DOWN : XKB_KEY_UP);
+            }
+
+            SeatKeyboardClient *kc, *kc_next;
+            wl_list_for_each_safe(kc, kc_next, &seat->keyboard_clients, destroy_listener.link) {
+                if (kc->resource) {
+                    wl_keyboard_send_key(kc->resource, serial, time, keycode, state);
+                }
+            }
+            send_keymap_modifiers(serial);
+        } else if (strncmp(line, "motion ", 7) == 0) {
+            int x = 0, y = 0;
+            sscanf(line + 7, "%d %d", &x, &y);
+            pointer_x = wl_fixed_from_int(x);
+            pointer_y = wl_fixed_from_int(y);
+            uint32_t serial = ++seat->serial;
+            pointer_check_focus(serial);
+            send_pointer_motion(0);
+            send_pointer_axis_done(0);
+        } else if (strncmp(line, "button ", 7) == 0) {
+            /* "button CODE press|release" — CODE is a Linux button code. */
+            char code_str[16] = {};
+            char action[16] = {};
+            sscanf(line + 7, "%15s %15s", code_str, action);
+            uint32_t button = (uint32_t)strtol(code_str, nullptr, 10);
+            uint32_t button_state = (strcmp(action, "press") == 0) ?
+                WL_POINTER_BUTTON_STATE_PRESSED :
+                WL_POINTER_BUTTON_STATE_RELEASED;
+
+            if (button_state == WL_POINTER_BUTTON_STATE_PRESSED) {
+                seat->grab_surface_resource = seat->pointer_surface_resource;
+            } else {
+                seat->grab_surface_resource = nullptr;
+            }
+
+            uint32_t serial = ++seat->serial;
+            send_pointer_button(serial, 0, button, button_state);
+        } else if (strcmp(line, "focus gained") == 0) {
+            /* Focus gained: re-send enter to the currently focused surface. */
+            if (comp && comp->focused_surface_resource) {
+                seat_set_keyboard_focus(seat, comp->focused_surface_resource, comp);
+            }
+        } else if (strcmp(line, "focus lost") == 0) {
+            seat_set_keyboard_focus(seat, nullptr, comp);
+        } else if (strcmp(line, "quit") == 0) {
+            fclose(fp);
+            return 1;
+        }
+    }
+
+    fclose(fp);
+    return 0;
 }
 
 /* ---------- SeatKeyboardClient destroy listener ---------- */

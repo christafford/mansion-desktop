@@ -24,6 +24,7 @@ struct Options {
     bool headless = false;   // no host window, no EGL, no host input
     long exit_after_ms = -1; // <0: run until a signal arrives
     std::string screenshot;  // if set, write a PPM screenshot after the loop
+    std::string input_script; // if set, execute scripted input events
 };
 
 void print_help() {
@@ -35,6 +36,7 @@ void print_help() {
         "  --headless           no host window or input; for automated tests\n"
         "  --exit-after-ms N    exit with status 0 after N milliseconds\n"
         "  --screenshot FILE    write a binary PPM screenshot after the loop\n"
+        "  --input-script FILE  execute scripted input events during the loop\n"
         "  -h, --help           show this help\n"
         "The socket name is printed to stdout as MANSION_SOCKET=<name>.\n";
 }
@@ -97,6 +99,13 @@ bool parse_args(int argc, char** argv, Options& opts) {
                 return false;
             }
             opts.screenshot = value;
+        } else if (name == "--input-script") {
+            if (!take_value()) return false;
+            if (value.empty()) {
+                std::cerr << "Error: --input-script requires a file path\n";
+                return false;
+            }
+            opts.input_script = value;
         } else {
             std::cerr << "Error: unknown argument " << arg << "\n";
             return false;
@@ -250,6 +259,19 @@ int main(int argc, char** argv) {
         wl_display_flush_clients(wl_display);
 
         if (input_started) input_process();
+
+        /* Execute input script if one was provided. */
+        if (!opts.input_script.empty()) {
+            int rc = input_execute_script(opts.input_script.c_str(), seat, compositor);
+            if (rc == 1) {
+                // Script requested quit.
+                running = 0;
+            } else if (rc < 0) {
+                std::cerr << "Input script error" << std::endl;
+                status = 1;
+                break;
+            }
+        }
 
         render(display);
         frame_count++;
