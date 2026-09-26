@@ -1,5 +1,6 @@
 #!/bin/sh
 # P1-T02: the test client connects and sees the core globals.
+# P1-T03: xdg_wm_base is advertised as well.
 . "$(dirname "$0")/lib.sh"
 
 start_compositor --exit-after-ms 5000
@@ -9,6 +10,7 @@ expect_line "$WORK/client.out" "^connected$"
 expect_line "$WORK/client.out" "^global wl_compositor [0-9]+$"
 expect_line "$WORK/client.out" "^global wl_shm [0-9]+$"
 expect_line "$WORK/client.out" "^global wl_seat [0-9]+$"
+expect_line "$WORK/client.out" "^global xdg_wm_base [0-9]+$"
 expect_line "$WORK/client.out" "^done$"
 
 # The compositor must survive a client connecting and disconnecting.

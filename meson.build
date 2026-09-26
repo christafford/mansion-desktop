@@ -14,18 +14,31 @@ x11 = dependency('x11')
 
 cpp_args = ['-Wall', '-Wextra']
 
+# Protocol code is generated at build time, never committed (P1-T03).
+wayland_scanner = find_program('wayland-scanner')
+wp_dir = wayland_protocols.get_variable(pkgconfig: 'pkgdatadir')
+xdg_shell_xml = wp_dir / 'stable' / 'xdg-shell' / 'xdg-shell.xml'
+xdg_shell_server_h = custom_target('xdg-shell-server-header',
+    input: xdg_shell_xml, output: 'xdg-shell-server-protocol.h',
+    command: [wayland_scanner, 'server-header', '@INPUT@', '@OUTPUT@'])
+xdg_shell_client_h = custom_target('xdg-shell-client-header',
+    input: xdg_shell_xml, output: 'xdg-shell-client-protocol.h',
+    command: [wayland_scanner, 'client-header', '@INPUT@', '@OUTPUT@'])
+xdg_shell_code = custom_target('xdg-shell-code',
+    input: xdg_shell_xml, output: 'xdg-shell-protocol.c',
+    command: [wayland_scanner, 'private-code', '@INPUT@', '@OUTPUT@'])
+
 sources = files(
     'src/main.cpp',
     'src/compositor.cpp',
     'src/xdg-shell.cpp',
-    'src/xdg-shell-protocol.c',
     'src/display.cpp',
     'src/input.cpp',
     'src/launch.cpp',
 )
 
 mansion_exe = executable('mansion-desktop',
-    sources,
+    sources, xdg_shell_server_h, xdg_shell_code,
     cpp_args: cpp_args,
     dependencies: [wayland_server, wayland_egl, egl, glesv2, xkbcommon, x11],
     include_directories: include_directories('.'),
@@ -34,7 +47,7 @@ mansion_exe = executable('mansion-desktop',
 
 # Test client and headless tests (tests/README.md)
 test_client = executable('mansion-test-client',
-    files('tests/mansion-test-client.c', 'tests/xdg-shell-protocol.c'),
+    files('tests/mansion-test-client.c'), xdg_shell_client_h, xdg_shell_code,
     c_args: ['-Wall', '-Wextra'],
     dependencies: [wayland_client],
 )

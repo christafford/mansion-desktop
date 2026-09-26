@@ -2,10 +2,15 @@
 
 #include <wayland-server.h>
 
-/* Internal surface structure - shared between compositor.cpp and display.cpp */
+struct MansionXdgSurface;
+
+/* Internal surface structure - shared between compositor.cpp, display.cpp and xdg-shell.cpp */
 struct MansionSurface {
     struct wl_resource* resource;
     struct wl_list link;
+
+    /* Role object, owned by its own wl_resource; nullptr without a role. */
+    struct MansionXdgSurface* xdg_surface;
 
     struct wl_resource* buffer_resource;
     int32_t pending_x, pending_y;

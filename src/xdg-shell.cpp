@@ -1,359 +1,280 @@
-#include <cstring>
-#include <iostream>
+// xdg_wm_base / xdg_surface / xdg_toplevel (P1-T03).
+//
+// Ownership: every Mansion* struct here is owned by its wl_resource and freed
+// from the resource destructor, so client disconnects (which destroy resources
+// without calling the `destroy` request handlers) never leak or double-free.
+// Cross-links between xdg_surface and xdg_toplevel, and between xdg_surface and
+// the wl_surface, are cleared by whichever side goes away first.
 
 #include <wayland-server.h>
 #include "xdg-shell-server-protocol.h"
 
 #include "xdg-shell.h"
 #include "compositor.h"
+#include "compositor-private.h"
 
-/* ── Internal structures ─────────────────────────────────────────── */
+namespace {
 
-struct MansionXdgWmBase {
-    struct wl_resource* resource;
-};
+constexpr uint32_t kWmBaseVersion = 3;
+constexpr int32_t kInitialWidth = 800;
+constexpr int32_t kInitialHeight = 600;
 
-struct MansionXdgSurface {
-    struct wl_resource* resource;
-    struct wl_resource* surface_resource;  /* associated wl_surface */
-    struct wl_resource* toplevel_resource;
-    int32_t toplevel_configure_width;
-    int32_t toplevel_configure_height;
-    bool configured;
-    uint32_t configure_serial;
-    uint32_t configure_serial_next;       /* monotonically increasing */
-    wl_list link;                          /* link in global surface_list */
-};
+struct MansionXdgToplevel;
 
-/* Forward declaration — defined below. */
-struct MansionXdgSurface;
-
-struct MansionXdgToplevel {
-    struct wl_resource* resource;
-    struct MansionXdgSurface* parent;   /* parent xdg_surface (for cleanup coordination) */
-    int32_t configure_width;
-    int32_t configure_height;
-};
-
-/* Global list of all xdg_surfaces tracked by this shell instance. */
-static wl_list g_surface_list = {0};
-
-/* ── xdg_positioner ──────────────────────────────────────────────── */
-
-static void positioner_destroy(struct wl_client* client, struct wl_resource* resource) {
-    (void)client;
-    wl_resource_destroy(resource);
-}
-
-static const struct xdg_positioner_interface positioner_impl = {
-    .destroy = positioner_destroy,
-};
-
-/* ── xdg_wm_base ─────────────────────────────────────────────────── */
-
-static void wm_base_destroy(struct wl_client* client, struct wl_resource* resource) {
-    (void)client;
-    wl_resource_destroy(resource);
-}
-
-static void wm_base_create_positioner(struct wl_client* client, struct wl_resource* resource,
-                                       uint32_t id) {
-    (void)client; (void)resource;
-    /* Positioner not yet implemented; create a stub object and reject on use */
-    struct wl_resource* pos = wl_resource_create(client, &xdg_positioner_interface,
-                                                  1, id);
-    if (pos) {
-        wl_resource_set_implementation(pos, &positioner_impl, nullptr, nullptr);
-    }
-}
-
-static void wm_base_pong(struct wl_client* client, struct wl_resource* resource, uint32_t serial) {
-    (void)client; (void)resource; (void)serial;
-    /* Pong received from client — nothing to do on the server side */
-}
-
-/* Forward declaration — wm_base_get_xdg_surface is defined below. */
-static void wm_base_get_xdg_surface(struct wl_client* client, struct wl_resource* resource,
-                                     uint32_t id, struct wl_resource* surface_resource);
-
-static const struct xdg_wm_base_interface wm_base_impl = {
-    .destroy = wm_base_destroy,
-    .create_positioner = wm_base_create_positioner,
-    .get_xdg_surface = wm_base_get_xdg_surface,
-    .pong = wm_base_pong,
-};
-
-/* ── xdg_toplevel ────────────────────────────────────────────────── */
-
-static void toplevel_destroy(struct wl_client* client, struct wl_resource* resource) {
-    (void)client;
-    auto* toplevel = static_cast<MansionXdgToplevel*>(wl_resource_get_user_data(resource));
-    if (!toplevel) return;
-    /* Clear parent's reference to prevent double-destroy of the toplevel resource */
-    if (toplevel->parent) {
-        toplevel->parent->toplevel_resource = nullptr;
-        toplevel->parent = nullptr;
-    }
-    wl_resource_destroy(resource);
-    wl_resource_set_user_data(resource, nullptr);
-    delete toplevel;
-}
-
-static void toplevel_set_title(struct wl_client* client, struct wl_resource* resource,
-                                const char* title) {
-    (void)client; (void)resource; (void)title;
-}
-
-static void toplevel_set_app_id(struct wl_client* client, struct wl_resource* resource,
-                                 const char* app_id) {
-    (void)client; (void)resource; (void)app_id;
-}
-
-static void toplevel_show_window_menu(struct wl_client* client, struct wl_resource* resource,
-                                       struct wl_resource* seat, uint32_t serial,
-                                       int32_t x, int32_t y) {
-    (void)client; (void)resource; (void)seat; (void)serial; (void)x; (void)y;
-}
-
-static void toplevel_move(struct wl_client* client, struct wl_resource* resource,
-                           struct wl_resource* seat, uint32_t serial) {
-    (void)client; (void)resource; (void)seat; (void)serial;
-}
-
-static void toplevel_resize(struct wl_client* client, struct wl_resource* resource,
-                             struct wl_resource* seat, uint32_t serial, uint32_t edges) {
-    (void)client; (void)resource; (void)seat; (void)serial; (void)edges;
-}
-
-static void toplevel_set_max_size(struct wl_client* client, struct wl_resource* resource,
-                                   int32_t width, int32_t height) {
-    (void)client; (void)resource; (void)width; (void)height;
-}
-
-static void toplevel_set_min_size(struct wl_client* client, struct wl_resource* resource,
-                                   int32_t width, int32_t height) {
-    (void)client; (void)resource; (void)width; (void)height;
-}
-
-static void toplevel_set_maximized(struct wl_client* client, struct wl_resource* resource) {
-    (void)client; (void)resource;
-}
-
-static void toplevel_unset_maximized(struct wl_client* client, struct wl_resource* resource) {
-    (void)client; (void)resource;
-}
-
-static void toplevel_set_fullscreen(struct wl_client* client, struct wl_resource* resource,
-                                     struct wl_resource* output) {
-    (void)client; (void)resource; (void)output;
-}
-
-static void toplevel_unset_fullscreen(struct wl_client* client, struct wl_resource* resource) {
-    (void)client; (void)resource;
-}
-
-static void toplevel_set_minimized(struct wl_client* client, struct wl_resource* resource) {
-    (void)client; (void)resource;
-}
-
-static void toplevel_set_parent(struct wl_client* client, struct wl_resource* resource,
-                                 struct wl_resource* parent) {
-    (void)client; (void)resource; (void)parent;
-}
-
-static const struct xdg_toplevel_interface toplevel_impl = {
-    .destroy = toplevel_destroy,
-    .set_parent = toplevel_set_parent,
-    .set_title = toplevel_set_title,
-    .set_app_id = toplevel_set_app_id,
-    .show_window_menu = toplevel_show_window_menu,
-    .move = toplevel_move,
-    .resize = toplevel_resize,
-    .set_max_size = toplevel_set_max_size,
-    .set_min_size = toplevel_set_min_size,
-    .set_maximized = toplevel_set_maximized,
-    .unset_maximized = toplevel_unset_maximized,
-    .set_fullscreen = toplevel_set_fullscreen,
-    .unset_fullscreen = toplevel_unset_fullscreen,
-    .set_minimized = toplevel_set_minimized,
-};
-
-/* ── xdg_surface ─────────────────────────────────────────────────── */
-
-static void xdg_surface_destroy(struct wl_client* client, struct wl_resource* resource) {
-    (void)client;
-    auto* xdg_surface = static_cast<MansionXdgSurface*>(wl_resource_get_user_data(resource));
-    if (!xdg_surface) return;
-    if (xdg_surface->toplevel_resource) {
-        wl_resource_destroy(xdg_surface->toplevel_resource);
-        xdg_surface->toplevel_resource = nullptr;
-    }
-    wl_list_remove(&xdg_surface->link);
-    wl_resource_destroy(resource);
-    xdg_surface->resource = nullptr;
-    delete xdg_surface;
-}
-
-static void xdg_surface_get_toplevel(struct wl_client* client, struct wl_resource* resource,
-                                      uint32_t id) {
-    (void)client;
-    auto* xdg_surface = static_cast<MansionXdgSurface*>(wl_resource_get_user_data(resource));
-
-    /* Reject duplicate toplevel request */
-    if (xdg_surface->toplevel_resource) {
-        wl_resource_post_error(resource, XDG_SURFACE_ERROR_ALREADY_CONSTRUCTED,
-                                "xdg_surface has already been given a toplevel");
-        return;
-    }
-
-    auto* toplevel = new MansionXdgToplevel;
-    toplevel->resource = wl_resource_create(client, &xdg_toplevel_interface,
-                                             wl_resource_get_version(resource), id);
-    if (!toplevel->resource) {
-        delete toplevel;
-        wl_client_post_no_memory(client);
-        return;
-    }
-    wl_resource_set_implementation(toplevel->resource, &toplevel_impl, toplevel, nullptr);
-    toplevel->parent = xdg_surface;
-    xdg_surface->toplevel_resource = toplevel->resource;
-
-    /* Store the default configure size */
-    toplevel->configure_width = 800;
-    toplevel->configure_height = 600;
-    xdg_surface->toplevel_configure_width = 800;
-    xdg_surface->toplevel_configure_height = 600;
-}
-
-static void xdg_surface_ack_configure(struct wl_client* client, struct wl_resource* resource,
-                                       uint32_t serial) {
-    (void)client;
-    auto* xdg_surface = static_cast<MansionXdgSurface*>(wl_resource_get_user_data(resource));
-    xdg_surface->configure_serial = serial;
-}
-
-static void xdg_surface_set_window_geometry(struct wl_client* client, struct wl_resource* resource,
-                                             int32_t x, int32_t y, int32_t width, int32_t height) {
-    (void)client; (void)resource; (void)x; (void)y; (void)width; (void)height;
-}
-
-static const struct xdg_surface_interface xdg_surface_impl = {
-    .destroy = xdg_surface_destroy,
-    .get_toplevel = xdg_surface_get_toplevel,
-    .get_popup = nullptr,
-    .set_window_geometry = xdg_surface_set_window_geometry,
-    .ack_configure = xdg_surface_ack_configure,
-};
-
-/* ── Surface → xdg_surface mapping ───────────────────────────────── */
-
-/* Iterate all xdg_surfaces and send configure for unconfigured ones
- * whose wl_surface just committed. */
-void xdg_shell_on_surface_commit(struct wl_resource* surface_resource) {
-    MansionXdgSurface* xdg_surface;
-    wl_list_for_each(xdg_surface, &g_surface_list, link) {
-        if (xdg_surface->surface_resource == surface_resource && !xdg_surface->configured) {
-            /* Send xdg_surface.configure first (sends serial) */
-            uint32_t serial = xdg_surface->configure_serial_next++;
-            xdg_surface_send_configure(xdg_surface->resource, serial);
-
-            /* Then send xdg_toplevel.configure with the size hint */
-            if (xdg_surface->toplevel_resource) {
-                struct wl_array empty_states;
-                wl_array_init(&empty_states);
-                xdg_toplevel_send_configure(xdg_surface->toplevel_resource,
-                                            xdg_surface->toplevel_configure_width,
-                                            xdg_surface->toplevel_configure_height,
-                                            &empty_states);
-                wl_array_release(&empty_states);
-            }
-
-            xdg_surface->configured = true;
-            return;
-        }
-    }
-}
-
-/* ── xdg_wm_base global ──────────────────────────────────────────── */
+} // namespace
 
 struct MansionXdgShell {
     struct wl_global* global;
 };
 
-static void wm_base_bind(struct wl_client* client, void* data, uint32_t version, uint32_t id) {
-    (void)version;
-    auto* shell = static_cast<MansionXdgShell*>(data);
+struct MansionXdgSurface {
+    struct wl_resource* resource;
+    struct wl_resource* surface_resource;   // nullptr once the wl_surface is gone
+    MansionXdgToplevel* toplevel;           // nullptr until get_toplevel / after destroy
+    struct wl_listener surface_destroy;
+    bool configured;
+    uint32_t last_configure_serial;
+    uint32_t acked_serial;
+};
 
-    auto* wm_base = new MansionXdgWmBase;
-    wm_base->resource = wl_resource_create(client, &xdg_wm_base_interface, version, id);
-    if (!wm_base->resource) {
-        delete wm_base;
+namespace {
+
+struct MansionXdgToplevel {
+    struct wl_resource* resource;
+    MansionXdgSurface* xdg_surface;         // nullptr once the xdg_surface is gone
+    int32_t width, height;                  // size sent in the initial configure
+};
+
+template <typename T>
+T* user_data(struct wl_resource* resource) {
+    return static_cast<T*>(wl_resource_get_user_data(resource));
+}
+
+// Every `destroy` request just drops the resource; the destructor does the work.
+void resource_destroy_request(struct wl_client*, struct wl_resource* resource) {
+    wl_resource_destroy(resource);
+}
+
+/* ── xdg_positioner: accepted and ignored until popups exist ─────── */
+
+void positioner_ignore_2i(struct wl_client*, struct wl_resource*, int32_t, int32_t) {}
+void positioner_ignore_4i(struct wl_client*, struct wl_resource*, int32_t, int32_t, int32_t, int32_t) {}
+void positioner_ignore_u(struct wl_client*, struct wl_resource*, uint32_t) {}
+void positioner_ignore(struct wl_client*, struct wl_resource*) {}
+
+const struct xdg_positioner_interface positioner_impl = {
+    .destroy = resource_destroy_request,
+    .set_size = positioner_ignore_2i,
+    .set_anchor_rect = positioner_ignore_4i,
+    .set_anchor = positioner_ignore_u,
+    .set_gravity = positioner_ignore_u,
+    .set_constraint_adjustment = positioner_ignore_u,
+    .set_offset = positioner_ignore_2i,
+    .set_reactive = positioner_ignore,
+    .set_parent_size = positioner_ignore_2i,
+    .set_parent_configure = positioner_ignore_u,
+};
+
+/* ── xdg_toplevel ────────────────────────────────────────────────── */
+
+void toplevel_resource_destroyed(struct wl_resource* resource) {
+    auto* toplevel = user_data<MansionXdgToplevel>(resource);
+    if (!toplevel) return;
+    if (toplevel->xdg_surface) toplevel->xdg_surface->toplevel = nullptr;
+    delete toplevel;
+}
+
+void toplevel_ignore(struct wl_client*, struct wl_resource*) {}
+void toplevel_ignore_s(struct wl_client*, struct wl_resource*, const char*) {}
+void toplevel_ignore_r(struct wl_client*, struct wl_resource*, struct wl_resource*) {}
+void toplevel_ignore_2i(struct wl_client*, struct wl_resource*, int32_t, int32_t) {}
+void toplevel_ignore_ru(struct wl_client*, struct wl_resource*, struct wl_resource*, uint32_t) {}
+void toplevel_ignore_ruu(struct wl_client*, struct wl_resource*, struct wl_resource*, uint32_t, uint32_t) {}
+void toplevel_ignore_ru2i(struct wl_client*, struct wl_resource*, struct wl_resource*, uint32_t, int32_t, int32_t) {}
+
+const struct xdg_toplevel_interface toplevel_impl = {
+    .destroy = resource_destroy_request,
+    .set_parent = toplevel_ignore_r,
+    .set_title = toplevel_ignore_s,
+    .set_app_id = toplevel_ignore_s,
+    .show_window_menu = toplevel_ignore_ru2i,
+    .move = toplevel_ignore_ru,
+    .resize = toplevel_ignore_ruu,
+    .set_max_size = toplevel_ignore_2i,
+    .set_min_size = toplevel_ignore_2i,
+    .set_maximized = toplevel_ignore,
+    .unset_maximized = toplevel_ignore,
+    .set_fullscreen = toplevel_ignore_r,
+    .unset_fullscreen = toplevel_ignore,
+    .set_minimized = toplevel_ignore,
+};
+
+/* ── xdg_surface ─────────────────────────────────────────────────── */
+
+void xdg_surface_detach_wl_surface(MansionXdgSurface* xdg_surface) {
+    if (!xdg_surface->surface_resource) return;
+    if (auto* surface = compositor_surface_from_resource(xdg_surface->surface_resource)) {
+        if (surface->xdg_surface == xdg_surface) surface->xdg_surface = nullptr;
+    }
+    wl_list_remove(&xdg_surface->surface_destroy.link);
+    xdg_surface->surface_resource = nullptr;
+}
+
+void xdg_surface_resource_destroyed(struct wl_resource* resource) {
+    auto* xdg_surface = user_data<MansionXdgSurface>(resource);
+    if (!xdg_surface) return;
+    if (xdg_surface->toplevel) xdg_surface->toplevel->xdg_surface = nullptr;
+    xdg_surface_detach_wl_surface(xdg_surface);
+    delete xdg_surface;
+}
+
+// The wl_surface went away first (client disconnect or protocol misuse).
+void on_wl_surface_destroyed(struct wl_listener* listener, void*) {
+    MansionXdgSurface* xdg_surface = wl_container_of(listener, xdg_surface, surface_destroy);
+    // The wl_surface's own destructor frees MansionSurface, so only drop our side.
+    wl_list_remove(&xdg_surface->surface_destroy.link);
+    xdg_surface->surface_resource = nullptr;
+}
+
+void xdg_surface_get_toplevel(struct wl_client* client, struct wl_resource* resource, uint32_t id) {
+    auto* xdg_surface = user_data<MansionXdgSurface>(resource);
+    if (xdg_surface->toplevel) {
+        wl_resource_post_error(resource, XDG_SURFACE_ERROR_ALREADY_CONSTRUCTED,
+                               "xdg_surface already has a toplevel");
+        return;
+    }
+    auto* toplevel = new MansionXdgToplevel{};
+    toplevel->resource = wl_resource_create(client, &xdg_toplevel_interface,
+                                            wl_resource_get_version(resource), id);
+    if (!toplevel->resource) {
+        delete toplevel;
         wl_client_post_no_memory(client);
         return;
     }
-    wl_resource_set_implementation(wm_base->resource, &wm_base_impl, wm_base, nullptr);
-    (void)shell;
+    toplevel->xdg_surface = xdg_surface;
+    toplevel->width = kInitialWidth;
+    toplevel->height = kInitialHeight;
+    wl_resource_set_implementation(toplevel->resource, &toplevel_impl, toplevel,
+                                   toplevel_resource_destroyed);
+    xdg_surface->toplevel = toplevel;
 }
 
-static void wm_base_get_xdg_surface(struct wl_client* client, struct wl_resource* resource,
-                                     uint32_t id, struct wl_resource* surface_resource) {
-    (void)client; (void)resource;
-    auto* xdg_surface = new MansionXdgSurface;
+void xdg_surface_get_popup(struct wl_client*, struct wl_resource* resource, uint32_t,
+                           struct wl_resource*, struct wl_resource*) {
+    wl_resource_post_error(resource, WL_DISPLAY_ERROR_IMPLEMENTATION,
+                           "xdg_popup is not implemented yet");
+}
+
+void xdg_surface_set_window_geometry(struct wl_client*, struct wl_resource*, int32_t, int32_t,
+                                     int32_t, int32_t) {}
+
+void xdg_surface_ack_configure(struct wl_client*, struct wl_resource* resource, uint32_t serial) {
+    user_data<MansionXdgSurface>(resource)->acked_serial = serial;
+}
+
+const struct xdg_surface_interface xdg_surface_impl = {
+    .destroy = resource_destroy_request,
+    .get_toplevel = xdg_surface_get_toplevel,
+    .get_popup = xdg_surface_get_popup,
+    .set_window_geometry = xdg_surface_set_window_geometry,
+    .ack_configure = xdg_surface_ack_configure,
+};
+
+/* ── xdg_wm_base ─────────────────────────────────────────────────── */
+
+void wm_base_create_positioner(struct wl_client* client, struct wl_resource* resource, uint32_t id) {
+    auto* positioner = wl_resource_create(client, &xdg_positioner_interface,
+                                          wl_resource_get_version(resource), id);
+    if (!positioner) {
+        wl_client_post_no_memory(client);
+        return;
+    }
+    wl_resource_set_implementation(positioner, &positioner_impl, nullptr, nullptr);
+}
+
+void wm_base_get_xdg_surface(struct wl_client* client, struct wl_resource* resource, uint32_t id,
+                             struct wl_resource* surface_resource) {
+    auto* surface = compositor_surface_from_resource(surface_resource);
+    if (!surface) {
+        wl_resource_post_error(resource, XDG_WM_BASE_ERROR_INVALID_SURFACE_STATE,
+                               "get_xdg_surface on an unknown wl_surface");
+        return;
+    }
+    if (surface->xdg_surface) {
+        wl_resource_post_error(resource, XDG_WM_BASE_ERROR_ROLE,
+                               "wl_surface already has an xdg_surface");
+        return;
+    }
+    auto* xdg_surface = new MansionXdgSurface{};
     xdg_surface->resource = wl_resource_create(client, &xdg_surface_interface,
-                                                wl_resource_get_version(resource), id);
+                                               wl_resource_get_version(resource), id);
     if (!xdg_surface->resource) {
         delete xdg_surface;
         wl_client_post_no_memory(client);
         return;
     }
-    wl_resource_set_implementation(xdg_surface->resource, &xdg_surface_impl, xdg_surface, nullptr);
     xdg_surface->surface_resource = surface_resource;
-    xdg_surface->toplevel_resource = nullptr;
-    xdg_surface->configured = false;
-    xdg_surface->configure_serial = 0;
-    xdg_surface->configure_serial_next = 1;
-    xdg_surface->toplevel_configure_width = 800;
-    xdg_surface->toplevel_configure_height = 600;
-    wl_list_init(&xdg_surface->link);
-    wl_list_insert(&g_surface_list, &xdg_surface->link);
+    xdg_surface->surface_destroy.notify = on_wl_surface_destroyed;
+    wl_resource_add_destroy_listener(surface_resource, &xdg_surface->surface_destroy);
+    surface->xdg_surface = xdg_surface;
+    wl_resource_set_implementation(xdg_surface->resource, &xdg_surface_impl, xdg_surface,
+                                   xdg_surface_resource_destroyed);
 }
 
-struct MansionXdgShell* create_xdg_shell(struct MansionCompositor* compositor,
-                                          struct wl_display* display) {
-    (void)compositor;
-    auto* shell = new MansionXdgShell;
+void wm_base_pong(struct wl_client*, struct wl_resource*, uint32_t) {}
 
-    /* Initialize the global surface tracking list */
-    wl_list_init(&g_surface_list);
+const struct xdg_wm_base_interface wm_base_impl = {
+    .destroy = resource_destroy_request,
+    .create_positioner = wm_base_create_positioner,
+    .get_xdg_surface = wm_base_get_xdg_surface,
+    .pong = wm_base_pong,
+};
 
-    shell->global = wl_global_create(display, &xdg_wm_base_interface, 3,
-                                      shell, wm_base_bind);
+void wm_base_bind(struct wl_client* client, void* data, uint32_t version, uint32_t id) {
+    auto* resource = wl_resource_create(client, &xdg_wm_base_interface, version, id);
+    if (!resource) {
+        wl_client_post_no_memory(client);
+        return;
+    }
+    wl_resource_set_implementation(resource, &wm_base_impl, data, nullptr);
+}
+
+} // namespace
+
+/* ── Public API ──────────────────────────────────────────────────── */
+
+void xdg_shell_on_surface_commit(struct MansionXdgSurface* xdg_surface) {
+    if (!xdg_surface || xdg_surface->configured || !xdg_surface->toplevel) return;
+
+    // Protocol order: role-specific configure first, then xdg_surface.configure
+    // carrying the serial that closes the configure sequence.
+    struct wl_array states;
+    wl_array_init(&states);
+    xdg_toplevel_send_configure(xdg_surface->toplevel->resource,
+                                xdg_surface->toplevel->width, xdg_surface->toplevel->height, &states);
+    wl_array_release(&states);
+
+    auto* display = wl_client_get_display(wl_resource_get_client(xdg_surface->resource));
+    xdg_surface->last_configure_serial = wl_display_next_serial(display);
+    xdg_surface_send_configure(xdg_surface->resource, xdg_surface->last_configure_serial);
+    xdg_surface->configured = true;
+}
+
+struct MansionXdgShell* create_xdg_shell(struct MansionCompositor*, struct wl_display* display) {
+    auto* shell = new MansionXdgShell{};
+    shell->global = wl_global_create(display, &xdg_wm_base_interface, kWmBaseVersion,
+                                     shell, wm_base_bind);
     if (!shell->global) {
         delete shell;
         return nullptr;
     }
-
     return shell;
 }
 
 void destroy_xdg_shell(struct MansionXdgShell* shell) {
     if (!shell) return;
+    // Client resources are torn down by wl_display_destroy (their destructors
+    // free the Mansion* structs); only the global belongs to us.
     wl_global_destroy(shell->global);
-
-    /* Clean up all tracked xdg_surfaces */
-    MansionXdgSurface* xdg_surface, *next;
-    wl_list_for_each_safe(xdg_surface, next, &g_surface_list, link) {
-        if (xdg_surface->toplevel_resource) {
-            wl_resource_destroy(xdg_surface->toplevel_resource);
-            xdg_surface->toplevel_resource = nullptr;
-        }
-        if (xdg_surface->resource) {
-            wl_resource_destroy(xdg_surface->resource);
-            xdg_surface->resource = nullptr;
-        }
-        wl_list_remove(&xdg_surface->link);
-        delete xdg_surface;
-    }
-
     delete shell;
 }

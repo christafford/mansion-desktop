@@ -54,9 +54,7 @@ static void surface_commit(struct wl_client* client, struct wl_resource* resourc
 
     surface->buffer_destroyed = false;
 
-    /* Notify xdg-shell about the commit so it can send configure for
-     * unconfigured surfaces. */
-    xdg_shell_on_surface_commit(resource);
+    if (surface->xdg_surface) xdg_shell_on_surface_commit(surface->xdg_surface);
 }
 
 static void surface_frame(struct wl_client* client, struct wl_resource* resource,
@@ -121,6 +119,7 @@ static void compositor_create_surface(struct wl_client* client, struct wl_resour
     wl_list_init(&surface->link);
     wl_list_insert(&compositor->surface_list, &surface->link);
 
+    surface->xdg_surface = nullptr;
     surface->buffer_resource = nullptr;
     surface->buffer_destroyed = false;
     surface->has_pending_position = false;

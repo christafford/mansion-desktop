@@ -7,15 +7,19 @@ running the check that proves it.
 
 ## Next task
 
-**P1-T03 xdg-shell replaces wl_shell** in [TASKS.md](TASKS.md). Prerequisites
-(P1-T01, P1-T02) are ticked and pass with `meson test -C build`.
+**P1-T04 wl_shm buffers, commit, release, frame callbacks** in
+[TASKS.md](TASKS.md). Prerequisites (P1-T01 to P1-T03) are ticked and pass with
+`meson test -C build`.
 
-Continuation point: start by adding `wayland-scanner` code generation to
-`meson.build` (the commented block shows the shape), then create
-`src/xdg-shell.cpp` implementing `xdg_wm_base`, `xdg_surface`, `xdg_toplevel`,
-then extend `tests/mansion-test-client.c` with `--toplevel`, then add
-`tests/client_toplevel.sh` and its `meson.build` entry. Delete `src/shell.cpp`
-last, once the new test passes.
+Continuation point: `src/compositor.cpp` already stores `buffer_resource` on
+attach but ignores its contents. Add pending/current buffer state to
+`MansionSurface` (`compositor-private.h`), read size/format with
+`wl_shm_buffer_get` on commit, release the previous buffer, add a
+`wl_resource_add_destroy_listener` for the buffer, collect `wl_surface.frame`
+callbacks per surface and fire them from the render tick in `main.cpp`. Make
+`create_region` return a no-op `wl_region` instead of posting an error. Then
+extend `tests/mansion-test-client.c` with `--buffer WxH --color RRGGBB` and add
+`tests/client_frame.sh`.
 
 ## Verified by automated test
 
@@ -25,9 +29,16 @@ Run `meson test -C build --print-errorlogs`.
   --exit-after-ms N` starts without a display, prints `MANSION_SOCKET=NAME`,
   creates the socket and lock file in `$XDG_RUNTIME_DIR`, exits 0 on its own,
   removes both files, and opens no input devices.
-- `client-globals` (P1-T02): `mansion-test-client` connects and sees
-  `wl_compositor`, `wl_shm`, `wl_seat`; the compositor survives the client
-  disconnecting and exits 0 on SIGTERM.
+- `client-globals` (P1-T02, P1-T03): `mansion-test-client` connects and sees
+  `wl_compositor`, `wl_shm`, `wl_seat`, `xdg_wm_base`; the compositor survives
+  the client disconnecting and exits 0 on SIGTERM.
+- `client-toplevel` (P1-T03): the client creates `xdg_surface` + `xdg_toplevel`
+  on a `wl_surface`, commits, and receives `xdg_toplevel.configure 800x600`
+  followed by `xdg_surface.configure` with a serial. Protocol code is generated
+  by `wayland-scanner` at build time. The same three tests pass in a
+  `-Db_sanitize=address,undefined` build (`build-asan`, 2026-09-26), and an
+  ad-hoc run that SIGKILLed a mapped client and then connected a second client
+  reported no sanitizer errors.
 - Auto-continue plugin: `node --test .opencode/tests/*.test.js` (34 tests),
   plus one live run against OpenCode 2.0.16 with the local model on
   2026-09-26 (see [OPENCODE-AUTOCONTINUE.md](OPENCODE-AUTOCONTINUE.md)).
@@ -40,8 +51,11 @@ compositor. `weston-terminal` is not installed in the development container
 
 ## Not verified / known broken
 
-- **No client can map a window.** Only the deprecated `wl_shell` is offered;
-  every current toolkit and terminal requires `xdg_shell` (P1-T03).
+- **xdg-shell is minimal.** `xdg_wm_base` v3 with `xdg_surface`/`xdg_toplevel`
+  only: one fixed 800x600 configure, `ack_configure` serial stored but not
+  checked, `set_window_geometry`/title/app_id/min/max ignored, `xdg_positioner`
+  accepted and ignored, `get_popup` posts a protocol error. No `ping` is sent.
+  Resize configures arrive in P1-T09, popups in Project 5.
 - **Buffers are not drawn.** Committed `wl_shm` buffers are tracked as a
   pointer only; the renderer draws untextured placeholder quads with pixel
   coordinates fed to a clip-space shader, so nothing sensible appears (P1-T04,
@@ -87,7 +101,8 @@ meson test -C build --print-errorlogs
 
 - `src/main.cpp` — options, startup/shutdown order, event loop
 - `src/compositor.cpp`, `compositor-private.h` — `wl_compositor`, `wl_surface` state
-- `src/shell.cpp` — `wl_shell` (to be replaced by xdg-shell in P1-T03)
+- `src/xdg-shell.cpp` — `xdg_wm_base`, `xdg_surface`, `xdg_toplevel`
+  (protocol code generated into `build/` by `wayland-scanner`)
 - `src/display.cpp` — X11 host window, EGL/GLES2 renderer, headless stub
 - `src/input.cpp` — `wl_seat`, evdev reading (to be replaced in P1-T06/T07)
 - `src/launch.cpp` — child process launcher

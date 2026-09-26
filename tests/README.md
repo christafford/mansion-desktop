@@ -24,10 +24,13 @@ meson test -C build client-globals --verbose
   `expect_line`, `wait_compositor`). Tests source it with the compositor binary
   as `$1` and the client binary as `$2`; Meson passes both.
 - `mansion-test-client.c` — small C client. Prints `global <iface> <version>`,
-  `connected`, `done`. Later tasks add `--toplevel`, `--buffer`, `--color`,
-  `--report-input`, `--egl` (see `docs/TASKS.md`).
+  `connected`, `done`; with `--toplevel` it creates an xdg toplevel and prints
+  `configure <w> <h>`. Later tasks add `--buffer`, `--color`, `--report-input`,
+  `--egl` (see `docs/TASKS.md`). Its xdg-shell client code is generated into
+  `build/` by Meson.
 - `smoke_headless.sh` — P1-T01.
-- `client_globals.sh` — P1-T02.
+- `client_globals.sh` — P1-T02, P1-T03.
+- `client_toplevel.sh` — P1-T03.
 
 ## Adding a test
 

@@ -63,7 +63,7 @@ itself is the human acceptance step.
   `wl_compositor`, `wl_shm`, and `wl_seat` are advertised.
   **Acceptance:** `meson test -C build client-globals` passes.
 
-- [ ] **P1-T03 xdg-shell replaces wl_shell.** Generate `xdg-shell` server and
+- [x] **P1-T03 xdg-shell replaces wl_shell.** (2026-09-26) Generate `xdg-shell` server and
   client code with `wayland-scanner` in `meson.build` (protocol XML from
   `pkg-config --variable=pkgdatadir wayland-protocols`). Implement
   `xdg_wm_base` (`get_xdg_surface`, `create_positioner` may post an error for

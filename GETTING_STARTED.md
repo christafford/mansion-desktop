@@ -60,7 +60,7 @@ Protocol debugging: `WAYLAND_DEBUG=1 ./build/mansion-test-client --socket <name>
 1. Read `docs/STATUS.md` ("Next task") and `docs/TASKS.md`.
 2. Do one task. Build. Run `meson test`.
 3. Tick the task, update `docs/STATUS.md` and the current `docs/handoffs/NN.md`.
-4. Commit: `git add -A && git commit -m "P1-T03: xdg-shell"`.
+4. Commit: `git add -A && git commit -q -m "<task id>: <summary>"`.
 
 The conventions (labels for verification, human-only tasks, no test
 weakening) are at the top of `docs/TASKS.md`.
