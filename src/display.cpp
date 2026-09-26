@@ -319,8 +319,26 @@ void destroy_renderer(struct MansionDisplay* display) {
 
 void render_surface(struct MansionDisplay* display, struct wl_resource* surface, int32_t x, int32_t y);
 
+static void fire_frame_callbacks(struct MansionCompositor* compositor) {
+    static uint32_t tick = 0;
+    ++tick;
+    struct MansionSurface *surface, *next;
+    wl_list_for_each_safe(surface, next, &compositor->surface_list, link) {
+        struct wl_resource *cb, *cb_next;
+        wl_list_for_each_safe(cb, cb_next, &surface->frame_callback_list, link) {
+            wl_list_remove(wl_resource_get_link(cb));
+            wl_callback_send_done(cb, tick);
+            wl_resource_destroy(cb);
+        }
+    }
+}
+
 void render(struct MansionDisplay* display) {
     if (!display) return;
+
+    // Fire frame callbacks on every render tick (needed even in headless mode).
+    fire_frame_callbacks(display->compositor);
+
     auto* renderer = display->renderer;
     if (!renderer) return;
 

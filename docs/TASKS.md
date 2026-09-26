@@ -77,7 +77,7 @@ itself is the human acceptance step.
   **Acceptance:** `meson test -C build client-toplevel` passes (configure line
   received with non-zero size); `client-globals` now sees `xdg_wm_base`.
 
-- [ ] **P1-T04 wl_shm buffers, commit, release, frame callbacks.** Track pending
+- [x] **P1-T04 wl_shm buffers, commit, release, frame callbacks.** Track pending
   and current buffer per surface. On commit: read `wl_shm_buffer` size and
   format, store width/height, keep a reference to the buffer resource, release
   the previous buffer with `wl_buffer.release`, and handle buffer destruction

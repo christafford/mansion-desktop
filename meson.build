@@ -61,3 +61,5 @@ test('client-globals', find_program('tests/client_globals.sh'),
     args: [mansion_exe, test_client], env: test_env, suite: 'p1', timeout: 30)
 test('client-toplevel', find_program('tests/client_toplevel.sh'),
     args: [mansion_exe, test_client], env: test_env, suite: 'p1', timeout: 30)
+test('client-frame', find_program('tests/client_frame.sh'),
+    args: [mansion_exe, test_client], env: test_env, suite: 'p1', timeout: 30)

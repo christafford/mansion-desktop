@@ -1,3 +1,4 @@
+#include <cstring>
 #include <iostream>
 
 #include <wayland-server-protocol.h>
@@ -8,17 +9,34 @@
 #include "display.h"
 #include "xdg-shell.h"
 
+/* ---------- surface ---------- */
+
 static void surface_destroy_callback(struct wl_resource* resource) {
     auto* surface = static_cast<MansionSurface*>(wl_resource_get_user_data(resource));
     if (!surface) return;
     wl_list_remove(&surface->link);
+
+    /* Clean up frame callbacks. */
+    struct wl_resource *cb, *cb_next;
+    wl_list_for_each_safe(cb, cb_next, &surface->frame_callback_list, link) {
+        wl_list_remove(wl_resource_get_link(cb));
+        wl_resource_destroy(cb);
+    }
+
     delete surface;
 }
 
 static void surface_destroy(struct wl_client* client, struct wl_resource* resource) {
     (void)client; (void)resource;
-    /* wl_resource_destroy is called by the server to tear down this resource.
-     * The destructor (surface_destroy_callback) will be invoked automatically. */
+}
+
+/* Buffer destroy listener — fires when the client destroys the wl_buffer proxy. */
+static void buffer_destroy_notify(struct wl_listener* listener, void* data) {
+    (void)data;
+    MansionSurface* surface = (MansionSurface*)
+        wl_container_of(listener, (MansionSurface*)NULL, buffer_destroy_listener);
+    surface->buffer_destroyed = true;
+    surface->buffer_resource = nullptr;
 }
 
 static void surface_attach(struct wl_client* client, struct wl_resource* resource,
@@ -29,11 +47,22 @@ static void surface_attach(struct wl_client* client, struct wl_resource* resourc
     if (buffer_resource == nullptr) {
         surface->buffer_resource = nullptr;
         surface->buffer_destroyed = false;
+        /* Remove any previously registered destroy listener. */
+        if (!wl_list_empty(&surface->buffer_destroy_listener.link))
+            wl_list_remove(&surface->buffer_destroy_listener.link);
         return;
     }
 
+    /* Remove any previously registered destroy listener. */
+    if (!wl_list_empty(&surface->buffer_destroy_listener.link))
+        wl_list_remove(&surface->buffer_destroy_listener.link);
+
     surface->buffer_resource = buffer_resource;
     surface->buffer_destroyed = false;
+
+    /* Listen for buffer destruction. */
+    surface->buffer_destroy_listener.notify = buffer_destroy_notify;
+    wl_resource_add_destroy_listener(buffer_resource, &surface->buffer_destroy_listener);
 }
 
 static void surface_damage(struct wl_client* client, struct wl_resource* resource,
@@ -45,6 +74,7 @@ static void surface_commit(struct wl_client* client, struct wl_resource* resourc
     (void)client;
     auto* surface = static_cast<MansionSurface*>(wl_resource_get_user_data(resource));
 
+    /* Apply pending position. */
     if (surface->has_pending_position) {
         surface->current_x = surface->pending_x;
         surface->current_y = surface->pending_y;
@@ -52,14 +82,39 @@ static void surface_commit(struct wl_client* client, struct wl_resource* resourc
         surface->has_pending_position = false;
     }
 
+    /* Read buffer size on commit. */
+    if (surface->buffer_resource) {
+        auto* shm_buf = wl_shm_buffer_get(surface->buffer_resource);
+        if (shm_buf) {
+            surface->width = wl_shm_buffer_get_width(shm_buf);
+            surface->height = wl_shm_buffer_get_height(shm_buf);
+        }
+    }
+
+    /* For a simple headless compositor: release the buffer immediately
+     * after commit (it has been "presented" during this render tick). */
+    if (surface->buffer_resource) {
+        wl_buffer_send_release(surface->buffer_resource);
+        surface->buffer_resource = nullptr;
+    }
+
     surface->buffer_destroyed = false;
 
+    /* Notify xdg-shell of commit (triggers configure). */
     if (surface->xdg_surface) xdg_shell_on_surface_commit(surface->xdg_surface);
 }
 
 static void surface_frame(struct wl_client* client, struct wl_resource* resource,
-                          uint32_t callback) {
-    (void)client; (void)resource; (void)callback;
+                          uint32_t callback_id) {
+    (void)client;
+    auto* surface = static_cast<MansionSurface*>(wl_resource_get_user_data(resource));
+
+    auto* cb = wl_resource_create(client, &wl_callback_interface, 1, callback_id);
+    if (!cb) {
+        wl_client_post_no_memory(client);
+        return;
+    }
+    wl_list_insert(&surface->frame_callback_list, wl_resource_get_link(cb));
 }
 
 static void surface_set_opaque_region(struct wl_client* client, struct wl_resource* resource,
@@ -68,17 +123,17 @@ static void surface_set_opaque_region(struct wl_client* client, struct wl_resour
 }
 
 static void surface_set_input_region(struct wl_client* client, struct wl_resource* resource,
-                                     struct wl_resource* region) {
+                                      struct wl_resource* region) {
     (void)client; (void)resource; (void)region;
 }
 
 static void surface_set_buffer_transform(struct wl_client* client, struct wl_resource* resource,
-                                         int32_t transform) {
+                                          int32_t transform) {
     (void)client; (void)resource; (void)transform;
 }
 
 static void surface_set_buffer_scale(struct wl_client* client, struct wl_resource* resource,
-                                     int32_t scale) {
+                                      int32_t scale) {
     (void)client; (void)resource; (void)scale;
 }
 
@@ -102,6 +157,31 @@ static const struct wl_surface_interface surface_impl = {
     nullptr, /* get_release (v7) */
 };
 
+/* ---------- wl_region ---------- */
+
+static void region_destroy(struct wl_client* client, struct wl_resource* resource) {
+    (void)client;
+    wl_resource_destroy(resource);
+}
+
+static void region_add(struct wl_client* client, struct wl_resource* resource,
+                       int32_t x, int32_t y, int32_t width, int32_t height) {
+    (void)client; (void)resource; (void)x; (void)y; (void)width; (void)height;
+}
+
+static void region_subtract(struct wl_client* client, struct wl_resource* resource,
+                            int32_t x, int32_t y, int32_t width, int32_t height) {
+    (void)client; (void)resource; (void)x; (void)y; (void)width; (void)height;
+}
+
+static const struct wl_region_interface region_impl = {
+    region_destroy,
+    region_add,
+    region_subtract,
+};
+
+/* ---------- compositor ---------- */
+
 static void compositor_create_surface(struct wl_client* client, struct wl_resource* compositor_resource,
                                        uint32_t id) {
     auto* compositor = static_cast<MansionCompositor*>(wl_resource_get_user_data(compositor_resource));
@@ -121,18 +201,26 @@ static void compositor_create_surface(struct wl_client* client, struct wl_resour
 
     surface->xdg_surface = nullptr;
     surface->buffer_resource = nullptr;
+    wl_list_init(&surface->buffer_destroy_listener.link);
     surface->buffer_destroyed = false;
     surface->has_pending_position = false;
     surface->has_current_position = false;
     surface->width = 0;
     surface->height = 0;
+    wl_list_init(&surface->frame_callback_list);
 }
 
 static void compositor_create_region(struct wl_client* client, struct wl_resource* compositor_resource,
-                                      uint32_t id) {
-    (void)client; (void)compositor_resource; (void)id;
-    wl_resource_post_error(compositor_resource, WL_DISPLAY_ERROR_INVALID_OBJECT,
-                           "region not implemented");
+                                       uint32_t id) {
+    auto* compositor = static_cast<MansionCompositor*>(wl_resource_get_user_data(compositor_resource));
+    (void)compositor;
+
+    auto* region = wl_resource_create(client, &wl_region_interface, 1, id);
+    if (!region) {
+        wl_client_post_no_memory(client);
+        return;
+    }
+    wl_resource_set_implementation(region, &region_impl, nullptr, nullptr);
 }
 
 static void compositor_release(struct wl_client* client, struct wl_resource* resource) {

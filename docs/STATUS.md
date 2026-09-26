@@ -7,19 +7,12 @@ running the check that proves it.
 
 ## Next task
 
-**P1-T04 wl_shm buffers, commit, release, frame callbacks** in
-[TASKS.md](TASKS.md). Prerequisites (P1-T01 to P1-T03) are ticked and pass with
-`meson test -C build`.
+**P1-T05 Offscreen rendering and screenshots** in [TASKS.md](TASKS.md).
 
-Continuation point: `src/compositor.cpp` already stores `buffer_resource` on
-attach but ignores its contents. Add pending/current buffer state to
-`MansionSurface` (`compositor-private.h`), read size/format with
-`wl_shm_buffer_get` on commit, release the previous buffer, add a
-`wl_resource_add_destroy_listener` for the buffer, collect `wl_surface.frame`
-callbacks per surface and fire them from the render tick in `main.cpp`. Make
-`create_region` return a no-op `wl_region` instead of posting an error. Then
-extend `tests/mansion-test-client.c` with `--buffer WxH --color RRGGBB` and add
-`tests/client_frame.sh`.
+Continuation point: `src/display.cpp` already has a render function with EGL/GLES2
+and `MansionRenderer`. The buffer dimensions are now read from `wl_shm_buffer_get`
+on commit (P1-T04). Upload ARGB8888 buffers with `glTexImage2D` and draw surfaces
+at their position. Add `--screenshot PATH` and `tests/ppm_pixel.py`.
 
 ## Verified by automated test
 
@@ -39,6 +32,9 @@ Run `meson test -C build --print-errorlogs`.
   `-Db_sanitize=address,undefined` build (`build-asan`, 2026-09-26), and an
   ad-hoc run that SIGKILLed a mapped client and then connected a second client
   reported no sanitizer errors.
+- `client-frame` (P1-T04): the client creates a 200×100 ARGB8888 shm buffer,
+  attaches and commits it, and receives `frame <time_ms>` and `release` within
+  2 seconds. `meson test -C build client-frame` passes.
 - Auto-continue plugin: `node --test .opencode/tests/*.test.js` (49 tests),
   plus one live run against OpenCode 2.0.16 with the local model on
   2026-09-26 (see [OPENCODE-AUTOCONTINUE.md](OPENCODE-AUTOCONTINUE.md)). The
@@ -61,10 +57,10 @@ compositor. `weston-terminal` is not installed in the development container
   checked, `set_window_geometry`/title/app_id/min/max ignored, `xdg_positioner`
   accepted and ignored, `get_popup` posts a protocol error. No `ping` is sent.
   Resize configures arrive in P1-T09, popups in Project 5.
-- **Buffers are not drawn.** Committed `wl_shm` buffers are tracked as a
-  pointer only; the renderer draws untextured placeholder quads with pixel
-  coordinates fed to a clip-space shader, so nothing sensible appears (P1-T04,
-  P1-T05). No frame callbacks are sent, so clients that wait for `frame` stall.
+- **Buffers are not drawn.** The compositor reads buffer size from `wl_shm_buffer_get`
+  on commit and fires `wl_buffer.release` + `wl_callback.done` (P1-T04), but the
+  renderer uploads no pixel data; surfaces appear as blank quads (P1-T05).
+  No `--screenshot` option exists yet.
 - **Input comes from `/dev/input`** in windowed mode and is forwarded to the
   single most recent keyboard/pointer resource without focus, enter/leave,
   modifiers, or serials. It reads the host machine's real keyboards while the
