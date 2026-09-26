@@ -1,235 +1,196 @@
-#include <wayland-server.h>
-#include <wayland-server-core.h>
-#include <wayland-server-protocol.h>
+#include <string>
 
+#include <wayland-server-protocol.h>
+#include <wayland-util.h>
+
+#include "shell.h"
 #include "compositor.h"
 
-struct MansionShell {
-    struct MansionCompositor* compositor;
-    struct wl_global* global;
-};
-
-struct ShellSurface {
+struct MansionShellSurface {
     struct MansionShell* shell;
     struct wl_resource* resource;
     struct wl_resource* surface;
-    enum { 
-        NONE, 
-        FULLSCREEN, 
-        MAXIMIZED, 
-        MINIMIZED 
-    } type;
-    struct wl_resource* fullscreen;
-    struct wl_resource* maximize;
-    struct wl_resource* minimize;
+    struct wl_list link;
+
+    struct {
+        bool is_fullscreen;
+        uint32_t method;
+        uint32_t framerate;
+        int32_t width, height;
+    } pending;
+
+    struct {
+        bool is_fullscreen;
+        uint32_t method;
+        uint32_t framerate;
+        int32_t width, height;
+    } current;
+
+    std::string title;
+    std::string class_name;
+    bool is_modal;
+    bool is_top_hint;
+    bool is_maximized;
+    bool is_minimized;
 };
 
-static void ping_timeout(struct wl_resource* resource, void* data) {
-    (void)data;
-    wl_resource_post_error(resource, WL_SHELL_ERROR, "ping timeout");
+struct MansionShell {
+    struct wl_global* global;
+    struct wl_list shell_surface_list;
+};
+
+static void shell_surface_pong(struct wl_client* client, struct wl_resource* resource,
+                                uint32_t serial) {
+    (void)client; (void)resource; (void)serial;
 }
 
-static void ping_pong(struct wl_resource* resource, uint32_t serial) {
-    (void)serial;
-    struct wl_event_source* timer = wl_event_loop_add_timer(wl_resource_get_display(resource)->event_loop, ping_timeout, resource); 
-    wl_event_source_timer_update(timer, 3000);
+static void shell_surface_move(struct wl_client* client, struct wl_resource* resource,
+                                struct wl_resource* seat, uint32_t serial) {
+    (void)client; (void)resource; (void)seat; (void)serial;
 }
 
-static void move(struct wl_client* client, struct wl_resource* shell_surface_resource, struct wl_resource* seat_resource, uint32_t serial) {
+static void shell_surface_resize(struct wl_client* client, struct wl_resource* resource,
+                                  struct wl_resource* seat, uint32_t serial, uint32_t edges) {
+    (void)client; (void)resource; (void)seat; (void)serial; (void)edges;
+}
+
+static void shell_surface_set_transient(struct wl_client* client, struct wl_resource* resource,
+                                         struct wl_resource* parent,
+                                         int32_t x, int32_t y, uint32_t flags) {
+    (void)client; (void)resource; (void)parent; (void)x; (void)y; (void)flags;
+}
+
+static void shell_surface_set_fullscreen(struct wl_client* client, struct wl_resource* resource,
+                                           uint32_t method, uint32_t framerate,
+                                           struct wl_resource* output) {
+    (void)client; (void)output;
+    auto* shell_surface = static_cast<MansionShellSurface*>(wl_resource_get_user_data(resource));
+    shell_surface->pending.is_fullscreen = true;
+    shell_surface->pending.method = method;
+    shell_surface->pending.framerate = framerate;
+}
+
+static void shell_surface_set_popup(struct wl_client* client, struct wl_resource* resource,
+                                      struct wl_resource* seat, uint32_t serial, struct wl_resource* parent,
+                                      int32_t x, int32_t y, uint32_t flags) {
+    (void)client; (void)resource; (void)seat; (void)serial; (void)parent;
+    (void)x; (void)y; (void)flags;
+}
+
+static void shell_surface_set_maximized(struct wl_client* client, struct wl_resource* resource,
+                                         struct wl_resource* output) {
+    (void)client; (void)resource; (void)output;
+    auto* shell_surface = static_cast<MansionShellSurface*>(wl_resource_get_user_data(resource));
+    shell_surface->is_maximized = true;
+}
+
+static void shell_surface_set_toplevel(struct wl_client* client, struct wl_resource* resource) {
+    (void)client; (void)resource;
+    auto* shell_surface = static_cast<MansionShellSurface*>(wl_resource_get_user_data(resource));
+    shell_surface->pending.is_fullscreen = false;
+    shell_surface->is_maximized = false;
+    shell_surface->is_minimized = false;
+}
+
+static void shell_surface_set_title(struct wl_client* client, struct wl_resource* resource,
+                                     const char* title) {
     (void)client;
-    (void)seat_resource;
-    (void)serial;
-    // TODO: Implement interactive move
+    auto* shell_surface = static_cast<MansionShellSurface*>(wl_resource_get_user_data(resource));
+    shell_surface->title = title ? title : "";
 }
 
-static void resize(struct wl_client* client, struct wl_resource* shell_surface_resource, struct wl_resource* seat_resource, uint32_t serial, uint32_t edges) {
+static void shell_surface_set_class(struct wl_client* client, struct wl_resource* resource,
+                                     const char* class_) {
     (void)client;
-    (void)seat_resource;
-    (void)serial;
-    (void)edges;
-    // TODO: Implement interactive resize
+    auto* shell_surface = static_cast<MansionShellSurface*>(wl_resource_get_user_data(resource));
+    shell_surface->class_name = class_ ? class_ : "";
 }
 
-static void fullscreen(struct wl_client* client, struct wl_resource* shell_surface_resource, struct wl_resource* output_resource) {\n    (void)client;
-    struct ShellSurface* shell_surface = static_cast<struct ShellSurface*>(wl_resource_get_user_data(shell_surface_resource));
-    if (shell_surface->type != NONE) {
-        wl_resource_post_error(shell_surface_resource, WL_SHELL_ERROR_ALREADY_FULLSCREEN, "WL_SHELL_ERROR_ALREADY_FULLSCREEN");
-        return;
-    }
-    shell_surface->type = FULLSCREEN;
-    shell_surface->fullscreen = output_resource;
-    wl_resource_post_error(shell_surface->surface, WL_SURFACE_ERROR, "fullscreen not implemented");
+static void shell_surface_destroy(struct wl_resource* resource) {
+    auto* shell_surface = static_cast<MansionShellSurface*>(wl_resource_get_user_data(resource));
+    wl_list_remove(&shell_surface->link);
+    delete shell_surface;
 }
 
-static void populate_maximized(struct ShellSurface* shell_surface) {
-    if (shell_surface->type == MAXIMIZED) {
-        wl_resource_post_error(shell_surface->resource, WL_SHELL_ERROR_ALREADY_MAXIMIZED, "WL_SHELL_ERROR_ALREADY_MAXIMIZED");
-        return;
-    }
-    shell_surface->type = MAXIMIZED;
-    wl_resource_post_error(shell_surface->surface, WL_SURFACE_ERROR, "maximize not implemented");
-}
+static const struct wl_shell_surface_interface shell_surface_impl = {
+    shell_surface_pong,
+    shell_surface_move,
+    shell_surface_resize,
+    shell_surface_set_toplevel,
+    shell_surface_set_transient,
+    shell_surface_set_fullscreen,
+    shell_surface_set_popup,
+    shell_surface_set_maximized,
+    shell_surface_set_title,
+    shell_surface_set_class,
+};
 
-static void maximize(struct wl_client* client, struct wl_resource* shell_surface_resource, struct wl_resource* output_resource) {\n    (void)client;
-    (void)output_resource;
-    populate_maximized(wl_resource_get_user_data(shell_surface_resource));
-}
+static void shell_create_shell_surface(struct wl_client* client, struct wl_resource* shell_resource,
+                                        uint32_t id, struct wl_resource* surface) {
+    auto* shell = static_cast<MansionShell*>(wl_resource_get_user_data(shell_resource));
 
-static void minimize(struct wl_client* client, struct wl_resource* shell_surface_resource) {\n    (void)client;
-    struct ShellSurface* shell_surface = static_cast<struct ShellSurface*>(wl_resource_get_user_data(shell_surface_resource));
-    if (shell_surface->type == MINIMIZED) {
-        wl_resource_post_error(shell_surface_resource, WL_SHELL_ERROR_ALREADY_MINIMIZED, "WL_SHELL_ERROR_ALREADY_MINIMIZED");
-        return;
-    }
-    shell_surface->type = MINIMIZED;
-    wl_resource_post_error(shell_surface->surface, WL_SURFACE_ERROR, "minimize not implemented");
-}
-
-static void restore(struct wl_client* client, struct wl_resource* shell_surface_resource) {\n    (void)client;
-    struct ShellSurface* shell_surface = static_cast<struct ShellSurface*>(wl_resource_get_user_data(shell_surface_resource));
-    if (shell_surface->type == NONE) {
-        wl_resource_post_error(shell_surface_resource, WL_SHELL_ERROR_INVALID_METHOD, "WL_SHELL_ERROR_INVALID_METHOD");
-        return;
-    }
-    shell_surface->type = NONE;
-    wl_resource_post_error(shell_surface->surface, WL_SURFACE_ERROR, "restore not implemented");
-}
-
-static void set_top_hint(struct wl_client* client, struct wl_resource* shell_surface_resource, uint32_t top_hint) {\n    (void)client;
-    (void)top_hint;
-    // TODO: Implement top hint
-}
-
-static void set_window_type(struct wl_client* client, struct wl_resource* shell_surface_resource, uint32_t window_type) {\n    (void)client;
-    (void)window_type;
-    // TODO: Implement window type
-}
-
-static void set_title(struct wl_client* client, struct wl_resource* shell_surface_resource, const char* title) {\n    (void)client;
-    (void)title;
-    // TODO: Set title
-}
-
-static void set_class(struct wl_client* client, struct wl_resource* shell_surface_resource, const char* class_) {\n    (void)client;
-    (void)class_;
-    // TODO: Set class
-}
-
-static void set_modality(struct wl_client* client, struct wl_resource* shell_surface_resource, uint32_t modality) {\n    (void)client;
-    (void)modality;
-    // TODO: Implement modality
-}
-
-static void destroy_shell_surface(struct wl_resource* resource) {\n    struct ShellSurface* shell_surface = static_cast<struct ShellSurface*>(wl_resource_get_user_data(resource));
-    if (shell_surface->fullscreen) {
-        wl_event_source_timer_update(shell_surface->fullscreen, 0);
-        wl_event_source_destroy(shell_surface->fullscreen);
-    } else if (shell_surface->maximize) {
-        wl_resource_destroy(shell_surface->maximize);
-    } else if (shell_surface->minimize) {
-        wl_resource_destroy(shell_surface->minimize);
-    }
-    free(shell_surface);
-}
-
-static void shell_surface_destroy(struct wl_resource* resource) {\n    wl_resource_destroy(resource);
-}
-
-static void create_shell_surface(struct wl_client* client, struct wl_resource* shell_resource, uint32_t id, struct wl_resource* surface_resource) {\n    struct MansionShell* shell = static_cast<struct MansionShell*>(wl_resource_get_user_data(shell_resource));
-    if (!wl_resource_get_version(surface_resource) >= 3) {
-        wl_resource_post_error(shell_resource, WL_SHELL_ERROR_INVALID_SURFACE, "WL_SHELL_ERROR_INVALID_SURFACE");
-        return;
-    }
-
-    struct ShellSurface* shell_surface = new ShellSurface;
-    if (!shell_surface) {
-        wl_resource_post_no_memory(shell_resource);
-        return;
-    }
+    auto* shell_surface = new MansionShellSurface;
     shell_surface->shell = shell;
-    shell_surface->resource = wl_resource_create(client, &wl_shell_surface_interface, wl_resource_get_version(shell_resource), id);
+    shell_surface->resource = wl_resource_create(client, &wl_shell_surface_interface, 1, id);
     if (!shell_surface->resource) {
-        free(shell_surface);
-        wl_resource_post_no_memory(shell_resource);
+        delete shell_surface;
+        wl_client_post_no_memory(client);
         return;
     }
-    shell_surface->surface = surface_resource;
-    shell_surface->type = NONE;
-    shell_surface->fullscreen = nullptr;
-    shell_surface->maximize = nullptr;
-    shell_surface->minimize = nullptr;
 
-    wl_resource_set_implementation(shell_surface->resource, shell_surface, &shell_surface_destroy);
-    wl_resource_set_destroy_listener(shell_surface->resource, &destroy_shell_surface);
-    wl_resource_set_dispatcher(shell_surface->resource, shell_shell_surface_interface, &move, &resize);
+    shell_surface->surface = surface;
+    wl_resource_set_implementation(shell_surface->resource, &shell_surface_impl,
+                                    shell_surface, shell_surface_destroy);
 
-    if (wl_resource_get_version(shell_resource) >= 4) {
-        shell_surface->fullscreen = wl_resource_create(shell_surface->resource, &wl_shell_surface_interface, 4, 0); 
-        if (!shell_surface->fullscreen) {
-            free(shell_surface);
-            wl_resource_post_no_memory(shell_resource);
-            return; 
-        }
-        wl_resource_set_dispatcher(shell_surface->fullscreen, &wl_shell_surface_interface, &move, &resize);
-    }
-    if (wl_resource_get_version(shell_resource) >= 5) {
-        shell_surface->maximize = wl_resource_create(shell_surface->resource, &wl_shell_surface_interface, 5, 0); 
-        if (!shell_surface->maximize) {
-            if (shell_surface->fullscreen) {
-                wl_resource_destroy(shell_surface->fullscreen);
-            }
-            free(shell_surface);
-            wl_resource_post_no_memory(shell_resource);
-            return; 
-        }
-        wl_resource_set_dispatcher(shell_surface->maximize, &wl_shell_surface_interface, &fullscreen, &fullscreen);
-    }
-    shell_surface->minimize = wl_resource_create(shell_surface->resource, &wl_shell_surface_interface, 5, 0); 
-    if (!shell_surface->minimize) {
-        if (shell_surface->fullscreen) {
-                wl_resource_destroy(shell_surface->fullscreen);
-        }
-        if (shell_surface->maximize) {
-                wl_resource_destroy(shell_surface->maximize);
-        }
-        free(shell_surface);
-        wl_resource_post_no_memory(shell_resource);
-        return; 
-    }
-    wl_resource_set_dispatcher(shell_surface->minimize, &wl_shell_surface_interface, &minimize, &restore);
+    wl_list_init(&shell_surface->link);
+    wl_list_insert(&shell->shell_surface_list, &shell_surface->link);
+
+    shell_surface->pending.is_fullscreen = false;
+    shell_surface->current.is_fullscreen = false;
+    shell_surface->is_modal = false;
+    shell_surface->is_top_hint = false;
+    shell_surface->is_maximized = false;
+    shell_surface->is_minimized = false;
 }
 
-struct MansionShell* create_shell(struct MansionCompositor* compositor, struct wl_display* display) {\n    struct MansionShell* shell = new MansionShell;
-    if (!shell) {
-        return nullptr;
+static const struct wl_shell_interface shell_impl = {
+    shell_create_shell_surface,
+};
+
+static void shell_bind(struct wl_client* client, void* data, uint32_t version, uint32_t id) {
+    auto* shell = static_cast<MansionShell*>(data);
+    (void)version;
+
+    auto* resource = wl_resource_create(client, &wl_shell_interface, 1, id);
+    if (!resource) {
+        wl_client_post_no_memory(client);
+        return;
     }
-    shell->compositor = compositor;
-    shell->global = wl_global_create(display, &wl_shell_interface, 4, shell, &bind_shell);
+    wl_resource_set_implementation(resource, &shell_impl, shell, nullptr);
+}
+
+struct MansionShell* create_shell(struct MansionCompositor* compositor, struct wl_display* display) {
+    (void)compositor;
+    auto* shell = new MansionShell;
+    wl_list_init(&shell->shell_surface_list);
+
+    shell->global = wl_global_create(display, &wl_shell_interface, 1, shell, shell_bind);
     if (!shell->global) {
-        free(shell);
+        delete shell;
         return nullptr;
     }
+
     return shell;
 }
 
-void destroy_shell(struct MansionShell* shell) {\n    wl_global_destroy(shell->global);
-    free(shell);
-}
+void destroy_shell(struct MansionShell* shell) {
+    if (!shell) return;
+    wl_global_destroy(shell->global);
 
-static void bind_shell(struct wl_resource* resource, void* data, struct wl_client* client, uint32_t version) {\n    (void)data;
-    (void)client;
-    if (version > 4) {
-        wl_resource_post_error(resource, WL_SHELL_ERROR_INVALID_GLOBAL, "Version %u exceeds %d", version, 4);
-        return;
+    struct MansionShellSurface *surface, *next;
+    wl_list_for_each_safe(surface, next, &shell->shell_surface_list, link) {
+        wl_resource_destroy(surface->resource);
     }
-    wl_resource_set_implementation(resource, &wl_shell_interface, data);
-}
 
-static void destroy_shell_global(struct wl_resource* resource) {\n    struct MansionShell* shell = static_cast<struct MansionShell*>(wl_resource_get_user_data(resource));
-    destroy_shell(shell);
+    delete shell;
 }
-
-static const struct wl_global_interface shell_interface = {
-    bind_shell,
-    nullptr
-};

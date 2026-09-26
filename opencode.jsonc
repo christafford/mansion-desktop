@@ -1,0 +1,22 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  "permissions": [
+    // Normal autonomous development
+    { "action": "read",     "resource": "*", "effect": "allow" },
+    { "action": "edit",     "resource": "*", "effect": "allow" },
+    { "action": "shell",    "resource": "*", "effect": "allow" },
+    { "action": "subagent", "resource": "*", "effect": "allow" },
+
+    // Never stop overnight to ask me something.
+    { "action": "question", "resource": "*", "effect": "deny" },
+
+    // Don't wander outside the repo.
+    { "action": "external_directory", "resource": "*", "effect": "deny" },
+
+    // Things I don't want an unattended agent doing.
+    { "action": "shell", "resource": "sudo *",     "effect": "deny" },
+    { "action": "shell", "resource": "git push *", "effect": "deny" },
+    { "action": "shell", "resource": "rm -rf *",   "effect": "deny" }
+  ]
+}

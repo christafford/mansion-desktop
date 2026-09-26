@@ -1,16 +1,18 @@
 project('mansion-desktop', 'cpp',
     version: '0.1',
-    default_options: ['warning_level=2', 'debug=true', 'cpp_std=c++20'])
+    default_options: ['warning_level=2', 'debug=true', 'cpp_std=c++17'])
 
 # Dependencies
 wayland_server = dependency('wayland-server')
 wayland_protocols = dependency('wayland-protocols')
-egl = dependency('wayland-egl')
-dri = dependency('dri')
+wayland_egl = dependency('wayland-egl')
+egl = dependency('egl')
 xkbcommon = dependency('xkbcommon')
+x11 = dependency('x11')
+gl = dependency('gl')
 
 # Compiler flags
-cpp_args = ['-Wall', '-Wextra', '-Werror']
+cpp_args = ['-Wall', '-Wextra']
 
 # Source files
 sources = files(
@@ -26,5 +28,7 @@ sources = files(
 executable('mansion-desktop',
     sources,
     cpp_args: cpp_args,
-    dependencies: [wayland_server, egl, dri, xkbcommon],
-    native: true)
+    dependencies: [wayland_server, wayland_egl, egl, xkbcommon, x11, gl],
+    native: true,
+    link_args: ['-lX11', '-lwayland-client'],
+)

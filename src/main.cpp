@@ -1,33 +1,24 @@
+#include <csignal>
+#include <cstdlib>
 #include <iostream>
 #include <string>
 #include <vector>
-#include <cstdlib>
-#include <sys/param.h>
 
 #include <wayland-server.h>
 
 #include "compositor.h"
+#include "display.h"
+#include "input.h"
+#include "launch.h"
 #include "shell.h"
 
-struct MansionDesktop {
-    struct wl_display* display;
-    struct wl_event_loop* event_loop;
-    uint32_t serial;
-
-    struct MansionCompositor* compositor;
-    struct MansionShell* shell;
-
-    bool should_run = true;
-};
-
 static void handle_help(int argc, char** argv) {
-    (void)argc;
-    (void)argv;
+    (void)argc; (void)argv;
     std::cout << "Usage: mansion-desktop [--launch=COMMAND]\n"
               << "Launch a Wayland client after the compositor starts.\n"
               << "Example: mansion-desktop --launch=weston-terminal\n"
               << std::endl;
-    exit(0);
+    std::exit(0);
 }
 
 static std::string get_socket_name() {
@@ -38,98 +29,130 @@ static std::string get_socket_name() {
     return "mansion-desktop";
 }
 
+static volatile sig_atomic_t running = 1;
 
+static void signal_handler(int signum) {
+    (void)signum;
+    running = 0;
+}
 
 int main(int argc, char** argv) {
-    std::vector<char*> args;
-    args.push_back(argv[0]);
-    std::string launch_app;
+    std::string launch_cmd;
 
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
         if (arg == "--help" || arg == "-h") {
             handle_help(argc, argv);
         } else if (arg.find("--launch=") == 0) {
-            launch_app = arg.substr(9);
-            if (launch_app.empty()) {
-                std::cerr << "Error: --launch= must be followed by a command\n"
-                          << std::endl;
+            launch_cmd = arg.substr(9);
+            if (launch_cmd.empty()) {
+                std::cerr << "Error: --launch= must be followed by a command\n" << std::endl;
                 return 1;
             }
         } else {
-            std::cerr << "Error: unknown argument " << arg << "\n"
-                      << std::endl;
+            std::cerr << "Error: unknown argument " << arg << "\n" << std::endl;
             return 1;
         }
     }
 
-    struct MansionDesktop mansion = {0, nullptr, 0};
-    mansion.serial = 1;
-
-    mansion.event_loop = wl_event_loop_create();
-    if (!mansion.event_loop) {
-        std::cerr << "Failed to create event loop\n" << std::endl;
+    struct wl_display* wl_display = wl_display_create();
+    if (!wl_display) {
+        std::cerr << "Failed to create Wayland display" << std::endl;
         return 1;
     }
 
-    mansion.display = wl_display_create();
-    if (!mansion.display) {
-        std::cerr << "Failed to create Wayland display\n" << std::endl;
-        wl_event_loop_destroy(mansion.event_loop);
+    auto* event_loop = wl_display_get_event_loop(wl_display);
+
+    // Create compositor (needs wl_display)
+    auto* compositor = create_compositor(wl_display);
+    if (!compositor) {
+        std::cerr << "Failed to create compositor" << std::endl;
+        wl_display_destroy(wl_display);
         return 1;
     }
 
-    // TODO: Set up compositor, shell, etc.
-    // TODO: Set up EGL and renderer
-    // TODO: Set up input devices
+    // Create EGL display (needs compositor and wl_display)
+    auto* egl_display = create_display(compositor, wl_display);
+    if (!egl_display) {
+        std::cerr << "Failed to create EGL display" << std::endl;
+        destroy_compositor(compositor);
+        wl_display_destroy(wl_display);
+        return 1;
+    }
 
+    // Create shell (needs compositor and wl_display)
+    auto* shell = create_shell(compositor, wl_display);
+    if (!shell) {
+        std::cerr << "Failed to create shell" << std::endl;
+        destroy_display(egl_display);
+        destroy_compositor(compositor);
+        wl_display_destroy(wl_display);
+        return 1;
+    }
+
+    // Create seat/input (needs wl_display)
+    auto* seat = create_seat(wl_display);
+    if (!seat) {
+        std::cerr << "Failed to create seat" << std::endl;
+        destroy_shell(shell);
+        destroy_display(egl_display);
+        destroy_compositor(compositor);
+        wl_display_destroy(wl_display);
+        return 1;
+    }
+
+    // Add socket
     const char* socket_name = get_socket_name().c_str();
-    if (wl_display_add_socket(mansion.display, socket_name) < 0) {
-        std::cerr << "Failed to add socket to display\n" << std::endl;
-        wl_event_loop_destroy(mansion.event_loop);
-        wl_display_destroy(mansion.display);
+    if (wl_display_add_socket(wl_display, socket_name) < 0) {
+        std::cerr << "Failed to add socket to display" << std::endl;
+        destroy_seat(seat);
+        destroy_shell(shell);
+        destroy_display(egl_display);
+        destroy_compositor(compositor);
+        wl_display_destroy(wl_display);
         return 1;
     }
 
-    wl_display_init_shm(mansion.display);
+    // Initialize shared memory
+    wl_display_init_shm(wl_display);
 
-    mansion.compositor = create_compositor(mansion.display);
-    if (!mansion.compositor) {
-        std::cerr << "Failed to initialize compositor\n" << std::endl;
-        wl_display_destroy(mansion.display);
-        wl_event_loop_destroy(mansion.event_loop);
-        return 1;
+    // Launch application if requested
+    if (!launch_cmd.empty()) {
+        auto* app = launch_app(wl_display, launch_cmd.c_str(), launch_cmd.c_str());
+        if (app) {
+            std::cerr << "Launched: " << launch_cmd << " (PID: " << app_pid(app) << ")" << std::endl;
+        } else {
+            std::cerr << "Failed to launch app: " << launch_cmd << std::endl;
+        }
     }
 
-    mansion.shell = create_shell(mansion.compositor, mansion.display);
-    if (!mansion.shell) {
-        std::cerr << "Failed to initialize shell\n" << std::endl;
-        destroy_compositor(mansion.compositor);
-        wl_display_destroy(mansion.display);
-        wl_event_loop_destroy(mansion.event_loop);
-        return 1;
+    // Set up signal handling for clean exit
+    struct sigaction sa;
+    sa.sa_handler = signal_handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    sigaction(SIGINT, &sa, nullptr);
+    sigaction(SIGTERM, &sa, nullptr);
+
+    std::cerr << "Mansion Desktop running on socket: " << socket_name << std::endl;
+
+    // Run event loop
+    while (running) {
+        // Dispatch Wayland events with a short timeout to allow periodic rendering
+        wl_event_loop_dispatch(event_loop, 16);  // ~60fps
+
+        // Render frame
+        render(egl_display);
     }
 
-    const char* socket_name = get_socket_name().c_str();
-    if (wl_display_add_socket(mansion.display, socket_name) < 0) {
-        std::cerr << "Failed to add socket to display\n" << std::endl;
-        destroy_shell(mansion.shell);
-        destroy_compositor(mansion.compositor);
-        wl_display_destroy(mansion.display);
-        wl_event_loop_destroy(mansion.event_loop);
-        return 1;
-    }
+    std::cerr << "Mansion Desktop exiting" << std::endl;
 
-    wl_display_run(mansion.display);
-
-    destroy_shell(mansion.shell);
-    destroy_compositor(mansion.compositor);
-    wl_display_destroy(mansion.display);
-    wl_event_loop_destroy(mansion.event_loop);
-
-    if (!launch_app.empty()) {
-        std::cout << "Note: Launching clients is not yet implemented\n" << std::endl;
-    }
+    // Cleanup - destroy in reverse order
+    destroy_seat(seat);
+    destroy_shell(shell);
+    destroy_display(egl_display);
+    destroy_compositor(compositor);
+    wl_display_destroy(wl_display);
 
     return 0;
 }
