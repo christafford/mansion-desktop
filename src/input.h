@@ -9,6 +9,10 @@ struct MansionCompositor;
 struct MansionSeat* create_seat(struct wl_display* display);
 void destroy_seat(struct MansionSeat* seat);
 
+/* External globals for main.cpp to set. */
+extern struct MansionSeat* g_seat;
+extern struct MansionCompositor* g_compositor;
+
 /* Set the seat's keyboard focus. Sends leave to the old surface and enter
    to the new one. `surface` can be nullptr to clear focus. */
 void seat_set_keyboard_focus(struct MansionSeat* seat,

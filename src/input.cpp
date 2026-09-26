@@ -13,6 +13,7 @@
 #include <wayland-server-protocol.h>
 #include <xkbcommon/xkbcommon.h>
 
+#include "compositor.h"
 #include "compositor-private.h"
 #include "display.h"
 #include "input.h"
@@ -34,7 +35,9 @@ static wl_fixed_t pointer_x = wl_fixed_from_int(300);
 static wl_fixed_t pointer_y = wl_fixed_from_int(200);
 
 /* Global pointer to seat for input forwarding */
-static struct MansionSeat* g_seat = nullptr;
+struct MansionSeat* g_seat = nullptr;
+/* Global pointer to compositor for pointer hit testing. */
+struct MansionCompositor* g_compositor = nullptr;
 
 /* Per-client keyboard state */
 struct SeatKeyboardClient {
@@ -58,6 +61,11 @@ struct MansionSeat {
 
     /* Keyboard focus (P1-T06-C). */
     struct wl_resource* focused_surface_resource;
+
+    /* Pointer focus and grab (P1-T06-D). */
+    struct wl_resource* pointer_surface_resource; /* surface pointer is over */
+    struct wl_resource* grab_surface_resource;    /* surface with pointer grab */
+    uint32_t serial;                              /* shared serial for all events */
 };
 
 /* Evdev device detection helpers */
@@ -255,12 +263,83 @@ static void send_keymap_modifiers(uint32_t serial) {
     }
 }
 
+/* ---------- Pointer hit test (P1-T06-D) ---------- */
+
+/* Hit-test surfaces in z-order (top-to-bottom = reverse of surface_list)
+   and return the topmost surface whose rectangle contains (x, y). */
+static struct wl_resource* pointer_hit_test(wl_fixed_t x, wl_fixed_t y) {
+    if (!g_compositor) return nullptr;
+
+    /* Collect surfaces, then iterate in reverse (z-order: last committed = top). */
+    MansionSurface* surfaces[64];
+    int count = 0;
+
+    MansionSurface *s, *s_next;
+    wl_list_for_each_safe(s, s_next, &g_compositor->surface_list, link) {
+        if (count < 64) {
+            surfaces[count++] = s;
+        }
+    }
+
+    for (int i = count - 1; i >= 0; i--) {
+        MansionSurface* surf = surfaces[i];
+        int sx = wl_fixed_to_int(surf->current_x);
+        int sy = wl_fixed_to_int(surf->current_y);
+        if (x >= wl_fixed_from_int(sx) && x < wl_fixed_from_int(sx + surf->width) &&
+            y >= wl_fixed_from_int(sy) && y < wl_fixed_from_int(sy + surf->height)) {
+            return surf->resource;
+        }
+    }
+    return nullptr;
+}
+
+/* Check if pointer position changed surface and send enter/leave. */
+static void pointer_check_focus(uint32_t serial) {
+    if (!g_seat) return;
+
+    struct wl_resource* new_surface =
+        g_seat->grab_surface_resource ? g_seat->grab_surface_resource
+                                      : pointer_hit_test(pointer_x, pointer_y);
+
+    if (new_surface != g_seat->pointer_surface_resource) {
+        /* Leave old surface. */
+        if (g_seat->pointer_surface_resource) {
+            SeatPointerClient *pk, *pk_next;
+            wl_list_for_each_safe(pk, pk_next, &g_seat->pointer_clients, destroy_listener.link) {
+                if (pk->resource) {
+                    wl_pointer_send_leave(pk->resource, serial,
+                                          g_seat->pointer_surface_resource);
+                }
+            }
+        }
+
+        g_seat->pointer_surface_resource = new_surface;
+
+        /* Enter new surface. */
+        if (new_surface) {
+            MansionSurface* ms =
+                compositor_surface_from_resource(new_surface);
+            if (ms) {
+                /* Compute position relative to the surface. */
+                wl_fixed_t rx = pointer_x - wl_fixed_from_int(ms->current_x);
+                wl_fixed_t ry = pointer_y - wl_fixed_from_int(ms->current_y);
+                SeatPointerClient *pk, *pk_next;
+                wl_list_for_each_safe(pk, pk_next, &g_seat->pointer_clients, destroy_listener.link) {
+                    if (pk->resource) {
+                        wl_pointer_send_enter(pk->resource, serial,
+                                              new_surface, rx, ry);
+                    }
+                }
+            }
+        }
+    }
+}
+
 void input_process(void) {
     if (!g_seat) return;
 
     uint32_t time_msec = 0;
-    static uint32_t serial = 1;  // Simple serial counter
-    serial++;
+    uint32_t serial = ++g_seat->serial;
 
     for (int i = 0; i < input_device_count; i++) {
         struct input_event ev;
@@ -278,7 +357,7 @@ void input_process(void) {
 
                 // Update xkb state so modifiers are tracked correctly.
                 // ev.code is a Linux keycode; xkb uses the same range.
-                if (g_seat && g_seat->xkbstate) {
+                if (g_seat->xkbstate) {
                     xkb_state_update_key(g_seat->xkbstate,
                                          ev.code + 8,  // evdev -> xkb offset
                                          state == WL_KEYBOARD_KEY_STATE_PRESSED ?
@@ -304,9 +383,11 @@ void input_process(void) {
                     } else if (ev.code == REL_Y) {
                         pointer_y += wl_fixed_from_int(ev.value);
                     } else if (ev.code == REL_WHEEL) {
+                        serial = ++g_seat->serial;
                         send_pointer_axis(time_msec, WL_POINTER_AXIS_VERTICAL_SCROLL,
                                           wl_fixed_from_int(ev.value * 10));
                     } else if (ev.code == REL_HWHEEL) {
+                        serial = ++g_seat->serial;
                         send_pointer_axis(time_msec, WL_POINTER_AXIS_HORIZONTAL_SCROLL,
                                           wl_fixed_from_int(ev.value * 10));
                     }
@@ -327,6 +408,17 @@ void input_process(void) {
                     uint32_t button_state = (ev.value == 1) ?
                         WL_POINTER_BUTTON_STATE_PRESSED :
                         WL_POINTER_BUTTON_STATE_RELEASED;
+
+                    if (button_state == WL_POINTER_BUTTON_STATE_PRESSED) {
+                        /* Set grab on button press. */
+                        g_seat->grab_surface_resource =
+                            g_seat->pointer_surface_resource;
+                    } else {
+                        /* Clear grab on button release. */
+                        g_seat->grab_surface_resource = nullptr;
+                    }
+
+                    serial = ++g_seat->serial;
                     send_pointer_button(serial, time_msec, button, button_state);
                 }
             }
@@ -335,6 +427,8 @@ void input_process(void) {
 
     // Send motion if we processed any events
     if (time_msec > 0) {
+        serial = ++g_seat->serial;
+        pointer_check_focus(serial);
         send_pointer_motion(time_msec);
         send_pointer_axis_done(time_msec);
     }
@@ -513,6 +607,7 @@ struct MansionSeat* create_seat(struct wl_display* display) {
 
     wl_list_init(&seat->keyboard_clients);
     wl_list_init(&seat->pointer_clients);
+    seat->serial = 1;
 
     seat->global = wl_global_create(display, &wl_seat_interface, 4, seat, seat_bind);
     if (!seat->global) {
@@ -593,6 +688,11 @@ void destroy_seat(struct MansionSeat* seat) {
         delete pk;
     }
     wl_list_init(&seat->pointer_clients);
+
+    /* Clear pointer and keyboard focus. */
+    seat->grab_surface_resource = nullptr;
+    seat->pointer_surface_resource = nullptr;
+    seat->focused_surface_resource = nullptr;
 
     wl_global_destroy(seat->global);
 

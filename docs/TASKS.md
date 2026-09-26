@@ -141,11 +141,11 @@ itself is the human acceptance step.
   **Acceptance:** `meson test -C build input-keyboard` passes (client reports
   `kbd_enter`/`kbd_leave` on focus change). (2026-09-26)
 
-- [ ] **P1-T06-D Pointer enter/leave/motion + hit test.** Pointer `enter`/`leave`
+- [x] **P1-T06-D Pointer enter/leave/motion + hit test.** Pointer `enter`/`leave`
   based on hit-testing surface rectangles against pointer position. Track
   pointer grab state. Maintain one increasing serial across all pointer/key
   events.
-  **Acceptance:** `meson test -C build input-pointer` passes.
+  **Acceptance:** `meson test -C build input-pointer` passes. (2026-09-26)
 
 - [ ] **P1-T06-E Input script.** Add `--input-script FILE` to main.cpp. Parse
   lines: `wait MS`, `key CODE press|release`, `motion X Y`, `button CODE

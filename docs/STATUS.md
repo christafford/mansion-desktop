@@ -7,10 +7,11 @@ running the check that proves it.
 
 ## Next task
 
-**P1-T06-D Pointer enter/leave/motion + hit test** — sub-task of P1-T06 in [TASKS.md](TASKS.md).
+**P1-T06-E Input script** — sub-task of P1-T06 in [TASKS.md](TASKS.md).
 
-Pointer `enter`/`leave` based on hit-testing surface rectangles against pointer position.
-Track pointer grab state. Maintain one increasing serial across all pointer/key events.
+Add `--input-script FILE` to main.cpp. Parse lines: `wait MS`, `key CODE
+press|release`, `motion X Y`, `button CODE press|release`, `focus lost|gained`,
+`quit`. Dispatch events through the input system during the event loop.
 
 ## Verified by automated test
 

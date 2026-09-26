@@ -162,6 +162,8 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    g_compositor = compositor;
+
     display = opts.headless ? create_display_headless(compositor, wl_display)
                             : create_display(compositor, wl_display);
     if (!display) {
