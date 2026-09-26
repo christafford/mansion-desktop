@@ -6,11 +6,19 @@
 #include "compositor.h"
 #include "compositor-private.h"
 #include "display.h"
+#include "xdg-shell.h"
 
 static void surface_destroy_callback(struct wl_resource* resource) {
     auto* surface = static_cast<MansionSurface*>(wl_resource_get_user_data(resource));
+    if (!surface) return;
     wl_list_remove(&surface->link);
     delete surface;
+}
+
+static void surface_destroy(struct wl_client* client, struct wl_resource* resource) {
+    (void)client; (void)resource;
+    /* wl_resource_destroy is called by the server to tear down this resource.
+     * The destructor (surface_destroy_callback) will be invoked automatically. */
 }
 
 static void surface_attach(struct wl_client* client, struct wl_resource* resource,
@@ -45,6 +53,10 @@ static void surface_commit(struct wl_client* client, struct wl_resource* resourc
     }
 
     surface->buffer_destroyed = false;
+
+    /* Notify xdg-shell about the commit so it can send configure for
+     * unconfigured surfaces. */
+    xdg_shell_on_surface_commit(resource);
 }
 
 static void surface_frame(struct wl_client* client, struct wl_resource* resource,
@@ -78,7 +90,7 @@ static void surface_damage_buffer(struct wl_client* client, struct wl_resource* 
 }
 
 static const struct wl_surface_interface surface_impl = {
-    nullptr, /* destroy (v1) - clients rarely call wl_surface_destroy */
+    surface_destroy,
     surface_attach,
     surface_damage,
     surface_frame,

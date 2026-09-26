@@ -14,7 +14,7 @@
 #include "display.h"
 #include "input.h"
 #include "launch.h"
-#include "shell.h"
+#include "xdg-shell.h"
 
 namespace {
 
@@ -128,7 +128,7 @@ int main(int argc, char** argv) {
 
     MansionCompositor* compositor = nullptr;
     MansionDisplay* display = nullptr;
-    MansionShell* shell = nullptr;
+    MansionXdgShell* xdg_shell = nullptr;
     MansionSeat* seat = nullptr;
     std::vector<MansionApp*> apps;
     int status = 1;
@@ -139,7 +139,7 @@ int main(int argc, char** argv) {
         apps.clear();
         if (input_started) input_destroy();
         destroy_seat(seat);
-        destroy_shell(shell);
+        destroy_xdg_shell(xdg_shell);
         destroy_display(display);
         destroy_compositor(compositor);
         // wl_display_destroy removes the socket and lock file that wl_display_add_socket created.
@@ -161,9 +161,9 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    shell = create_shell(compositor, wl_display);
-    if (!shell) {
-        std::cerr << "Failed to create shell" << std::endl;
+    xdg_shell = create_xdg_shell(compositor, wl_display);
+    if (!xdg_shell) {
+        std::cerr << "Failed to create xdg-shell" << std::endl;
         cleanup();
         return 1;
     }

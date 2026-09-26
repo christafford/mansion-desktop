@@ -12,18 +12,13 @@ glesv2 = dependency('glesv2')
 xkbcommon = dependency('xkbcommon')
 x11 = dependency('x11')
 
-# Protocol code generation (xdg-shell is added in docs/TASKS.md P1-T03):
-#   wayland_scanner = find_program('wayland-scanner')
-#   protocols_dir = wayland_protocols.get_variable('pkgdatadir')
-#   xdg_shell_xml = protocols_dir / 'stable/xdg-shell/xdg-shell.xml'
-#   custom_target(... wayland_scanner, 'server-header' / 'client-header' / 'private-code' ...)
-
 cpp_args = ['-Wall', '-Wextra']
 
 sources = files(
     'src/main.cpp',
     'src/compositor.cpp',
-    'src/shell.cpp',
+    'src/xdg-shell.cpp',
+    'src/xdg-shell-protocol.c',
     'src/display.cpp',
     'src/input.cpp',
     'src/launch.cpp',
@@ -33,12 +28,13 @@ mansion_exe = executable('mansion-desktop',
     sources,
     cpp_args: cpp_args,
     dependencies: [wayland_server, wayland_egl, egl, glesv2, xkbcommon, x11],
+    include_directories: include_directories('.'),
     install: true,
 )
 
 # Test client and headless tests (tests/README.md)
 test_client = executable('mansion-test-client',
-    files('tests/mansion-test-client.c'),
+    files('tests/mansion-test-client.c', 'tests/xdg-shell-protocol.c'),
     c_args: ['-Wall', '-Wextra'],
     dependencies: [wayland_client],
 )
@@ -49,4 +45,6 @@ test_env.set('MESON_SOURCE_ROOT', meson.current_source_dir())
 test('smoke-headless', find_program('tests/smoke_headless.sh'),
     args: [mansion_exe, test_client], env: test_env, suite: 'p1', timeout: 30)
 test('client-globals', find_program('tests/client_globals.sh'),
+    args: [mansion_exe, test_client], env: test_env, suite: 'p1', timeout: 30)
+test('client-toplevel', find_program('tests/client_toplevel.sh'),
     args: [mansion_exe, test_client], env: test_env, suite: 'p1', timeout: 30)
