@@ -13,7 +13,7 @@
 // OpenCode 2.x loads this file from .opencode/plugins/ and reloads it on change.
 // Settings come from DEFAULTS, then environment variables, then ctx.options.
 
-import { appendFile } from "node:fs/promises";
+import { appendFile, readFile, writeFile, rename, unlink } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import path from "node:path";
 
@@ -24,6 +24,7 @@ export const DEFAULTS = {
   pollMs: 10000,                    // idle detection fallback poll interval
   repeatLimit: 3,                   // identical final replies before stopping
   stallLimit: 12,                   // follow-ups with no repository change; 0 disables
+  falseDoneLimit: 2,                // consecutive unverified DONE claims before stopping
 };
 
 const ENV = {
@@ -33,6 +34,7 @@ const ENV = {
   pollMs: ["AUTOCONTINUE_POLL_MS", 1],
   repeatLimit: ["AUTOCONTINUE_REPEAT_LIMIT", 1],
   stallLimit: ["AUTOCONTINUE_STALL_LIMIT", 1],
+  falseDoneLimit: ["AUTOCONTINUE_FALSE_DONE_LIMIT", 1],
 };
 
 export const DONE = "AUTOCONTINUE_DONE";
@@ -56,7 +58,50 @@ failed. Do not delete or weaken tests. Stay inside the scope.
 End your reply with a line containing exactly ${DONE} when every task in the
 scope is ticked and verified, ${BLOCKED} when no task in the scope can proceed
 (record the blockers in docs/STATUS.md first), otherwise "Next: <task id>".
-Put these markers outside code blocks.`;
+Put these markers outside code blocks. ${DONE} is checked against docs/TASKS.md:
+if any non-human task in the scope is still unticked, the run continues.`;
+}
+
+// Task ids look like P1-T03; "(human)" tasks are never required for DONE.
+const TASK_RE = /^- \[( |x|X)\] \*\*(P(\d+)-T(\d+))\b([^\n]*)/gm;
+
+// Which projects and tasks a free-text scope covers. Understands "Project 3",
+// "Projects 1–4" / "1-4" / "1 to 4", and explicit ids "P1-T03" or "P1-T03 to
+// P1-T11". Returns null when nothing recognisable is present (then DONE cannot
+// be verified and is accepted as before).
+export function parseScope(scope) {
+  const text = String(scope ?? "");
+  const projects = new Set();
+  const taskRanges = [];
+  const range = (a, b) => { for (let n = Math.min(a, b); n <= Math.max(a, b); n++) projects.add(n); };
+  for (const m of text.matchAll(/\bprojects?\s+(\d+)(?:\s*(?:[-–—]|to|through)\s*(\d+))?/gi)) {
+    range(Number(m[1]), m[2] ? Number(m[2]) : Number(m[1]));
+  }
+  for (const m of text.matchAll(/\bP(\d+)-T(\d+)\b(?:\s*(?:[-–—]|to|through)\s*P(\d+)-T(\d+)\b)?/gi)) {
+    const from = [Number(m[1]), Number(m[2])];
+    const to = m[3] ? [Number(m[3]), Number(m[4])] : from;
+    taskRanges.push({ from, to });
+  }
+  if (!projects.size && !taskRanges.length) return null;
+  return { projects, taskRanges };
+}
+
+const cmp = (a, b) => a[0] - b[0] || a[1] - b[1];
+
+// Tasks inside the scope that are not ticked and not marked (human).
+export function unfinishedTasks(tasksMarkdown, scope) {
+  const parsed = typeof scope === "string" ? parseScope(scope) : scope;
+  if (!parsed) return null;
+  const open = [];
+  for (const m of tasksMarkdown.matchAll(TASK_RE)) {
+    const [, tick, id, project, task, rest] = m;
+    const key = [Number(project), Number(task)];
+    const inScope = parsed.projects.has(key[0]) ||
+      parsed.taskRanges.some((r) => cmp(r.from, key) <= 0 && cmp(key, r.to) <= 0);
+    if (!inScope || tick.toLowerCase() === "x" || /\(human\)/i.test(rest)) continue;
+    open.push(id);
+  }
+  return open;
 }
 
 export function resolveLimits(options = {}, env = process.env) {
@@ -110,10 +155,40 @@ function repoFingerprint(directory) {
   );
 }
 
-// `deps` lets tests replace the repository fingerprint and the clock.
+// Run state lives on disk so a plugin reload or OpenCode restart resumes the
+// run instead of silently ending it. Timers and in-flight flags are not saved.
+const PERSISTED = ["scope", "started", "count", "repeats", "stalls", "expected", "lastIdle",
+  "fingerprint", "lastMessage", "lastText", "falseDone"];
+
+function fileStateStore(file) {
+  return {
+    async load() {
+      try {
+        return JSON.parse(await readFile(file, "utf8"));
+      } catch (error) {
+        if (error?.code === "ENOENT") return {};
+        throw error;
+      }
+    },
+    async save(state) {
+      if (!Object.keys(state).length) {
+        await unlink(file).catch(() => {});
+        return;
+      }
+      const tmp = `${file}.tmp`;
+      await writeFile(tmp, JSON.stringify(state, null, 2));
+      await rename(tmp, file);
+    },
+  };
+}
+
+// `deps` lets tests replace the repository fingerprint, the clock, the task
+// list reader, and the state store.
 export function createPlugin(deps = {}) {
   const fingerprint = deps.fingerprint ?? repoFingerprint;
   const now = deps.now ?? Date.now;
+  const readTasks = deps.readTasks ?? ((directory) => readFile(path.join(directory, "docs", "TASKS.md"), "utf8"));
+  const stateStore = deps.stateStore ?? fileStateStore;
 
   return {
     id: "auto-continue",
@@ -122,9 +197,11 @@ export function createPlugin(deps = {}) {
       const limits = resolveLimits(ctx.options ?? {});
       const directory = ctx.location?.directory ?? process.cwd();
       const logFile = path.join(directory, ".opencode", "auto-continue.log");
+      const store = stateStore(path.join(directory, ".opencode", "auto-continue.state.json"));
       const runs = new Map();
       const controller = new AbortController();
       let pollTimer;
+      let unloading = false;
 
       async function log(message) {
         const line = `${new Date().toISOString()} ${message}`;
@@ -136,12 +213,26 @@ export function createPlugin(deps = {}) {
         }
       }
 
+      let persisting = Promise.resolve();
+      function persist() {
+        const state = {};
+        for (const [id, run] of runs) {
+          state[id] = Object.fromEntries(PERSISTED.filter((k) => run[k] !== undefined).map((k) => [k, run[k]]));
+        }
+        persisting = persisting
+          .then(() => store.save(state))
+          .catch((error) => log(`state not saved: ${error?.message ?? error}`));
+        return persisting;
+      }
+
       function stop(id, reason) {
         const run = runs.get(id);
         if (!run) return;
         clearTimeout(run.timer);
         runs.delete(id);
         void log(`${id}: stopped (${reason}); ${run.count} automatic follow-ups`);
+        // An unload keeps the state file so the run resumes on reload.
+        if (!unloading) void persist();
       }
 
       function schedule(id, run) {
@@ -155,6 +246,17 @@ export function createPlugin(deps = {}) {
         const list = Array.isArray(result) ? result : result?.data;
         if (!Array.isArray(list)) throw new Error("session.context returned no message list");
         return [...list].sort((a, b) => (a.time?.created ?? 0) - (b.time?.created ?? 0));
+      }
+
+      // Unticked non-human tasks in scope; [] when the claim holds or the scope
+      // names no task range. A missing or unreadable task list stops the run.
+      async function verifyDone(scope) {
+        const parsed = parseScope(scope);
+        if (!parsed) {
+          void log(`scope "${scope}" names no project or task range; ${DONE} accepted unverified`);
+          return [];
+        }
+        return unfinishedTasks(await readTasks(directory), parsed);
       }
 
       async function check(id, run) {
@@ -195,9 +297,27 @@ export function createPlugin(deps = {}) {
 
           const text = assistantText(latest);
           const marker = lastLine(text);
-          if (marker === DONE || marker === BLOCKED) {
+          if (marker === BLOCKED) {
             stop(id, marker);
             return;
+          }
+          let falseDone = "";
+          if (marker === DONE) {
+            const open = await verifyDone(run.scope);
+            if (runs.get(id) !== run) return;
+            if (!open.length) {
+              stop(id, marker);
+              return;
+            }
+            run.falseDone = (run.falseDone ?? 0) + 1;
+            void log(`${id}: ${DONE} claimed but ${open.length} task(s) in scope are unticked: ${open.join(", ")} (claim ${run.falseDone}/${limits.falseDoneLimit})`);
+            if (run.falseDone >= limits.falseDoneLimit) {
+              stop(id, `${DONE} claimed ${run.falseDone} times with unticked tasks: ${open.join(", ")}`);
+              return;
+            }
+            falseDone = `Your previous reply ended with ${DONE}, but docs/TASKS.md still has unticked tasks in scope: ${open.join(", ")}. The run is not finished. Do not repeat that marker until every one of them is ticked with its acceptance check passed.\n`;
+          } else {
+            run.falseDone = 0;
           }
           run.repeats = text === run.lastText ? run.repeats + 1 : 1;
           run.lastText = text;
@@ -218,7 +338,8 @@ export function createPlugin(deps = {}) {
 
           run.lastMessage = latest.id;
           run.count++;
-          run.expected = `Automatic follow-up ${run.count}/${limits.maxContinuations}.\n${instructions(run.scope)}`;
+          run.expected = `Automatic follow-up ${run.count}/${limits.maxContinuations}.\n${falseDone}${instructions(run.scope)}`;
+          await persist();
           await ctx.session.prompt({ sessionID: id, text: run.expected, delivery: "queue" });
           void log(`${id}: follow-up ${run.count}/${limits.maxContinuations} sent`);
         } catch (error) {
@@ -234,10 +355,11 @@ export function createPlugin(deps = {}) {
         if (!session || session.parentID) throw new Error("Auto-continue requires a top-level session");
         const text = instructions(scope);
         runs.set(sessionID, {
-          scope, started: now(), count: 0, repeats: 0, stalls: 0,
+          scope, started: now(), count: 0, repeats: 0, stalls: 0, falseDone: 0,
           expected: text, checking: false, lastIdle: session.time?.idle,
           fingerprint: limits.stallLimit > 0 ? await fingerprint(directory) : undefined,
         });
+        await persist();
         await log(`${sessionID}: enabled, at most ${limits.maxContinuations} automatic follow-ups`);
         await ctx.session.prompt({ sessionID, text, delivery: delivery ?? "queue" });
       }
@@ -337,10 +459,36 @@ export function createPlugin(deps = {}) {
 
       await log(`loaded; limits ${JSON.stringify(limits)}`);
 
+      // Resume runs saved by a previous load of this plugin.
+      try {
+        const saved = await store.load();
+        for (const [id, data] of Object.entries(saved)) {
+          let session;
+          try {
+            session = await ctx.session.get({ sessionID: id });
+          } catch {
+            session = undefined;
+          }
+          if (!session) {
+            void log(`${id}: saved run dropped, session no longer exists`);
+            continue;
+          }
+          const run = { ...data, checking: false, timer: undefined };
+          runs.set(id, run);
+          void log(`${id}: resumed after reload; ${run.count} follow-ups so far`);
+          // The turn may have ended while we were unloaded: check right away.
+          schedule(id, run);
+        }
+        await persist();
+      } catch (error) {
+        void log(`saved state unreadable, starting clean: ${error?.message ?? error}`);
+      }
+
       return () => {
+        unloading = true;
         controller.abort();
         clearInterval(pollTimer);
-        for (const id of runs.keys()) stop(id, "plugin unloaded");
+        for (const id of runs.keys()) stop(id, "plugin unloaded; state kept for resume");
       };
     },
   };

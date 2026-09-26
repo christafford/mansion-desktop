@@ -38,6 +38,18 @@ no longer loads in 2.x.
   acceptance check passed, update `docs/STATUS.md`, commit, and end with
   `Next: <task id>`, or with an exact final line `AUTOCONTINUE_DONE` (scope
   finished) or `AUTOCONTINUE_BLOCKED` (nothing in scope can proceed).
+- `AUTOCONTINUE_DONE` is not trusted. The plugin parses the scope for project
+  ranges (`Projects 1–4`, `Project 3`) and task ids (`P1-T03 to P1-T11`),
+  reads `docs/TASKS.md`, and only stops when every non-`(human)` task in scope
+  is ticked. Otherwise the next follow-up names the unticked tasks and the run
+  continues; `falseDoneLimit` consecutive false claims stop it. A scope without
+  a recognisable range cannot be checked, so `AUTOCONTINUE_DONE` is accepted as
+  written (the log says so).
+- Run state (scope, counters, last follow-up text) is written to
+  `.opencode/auto-continue.state.json` (git-ignored) after every change. When
+  OpenCode reloads the plugin or restarts, saved runs whose session still exists
+  are resumed, and a turn that ended while the plugin was unloaded gets its
+  follow-up right away. Runs whose session is gone are dropped.
 
 ## Stop conditions
 
@@ -45,7 +57,10 @@ no longer loads in 2.x.
 | --- | --- |
 | Follow-ups per run (`maxContinuations`) | 400 |
 | Wall-clock limit (`maxDurationMs`) | 96 h |
-| Final line is `AUTOCONTINUE_DONE` or `AUTOCONTINUE_BLOCKED` | always |
+| Final line is `AUTOCONTINUE_BLOCKED` | always |
+| Final line is `AUTOCONTINUE_DONE` and every in-scope task is ticked in `docs/TASKS.md` | always |
+| Consecutive `AUTOCONTINUE_DONE` claims with unticked tasks (`falseDoneLimit`) | 2 |
+| `docs/TASKS.md` cannot be read when checking a `AUTOCONTINUE_DONE` claim | always |
 | Identical final replies in a row (`repeatLimit`) | 3 |
 | Empty final reply | always |
 | Follow-ups without any change to `git status`/`HEAD` (`stallLimit`) | 12 (0 disables) |
@@ -53,12 +68,12 @@ no longer loads in 2.x.
 | Permission request (`permission.asked`) or question form (`form.created`) | always |
 | Any user prompt that is not the plugin's own follow-up | always |
 | `/autostop` | always |
-| OpenCode restart or plugin reload | run state is in memory only |
+| OpenCode restart or plugin reload | resumed from `.opencode/auto-continue.state.json` |
 
 Override defaults with environment variables before starting OpenCode:
 `AUTOCONTINUE_MAX_CONTINUATIONS`, `AUTOCONTINUE_MAX_HOURS`,
 `AUTOCONTINUE_DELAY_MS`, `AUTOCONTINUE_POLL_MS`, `AUTOCONTINUE_REPEAT_LIMIT`,
-`AUTOCONTINUE_STALL_LIMIT`. Plugin options from `opencode.jsonc`
+`AUTOCONTINUE_STALL_LIMIT`, `AUTOCONTINUE_FALSE_DONE_LIMIT`. Plugin options from `opencode.jsonc`
 (`"plugins": [{"package": "./.opencode/plugins/auto-continue.js", "options": {...}}]`)
 take precedence over both, but the auto-discovered file is already loaded, so
 prefer environment variables.
@@ -74,7 +89,10 @@ prefer environment variables.
 ## Logs
 
 - `.opencode/auto-continue.log` (git-ignored): enable/follow-up/stop lines
-  with reasons and counts.
+  with reasons and counts, false `AUTOCONTINUE_DONE` claims with the unticked
+  task ids, and resume/drop lines after a reload.
+- `.opencode/auto-continue.state.json` (git-ignored): the live run state.
+  Delete it to forget a run before starting OpenCode.
 - OpenCode's own log: `opencode debug paths` shows the `log` directory; look
   for `loading plugin` and `failed to load plugin`.
 

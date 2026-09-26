@@ -3,3 +3,5 @@ bun.lock
 package-lock.json
 .verify/
 auto-continue.log
+auto-continue.state.json
+auto-continue.state.json.tmp

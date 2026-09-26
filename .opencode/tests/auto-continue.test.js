@@ -1,12 +1,33 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { setTimeout as sleep } from 'node:timers/promises';
-import plugin, { createPlugin, DEFAULTS, DONE, BLOCKED, resolveLimits, assistantText, instructions } from '../plugins/auto-continue.js';
+import plugin, { createPlugin, DEFAULTS, DONE, BLOCKED, resolveLimits, assistantText, instructions, parseScope, unfinishedTasks } from '../plugins/auto-continue.js';
+import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+
+// Task list used by default: everything in Projects 1–2 ticked except a human task.
+const TASKS_DONE = `
+- [x] **P1-T01 Harness.** (aaa)
+- [x] **P1-T02 Globals.** (bbb)
+- [ ] **P1-T03 (human) Terminal smoke test.** needs a person
+- [x] **P2-T01 Math.** (ccc)
+- [ ] **P3-T01 Modes.** later
+`;
+const TASKS_OPEN = TASKS_DONE.replace('- [x] **P2-T01', '- [ ] **P2-T01');
+
+function memoryStore(initial = {}) {
+  const store = { state: initial, saves: 0 };
+  store.load = async () => JSON.parse(JSON.stringify(store.state));
+  store.save = async (state) => { store.saves++; store.state = JSON.parse(JSON.stringify(state)); };
+  return store;
+}
 
 // Mock of the OpenCode V2 Promise plugin context: only the parts the plugin uses.
-async function harness(t, { options = {}, fingerprints, events = true } = {}) {
+async function harness(t, { options = {}, fingerprints, events = true, tasks = TASKS_DONE, store = memoryStore(), sessions } = {}) {
   const prompts = [], commands = new Map(), hooks = new Map();
   let messages = [], session = { id: 'main', time: { created: 1, updated: 1 } };
+  const lookup = sessions ?? ((sessionID) => (sessionID === 'child' ? { id: 'child', parentID: 'main' } : session));
   let sink;
   const queue = [];
   const nextEvent = () => new Promise((resolve) => { sink = resolve; });
@@ -14,7 +35,7 @@ async function harness(t, { options = {}, fingerprints, events = true } = {}) {
     options: { delayMs: 5, pollMs: 0, ...options },
     location: { directory: '/project' },
     session: {
-      get: async ({ sessionID }) => (sessionID === 'child' ? { id: 'child', parentID: 'main' } : session),
+      get: async ({ sessionID }) => lookup(sessionID),
       context: async () => ({ data: messages }),
       prompt: async (input) => {
         prompts.push(input);
@@ -40,8 +61,12 @@ async function harness(t, { options = {}, fingerprints, events = true } = {}) {
   let prints = fingerprints ?? [];
   let printIndex = 0;
   const fingerprint = async () => prints.length ? prints[Math.min(printIndex++, prints.length - 1)] : `print-${printIndex++}`;
-  const cleanup = await createPlugin({ fingerprint }).setup(ctx);
+  const readTasks = async () => { if (tasks instanceof Error) throw tasks; return tasks; };
+  const make = () => createPlugin({ fingerprint, readTasks, stateStore: () => store });
+  let cleanup = await make().setup(ctx);
   t.after(() => cleanup());
+  // reload(): unload the plugin and set it up again against the same store, as OpenCode does on file change.
+  const reload = async () => { cleanup(); cleanup = await make().setup(ctx); await sleep(10); };
   const event = async (type, data = { sessionID: 'main' }) => {
     const ev = { type, data };
     if (sink) { const s = sink; sink = null; s(ev); } else queue.push(ev);
@@ -61,7 +86,7 @@ async function harness(t, { options = {}, fingerprints, events = true } = {}) {
   const finish = async (...args) => { answer(...args); await event('session.execution.succeeded'); await sleep(30); };
   const start = (scope = 'Projects 1–2') => commands.get('autocontinue').execute({ sessionID: 'main', prompt: { text: scope }, delivery: 'queue' });
   const user = async (text) => { for (const cb of hooks.get('prompt') ?? []) await cb({ sessionID: 'main', prompt: { text } }); };
-  return { ctx, prompts, commands, event, answer, finish, start, user, setMessages: (m) => { messages = m; }, setSession: (s) => { session = s; } };
+  return { ctx, prompts, commands, event, answer, finish, start, user, store, reload, setMessages: (m) => { messages = m; }, setSession: (s) => { session = s; } };
 }
 
 test('default export is a V2 plugin definition', () => {
@@ -309,4 +334,152 @@ test('cleanup cancels a pending follow-up', async (t) => {
   cleanup(); cleanup2();
   await sleep(80);
   assert.equal(prompts.length, 1);
+});
+
+// ── DONE verification against docs/TASKS.md ─────────────────────────────
+
+test('parseScope understands project ranges and task ids', () => {
+  assert.deepEqual([...parseScope('Projects 1–4 of docs/TASKS.md').projects], [1, 2, 3, 4]);
+  assert.deepEqual([...parseScope('projects 2 to 3').projects], [2, 3]);
+  assert.deepEqual([...parseScope('Project 7').projects], [7]);
+  const ids = parseScope('Project 1 (P1-T03 to P1-T11)');
+  assert.deepEqual([...ids.projects], [1]);
+  assert.deepEqual(ids.taskRanges, [{ from: [1, 3], to: [1, 11] }]);
+  assert.deepEqual(parseScope('P2-T05').taskRanges, [{ from: [2, 5], to: [2, 5] }]);
+  assert.equal(parseScope('make it nice'), null);
+  assert.equal(parseScope(''), null);
+});
+
+test('unfinishedTasks ignores ticked, human, and out-of-scope tasks', () => {
+  assert.deepEqual(unfinishedTasks(TASKS_DONE, 'Projects 1–2'), []);
+  assert.deepEqual(unfinishedTasks(TASKS_OPEN, 'Projects 1–2'), ['P2-T01']);
+  assert.deepEqual(unfinishedTasks(TASKS_OPEN, 'Projects 1–3'), ['P2-T01', 'P3-T01']);
+  assert.deepEqual(unfinishedTasks(TASKS_OPEN, 'P1-T01 to P1-T03'), []);
+  assert.deepEqual(unfinishedTasks(TASKS_OPEN, 'P2-T01'), ['P2-T01']);
+  assert.equal(unfinishedTasks(TASKS_OPEN, 'no range here'), null);
+});
+
+test('the repository task list is parsed: Projects 1–4 are not finished', async () => {
+  const file = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'docs', 'TASKS.md');
+  const open = unfinishedTasks(await readFile(file, 'utf8'), 'Projects 1–4 of docs/TASKS.md');
+  assert.ok(open.length > 0, 'expected unticked tasks in Projects 1–4');
+  assert.ok(open.every((id) => /^P[1-4]-T\d+$/.test(id)), open.join(','));
+  assert.ok(!open.includes('P1-T10') && !open.includes('P4-T04'), 'human tasks must not be required');
+});
+
+test(`${DONE} with unticked tasks in scope continues and names them`, async (t) => {
+  const h = await harness(t, { tasks: TASKS_OPEN });
+  await h.start('Projects 1–2');
+  await h.finish(`All done.\n${DONE}`);
+  assert.equal(h.prompts.length, 2);
+  assert.match(h.prompts[1].text, /still has unticked tasks in scope: P2-T01/);
+  assert.match(h.prompts[1].text, /Autonomous run scope: Projects 1–2/);
+  await h.finish('Working on P2-T01. Next: P2-T01');
+  assert.equal(h.prompts.length, 3);
+  assert.doesNotMatch(h.prompts[2].text, /unticked tasks/);
+});
+
+test(`${DONE} is honoured once every in-scope task is ticked`, async (t) => {
+  const h = await harness(t, { tasks: TASKS_DONE });
+  await h.start('Projects 1–2');
+  await h.finish(`Evidence.\n${DONE}`);
+  await h.finish('more');
+  assert.equal(h.prompts.length, 1);
+  assert.deepEqual(h.store.state, {}, 'finished run is removed from the state file');
+});
+
+test(`repeated false ${DONE} claims stop the run`, async (t) => {
+  const h = await harness(t, { tasks: TASKS_OPEN, options: { falseDoneLimit: 2 } });
+  await h.start('Projects 1–2');
+  await h.finish(`Done!\n${DONE}`);
+  assert.equal(h.prompts.length, 2);
+  await h.finish(`Really done.\n${DONE}`);
+  await h.finish('anything');
+  assert.equal(h.prompts.length, 2);
+});
+
+test(`${DONE} is accepted when the scope names no task range`, async (t) => {
+  const h = await harness(t, { tasks: TASKS_OPEN });
+  await h.start('tidy the docs');
+  await h.finish(`Finished.\n${DONE}`);
+  await h.finish('more');
+  assert.equal(h.prompts.length, 1);
+});
+
+test(`an unreadable task list stops the run instead of trusting ${DONE}`, async (t) => {
+  const h = await harness(t, { tasks: Object.assign(new Error('ENOENT'), { code: 'ENOENT' }) });
+  await h.start('Projects 1–2');
+  await h.finish(`Finished.\n${DONE}`);
+  await h.finish('more');
+  assert.equal(h.prompts.length, 1);
+});
+
+test(`${BLOCKED} still stops without consulting the task list`, async (t) => {
+  const h = await harness(t, { tasks: TASKS_OPEN });
+  await h.start('Projects 1–2');
+  await h.finish(`Blocked on hardware.\n${BLOCKED}`);
+  await h.finish('more');
+  assert.equal(h.prompts.length, 1);
+});
+
+// ── Persistence across plugin reloads ───────────────────────────────────
+
+test('run state is saved on start and after each follow-up', async (t) => {
+  const h = await harness(t);
+  await h.start('Projects 1–2');
+  assert.equal(h.store.state.main.scope, 'Projects 1–2');
+  assert.equal(h.store.state.main.count, 0);
+  await h.finish();
+  assert.equal(h.store.state.main.count, 1);
+  assert.equal(h.store.state.main.expected, h.prompts[1].text);
+  assert.equal(h.store.state.main.timer, undefined, 'timers are not persisted');
+});
+
+test('a reload resumes the run and continues after the next finished turn', async (t) => {
+  const h = await harness(t, { tasks: TASKS_OPEN });
+  await h.start('Projects 1–2');
+  await h.finish('Step one. Next: P2-T01');
+  assert.equal(h.prompts.length, 2);
+  await h.reload();
+  assert.ok(h.store.state.main, 'state survives the unload');
+  assert.equal(h.prompts.length, 2, 'a reload alone does not re-prompt while the turn is running');
+  await h.finish('Step two. Next: P2-T01');
+  assert.equal(h.prompts.length, 3);
+  assert.match(h.prompts[2].text, /^Automatic follow-up 2\//, 'the follow-up counter continues');
+  await h.finish(`All ticked.\n${DONE}`);
+  assert.equal(h.prompts.length, 4, 'the resumed run still verifies DONE');
+});
+
+test('a reload after the turn already ended sends the pending follow-up', async (t) => {
+  const h = await harness(t);
+  await h.start('Projects 1–2');
+  h.answer('Finished while unloaded. Next: P1-T02');
+  await h.reload();
+  await sleep(40);
+  assert.equal(h.prompts.length, 2);
+});
+
+test('saved runs whose session is gone are dropped on load', async (t) => {
+  const store = memoryStore({ ghost: { scope: 'Projects 1–2', started: 1, count: 3, expected: 'x' } });
+  const h = await harness(t, { store, sessions: (id) => (id === 'ghost' ? undefined : { id, time: { created: 1 } }) });
+  await sleep(10);
+  assert.deepEqual(h.store.state, {});
+  await h.event('session.execution.succeeded', { sessionID: 'ghost' }); await sleep(30);
+  assert.equal(h.prompts.length, 0);
+});
+
+test('autostop removes the saved state', async (t) => {
+  const h = await harness(t);
+  await h.start(); h.answer();
+  await h.commands.get('autostop').execute({ sessionID: 'main', delivery: 'queue' });
+  await sleep(10);
+  assert.deepEqual(h.store.state, {});
+});
+
+test('a broken state store does not prevent starting a run', async (t) => {
+  const store = { load: async () => { throw new Error('disk'); }, save: async () => { throw new Error('disk'); } };
+  const h = await harness(t, { store });
+  await h.start('Projects 1–2');
+  await h.finish();
+  assert.equal(h.prompts.length, 2);
 });

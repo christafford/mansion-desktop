@@ -39,9 +39,14 @@ Run `meson test -C build --print-errorlogs`.
   `-Db_sanitize=address,undefined` build (`build-asan`, 2026-09-26), and an
   ad-hoc run that SIGKILLed a mapped client and then connected a second client
   reported no sanitizer errors.
-- Auto-continue plugin: `node --test .opencode/tests/*.test.js` (34 tests),
+- Auto-continue plugin: `node --test .opencode/tests/*.test.js` (49 tests),
   plus one live run against OpenCode 2.0.16 with the local model on
-  2026-09-26 (see [OPENCODE-AUTOCONTINUE.md](OPENCODE-AUTOCONTINUE.md)).
+  2026-09-26 (see [OPENCODE-AUTOCONTINUE.md](OPENCODE-AUTOCONTINUE.md)). The
+  first two live runs ended early: the model answered `AUTOCONTINUE_DONE` after
+  one follow-up with 29 tasks open, and a plugin reload dropped the in-memory
+  run. Both are now covered by tests (`AUTOCONTINUE_DONE` is checked against
+  `docs/TASKS.md`; run state persists in `.opencode/auto-continue.state.json`).
+  The hardened plugin has not yet been exercised in a live OpenCode run.
 
 ## Verified by a person
 
