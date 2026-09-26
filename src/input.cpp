@@ -230,6 +230,28 @@ static void send_pointer_axis_done(uint32_t time_msec) {
     // wl_pointer v4 doesn't have axis_done; it's a v6+ extension.
 }
 
+/* Send modifier state to all keyboard clients. */
+static void send_keymap_modifiers(uint32_t serial) {
+    if (!g_seat || !g_seat->xkbstate) return;
+
+    xkb_mod_mask_t depressed =
+        xkb_state_serialize_mods(g_seat->xkbstate, XKB_STATE_MODS_DEPRESSED);
+    xkb_mod_mask_t latched =
+        xkb_state_serialize_mods(g_seat->xkbstate, XKB_STATE_MODS_LATCHED);
+    xkb_mod_mask_t locked =
+        xkb_state_serialize_mods(g_seat->xkbstate, XKB_STATE_MODS_LOCKED);
+    xkb_layout_index_t group =
+        xkb_state_serialize_layout(g_seat->xkbstate, XKB_STATE_LAYOUT_EFFECTIVE);
+
+    SeatKeyboardClient *kc, *kc_next;
+    wl_list_for_each_safe(kc, kc_next, &g_seat->keyboard_clients, destroy_listener.link) {
+        if (kc->resource) {
+            wl_keyboard_send_modifiers(kc->resource, serial,
+                                       depressed, latched, locked, group);
+        }
+    }
+}
+
 void input_process(void) {
     if (!g_seat) return;
 
@@ -251,12 +273,24 @@ void input_process(void) {
                     WL_KEYBOARD_KEY_STATE_PRESSED :
                     WL_KEYBOARD_KEY_STATE_RELEASED;
 
+                // Update xkb state so modifiers are tracked correctly.
+                // ev.code is a Linux keycode; xkb uses the same range.
+                if (g_seat && g_seat->xkbstate) {
+                    xkb_state_update_key(g_seat->xkbstate,
+                                         ev.code + 8,  // evdev -> xkb offset
+                                         state == WL_KEYBOARD_KEY_STATE_PRESSED ?
+                                             XKB_KEY_DOWN : XKB_KEY_UP);
+                }
+
                 SeatKeyboardClient *kc, *kc_next;
                 wl_list_for_each_safe(kc, kc_next, &g_seat->keyboard_clients, destroy_listener.link) {
                     if (kc->resource) {
                         wl_keyboard_send_key(kc->resource, serial, time_msec, ev.code, state);
                     }
                 }
+
+                // Send updated modifier state
+                send_keymap_modifiers(serial);
             }
 
             // Handle mouse events
@@ -427,6 +461,9 @@ static void seat_get_keyboard(struct wl_client* client, struct wl_resource* seat
             }
         }
     }
+
+    // Send repeat_info (rate = 25 keys/sec, delay = 500 ms)
+    wl_keyboard_send_repeat_info(resource, 25, 500);
 }
 
 static void seat_get_touch(struct wl_client* client, struct wl_resource* seat_resource,

@@ -129,11 +129,11 @@ itself is the human acceptance step.
   compositor survives a client that opens two keyboards on the same seat.
   (2026-09-26)
 
-- [ ] **P1-T06-B Keymap, repeat_info, modifiers.** Use `xkb_keymap_new_from_names`
+- [x] **P1-T06-B Keymap, repeat_info, modifiers.** Use `xkb_keymap_new_from_names`
   with `XKB_DEFAULT_*` (fallback `us`), send the keymap via memfd, compile
   xkbstate, send `repeat_info` for seat v4+, include modifiers in key events.
   **Acceptance:** `meson test -C build client-frame` passes; headless compositor
-  logs no xkb errors.
+  logs no xkb errors. (2026-09-26)
 
 - [ ] **P1-T06-C Keyboard enter/leave + focus.** Send keyboard `enter` (with
   the damaged-surface's wl_resource in the regions array) and `leave` events.

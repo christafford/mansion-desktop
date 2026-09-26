@@ -7,11 +7,11 @@ running the check that proves it.
 
 ## Next task
 
-**P1-T06-B Keymap, repeat_info, modifiers** — sub-task of P1-T06 in [TASKS.md](TASKS.md).
+**P1-T06-C Keyboard enter/leave + focus** — sub-task of P1-T06 in [TASKS.md](TASKS.md).
 
-Use `xkb_keymap_new_from_names` with `XKB_DEFAULT_*` (fallback `us`), send the
-keymap via memfd, compile xkbstate, send `repeat_info` for seat v4+, include
-modifiers in key events.
+Send keyboard `enter` (with the damaged-surface's wl_resource in the regions
+array) and `leave` events. Track keyboard focus — the most recently mapped
+toplevel wins.
 
 ## Verified by automated test
 
@@ -34,7 +34,9 @@ Run `meson test -C build --print-errorlogs`.
   reported no sanitizer errors.
 - `client-frame` (P1-T04): the client creates a 200×100 ARGB8888 shm buffer,
   attaches and commits it, and receives `frame <time_ms>` and `release` within
-  2 seconds. `meson test -C build client-frame` passes.
+  2 seconds. `meson test -C build client-frame` passes. The seat now sends
+  xkb keymap via memfd, repeat_info (rate=25, delay=500), and modifier state
+  on each key event (P1-T06-B).
 - `render-shm` (P1-T05): the compositor uses `EGL_PLATFORM_SURFACELESS_MESA`
   with a pbuffer surface to upload `wl_shm` buffers (ARGB8888) as OpenGL
   textures and draw them in screen position. `--screenshot PATH` reads the
