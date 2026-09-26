@@ -1,37 +1,13 @@
-#!/usr/bin/sh
-# Check for Mansion Desktop build dependencies
-
-echo "Checking dependencies..."
-
-required Programs="meson"
-missing=""
-
-for prog in $required Programs; do
-    if ! command -v $prog >/dev/null; then
-        echo "  $prog: missing"
-        missing="1"
-    else
-        echo "  $prog: ok"
-    fi
+#!/bin/sh
+# Check for Mansion Desktop build and test dependencies.
+status=0
+for prog in meson ninja g++ gcc pkg-config wayland-scanner node; do
+    if command -v "$prog" >/dev/null 2>&1; then echo "  $prog: ok"; else echo "  $prog: missing"; status=1; fi
 done
-
-required_pkg="wayland-server xkbcommon egl wayland-egl"
-missing_pkg=""
-
-for pkg in $required_pkg; do
-    if ! pkg-config --exists $pkg; then
-        echo "  $pkg: missing"
-        missing_pkg="1"
-    else
-        echo "  $pkg: ok"
-    fi
+for pkg in wayland-server wayland-client wayland-protocols wayland-egl egl glesv2 xkbcommon x11; do
+    if pkg-config --exists "$pkg"; then echo "  $pkg: $(pkg-config --modversion "$pkg")"; else echo "  $pkg: missing"; status=1; fi
 done
-
-if [ -z "$missing" ] && [ -z "$missing_pkg" ]; then
-    echo "All dependencies are available."
-    exit 0
-else
-    echo "Some dependencies are missing."
-    echo "See DEVELOPMENT.md for setup instructions."
-    exit 1
-fi
+# Optional: only the human smoke test needs a real terminal client.
+if command -v weston-terminal >/dev/null 2>&1; then echo "  weston-terminal: ok (optional)"; else echo "  weston-terminal: missing (optional; sudo pacman -S weston)"; fi
+[ "$status" -eq 0 ] && echo "All required dependencies are available." || echo "Some required dependencies are missing. See DEVELOPMENT.md."
+exit $status

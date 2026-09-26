@@ -2,6 +2,10 @@
 
 This plan accompanies [the concept](mansion-desktop-concept.md). It proposes an implementation sequence; it does not claim that any prototype has been built or tested.
 
+**Working from this roadmap:** the numbered projects below are broken into small, individually testable tasks in [docs/TASKS.md](docs/TASKS.md). Autonomous sessions work from that file; this document defines each project's scope, acceptance boundary, dependencies, and decision gates. Current verified state lives in [docs/STATUS.md](docs/STATUS.md); binding technical decisions live in [docs/decisions/](docs/decisions/).
+
+**Corrections recorded after the first implementation attempt (decision 02):** the shell protocol is `xdg_shell`, not the deprecated `wl_shell`; nested input comes from the host window, not `/dev/input`; the compositor uses libwayland-server directly rather than wlroots or Smithay; and every task must carry an acceptance check that runs headless, because unattended sessions cannot look at a screen.
+
 ## Assessment
 
 The concept is coherent and technically plausible. Its strongest decisions are keeping ordinary files and applications, storing spatial placement separately, distinguishing world input from application input, acknowledging the limits of session restoration, and developing as a nested compositor first.
@@ -51,9 +55,9 @@ Suggested locations: `docs/decisions/`, `docs/handoffs/NN.md`, and `docs/STATUS.
 
 **Depends on:** nothing.
 
-**Deliver:** a reproducible minimal compositor launched inside the existing desktop, plus a helper that launches a native Wayland terminal on its private display socket. Inspect the host environment, evaluate an appropriate Smithay example/backend, pin dependencies, and record the stack decision. Keep child-client environment changes local to the launcher.
+**Deliver:** a reproducible minimal compositor launched inside the existing desktop, plus a helper that launches a native Wayland terminal on its private display socket. Inspect the host environment, pin dependencies, and record the stack decision (done: decisions 01 and 02; libwayland-server, xdg-shell, host-window input). Keep child-client environment changes local to the launcher. Ship a headless mode and a test client so every protocol behaviour has an automated check (tasks P1-T01 to P1-T09).
 
-**Done when:** a terminal displays in 2D, accepts typing and pointer input, resizes, and can close without killing Mansion. The host desktop remains usable after Mansion exits. Document what happens to connected clients when Mansion stops.
+**Done when:** a terminal displays in 2D, accepts typing and pointer input, resizes, and can close without killing Mansion. The host desktop remains usable after Mansion exits. Document what happens to connected clients when Mansion stops. The terminal step (P1-T10) needs a person; all other criteria are covered by `meson test`.
 
 **Exclude:** 3D, persistence, XWayland, portals, native session installation.
 
@@ -285,18 +289,21 @@ bounded task. If incomplete, leave a precise continuation point for a fresh sess
 Replace [FIRST] and [LAST] with the authorized project range before using this prompt.
 
 ```text
-Read AGENTS.md, mansion-desktop-concept.md, and PROJECT-ROADMAP.md.
-Read docs/STATUS.md, relevant docs/decisions/, and the latest applicable
-docs/handoffs/. Inspect the current repository and preserve uncommitted work.
-Reconcile stale status claims with the implementation and verification evidence.
+Read AGENTS.md, PROJECT-ROADMAP.md, docs/TASKS.md, docs/STATUS.md, the
+docs/decisions/ files, and the latest applicable docs/handoffs/. Inspect the
+current repository and preserve uncommitted work. Reconcile stale status
+claims with the implementation and verification evidence.
 
 Run an autonomous development sequence through Projects [FIRST]–[LAST].
-Select the next eligible bounded task in that range. Verify prerequisites,
-implement the stated scope, and run relevant checks and demonstrations.
-Respect recorded stack decisions, dependencies, exclusions, and decision gates.
+Take the first unchecked task in docs/TASKS.md within that range whose
+prerequisites are ticked. Implement its stated scope, run
+`meson compile -C build && meson test -C build --print-errorlogs`, and run the
+task's acceptance check. Respect recorded decisions, dependencies,
+exclusions, and decision gates.
 
-After each task, update docs/STATUS.md and the applicable handoff with changes,
-exact validation commands and results, limitations, and the next bounded task.
+After each verified task, tick it in docs/TASKS.md, update docs/STATUS.md and
+the applicable handoff with changes, exact validation commands and results,
+limitations, and the next task, then commit locally (never push).
 Immediately begin the next eligible task without asking whether to continue.
 Do not end the run merely because one task or numbered project is complete.
 

@@ -1,97 +1,66 @@
-# Getting Started with Mansion Desktop Development
+# Getting started
 
-## Quick Start
+## Dependencies
 
-### Using Docker (recommended)
+Arch Linux (the development container used so far):
 
-1. Build the development container:
-```bash
-docker build -t mansion-desktop-dev -f Dockerfile.dev
+```sh
+sudo pacman -S --needed meson ninja gcc pkgconf wayland wayland-protocols \
+    libxkbcommon mesa libx11 nodejs
+sudo pacman -S --needed weston      # optional: weston-terminal for the human smoke test
 ```
 
-2. Run the container:
-```bash
-docker run -ti --net=host --volume="$PWD:/src" mansion-desktop-dev
+Debian/Ubuntu:
+
+```sh
+sudo apt-get install meson ninja-build g++ pkg-config libwayland-dev wayland-protocols \
+    libxkbcommon-dev libegl1-mesa-dev libgles2-mesa-dev libx11-dev nodejs
+sudo apt-get install weston         # optional
 ```
 
-3. Inside the container, build and test:
-```bash
+Fedora:
+
+```sh
+sudo dnf install meson ninja-build gcc-c++ pkgconf wayland-devel wayland-protocols-devel \
+    libxkbcommon-devel mesa-libEGL-devel mesa-libGLES-devel libX11-devel nodejs
+sudo dnf install weston             # optional
+```
+
+Check with `./check-deps.sh`.
+
+## Build, test, run
+
+```sh
 meson setup build --buildtype=debug
 meson compile -C build
-./build/mansion-desktop --launch=weston-terminal
+meson test -C build --print-errorlogs
 ```
 
-### Native Setup
+Headless (used by all automated tests; needs no display):
 
-Install dependencies:
-
-**Arch Linux:**
-```bash
-sudo pacman -S wayland-devel libxkbcommon mesa egl wayland-egl meson weston
+```sh
+./build/mansion-desktop --headless --exit-after-ms 2000
 ```
 
-**Debian/Ubuntu:**
-```bash
-sudo apt-get install libwayland-dev libxkbcommon-dev libegl1-mesa-dev mesa-common-dev wayland-protocols meson weston
+Windowed, inside your existing desktop session (`DISPLAY` must be set):
+
+```sh
+./build/mansion-desktop
+./build/mansion-desktop --launch weston-terminal
 ```
 
-Then build:
-```bash
-meson setup build --buildtype=debug
-meson compile -C build
-```
+`--help` lists all options. The compositor prints `MANSION_SOCKET=<name>` on
+stdout; clients started by hand need `WAYLAND_DISPLAY=<name>` and the same
+`XDG_RUNTIME_DIR`.
 
-## Project Structure
+Protocol debugging: `WAYLAND_DEBUG=1 ./build/mansion-test-client --socket <name>`.
 
-- `src/` - C++ source code (C++20)
-- `docs/` - design documents and handoff notes
-- `meson.build` - build configuration
+## Workflow
 
-## Development Workflow
+1. Read `docs/STATUS.md` ("Next task") and `docs/TASKS.md`.
+2. Do one task. Build. Run `meson test`.
+3. Tick the task, update `docs/STATUS.md` and the current `docs/handoffs/NN.md`.
+4. Commit: `git add -A && git commit -m "P1-T03: xdg-shell"`.
 
-1. **Pick a project** from [PROJECT-ROADMAP.md](PROJECT-ROADMAP.md)
-
-2. **Read the handoff** in `docs/handoffs/[NN].md`
-
-3. **Implement** the task
-
-4. **Test** both automated checks and manual demonstration
-
-5. **Update documentation**
-- `docs/STATUS.md` - overall progress
-- `docs/handoffs/[NN].md` - next steps
-- `docs/decisions/[NN]-*.md` - major decisions
-
-## Running Mansion Desktop
-
-```bash
-./build/mansion-desktop --launch=<command>
-```
-
-Example:
-```bash
-./build/mansion-desktop --launch=weston-terminal
-```
-
-## Debugging
-
-Run with `WL_DEBUG=1` for Wayland protocol logging:
-```bash
-WL_DEBUG=1 ./build/mansion-desktop --launch=weston-terminal
-```
-
-Use `meson test` to run automated checks (once added).
-
-## Useful Resources
-
-- [Wayland book](https://wayland.book.org/)
-- [wlroots](https://gitlab.freedesktop.org/wlroots/wlroots) - modular Wayland compositor library
-- [Weston compositor code](https://gitlab.freedesktop.org/wayland/weston)
-- [Wayland API reference](https://wayland.book.org/libwayland.html)
-- [Smithay (Rust)] (https://smithay.github.io/) - conceptual reference
-
-## Current Status
-
-This is the initial phase of the project. The first milestone is a nested compositor that can display a single live Wayland application and switch between world and application modes.
-
-See [docs/STATUS.md](docs/STATUS.md) for current progress.
+The conventions (labels for verification, human-only tasks, no test
+weakening) are at the top of `docs/TASKS.md`.

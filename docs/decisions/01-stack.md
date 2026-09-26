@@ -1,4 +1,11 @@
-# Decision: Technology Stack
+# Decision 01: Technology Stack
+
+> **Partly superseded (2026-09-26).** The implementation uses libwayland-server
+> directly; wlroots is not installed and not used. Decision
+> [02](02-nested-io-and-verification.md) records the current stack (C++20,
+> Meson, libwayland-server, xdg-shell, X11 host window with host-window input,
+> headless verification). The reasoning below is kept for history; the
+> sentence about `libseat`/`xdg-desktop-portal-unity` never applied.
 
 **Context**:
 The concept document suggested two plausible implementation stacks:

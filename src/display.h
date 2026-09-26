@@ -20,6 +20,9 @@ struct MansionDisplay {
 };
 
 struct MansionDisplay* create_display(struct MansionCompositor* compositor, struct wl_display* wl_display);
+/* Headless: no host window, no EGL context, no renderer. render() becomes a no-op.
+ * Offscreen rendering for screenshots is a later task (docs/TASKS.md P1-T05). */
+struct MansionDisplay* create_display_headless(struct MansionCompositor* compositor, struct wl_display* wl_display);
 void destroy_display(struct MansionDisplay* display);
 void swap_buffers(struct MansionDisplay* display);
 void render(struct MansionDisplay* display);

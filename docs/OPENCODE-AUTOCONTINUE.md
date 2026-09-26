@@ -1,84 +1,116 @@
 # OpenCode autonomous runs
 
-The repository includes a dependency-free project plugin at
-`.opencode/plugins/auto-continue.js`. OpenCode loads project plugins at startup.
-Restart OpenCode in this repository after pulling or changing the plugin.
+The repository ships a dependency-free OpenCode **V2** plugin at
+`.opencode/plugins/auto-continue.js`. OpenCode 2.x loads it from
+`.opencode/plugins/` when a session is opened in this directory and reloads it
+when the file changes. It was written for and verified against OpenCode
+2.0.16; the V1 plugin format (`export const Plugin = async ({client}) => hooks`)
+no longer loads in 2.x.
 
-## Start and stop
+## Before an unattended run
 
-In OpenCode, enter:
+1. Make sure the llama.cpp server is up: `curl -s http://127.0.0.1:8080/v1/models`.
+2. Build and test once yourself so the run starts green:
+   `meson compile -C build && meson test -C build`.
+3. Optionally install `weston` (`sudo pacman -S weston`) so the human smoke
+   test can be performed later. Autonomous sessions never use `sudo`.
+4. Check `git status --short` is clean or contains only work you want the run
+   to build on. The run commits after every verified task.
+5. Start OpenCode in this directory, then:
 
-```text
-/autocontinue Complete Projects 1–4 of PROJECT-ROADMAP.md
-```
+   ```text
+   /autocontinue Projects 1–4 of docs/TASKS.md
+   ```
 
-Supply an explicit scope. The command uses the build agent and authorizes work
-only within that scope. Each time the session finishes a normal response, the
-plugin waits 1.5 seconds and sends another prompt to the same session, reminding
-it of the scope, verification requirements, status file, and handoffs.
+   The scope is free text; keep it to a task range that exists in
+   `docs/TASKS.md`, for example `Project 1 (P1-T03 to P1-T11)`.
 
-To disable follow-ups:
+## What the plugin does
 
-```text
-/autostop
-```
+- `/autocontinue <scope>` sends the run instructions as a prompt and enables
+  follow-ups for that session only. Child sessions and other sessions are
+  never touched.
+- After each turn ends normally, it waits `delayMs` (2 s), reads the transcript,
+  and sends `Automatic follow-up N/MAX.` plus the same instructions again with
+  `delivery: queue`.
+- The instructions tell the model to take the next unchecked task in
+  `docs/TASKS.md`, build, run `meson test`, tick the task only when the
+  acceptance check passed, update `docs/STATUS.md`, commit, and end with
+  `Next: <task id>`, or with an exact final line `AUTOCONTINUE_DONE` (scope
+  finished) or `AUTOCONTINUE_BLOCKED` (nothing in scope can proceed).
 
-Any other new user message also disables follow-ups, so you can take over normally.
-Use OpenCode's interrupt control to interrupt ongoing work, then `/autostop` if
-needed. The plugin stops on reported session/assistant errors, including aborts.
-`/autostop` itself disables future prompts; it is not a process-kill command.
-Run `/autocontinue <scope>` again to resume deliberately.
+## Stop conditions
 
-## Boundaries
+| Condition | Default |
+| --- | --- |
+| Follow-ups per run (`maxContinuations`) | 400 |
+| Wall-clock limit (`maxDurationMs`) | 96 h |
+| Final line is `AUTOCONTINUE_DONE` or `AUTOCONTINUE_BLOCKED` | always |
+| Identical final replies in a row (`repeatLimit`) | 3 |
+| Empty final reply | always |
+| Follow-ups without any change to `git status`/`HEAD` (`stallLimit`) | 12 (0 disables) |
+| Turn failed or was interrupted; assistant message carries an error | always |
+| Permission request (`permission.asked`) or question form (`form.created`) | always |
+| Any user prompt that is not the plugin's own follow-up | always |
+| `/autostop` | always |
+| OpenCode restart or plugin reload | run state is in memory only |
 
-- At most 20 automatic follow-ups, in addition to the initial command.
-- No further follow-ups after eight hours. This does not interrupt an in-flight
-  task, impose a token/spending cap, or guarantee an eight-hour process lifetime.
-- Runs are held in memory and are disabled after OpenCode restarts.
-- Only explicitly started top-level sessions are continued. Child sessions and
-  unrelated sessions are ignored.
-- Permission/question requests and API errors disable continuation. The plugin
-  never approves permissions or retries failed requests automatically.
-- Three identical final responses, or an empty final response, stop the run.
-  This is a simple repetition check, not proof of implementation progress.
-- Completion and blocker detection rely on the assistant's final response. The
-  plugin instructs it to finish with an exact final line `AUTOCONTINUE_DONE` when
-  the entire scope is verified, or `AUTOCONTINUE_BLOCKED` when no eligible work
-  can proceed. It does not independently certify the work or acceptance tests.
-- Compaction summaries, unfinished replies, and tool-only turns do not trigger
-  additional prompts. Normal OpenCode compaction can proceed independently.
+Override defaults with environment variables before starting OpenCode:
+`AUTOCONTINUE_MAX_CONTINUATIONS`, `AUTOCONTINUE_MAX_HOURS`,
+`AUTOCONTINUE_DELAY_MS`, `AUTOCONTINUE_POLL_MS`, `AUTOCONTINUE_REPEAT_LIMIT`,
+`AUTOCONTINUE_STALL_LIMIT`. Plugin options from `opencode.jsonc`
+(`"plugins": [{"package": "./.opencode/plugins/auto-continue.js", "options": {...}}]`)
+take precedence over both, but the auto-discovered file is already loaded, so
+prefer environment variables.
 
-Limits are defined in `DEFAULTS` at the top of the plugin. Change them and restart
-OpenCode if needed. Stop reasons and continuation counts are written to OpenCode's
-application log under the `auto-continue` service.
+## Take over or stop
 
-The root `opencode.jsonc` uses OpenCode's `permission` object with `bash` and `task`
-tool names. Existing repository restrictions still apply. Permission settings
-control tool access; the plugin supplies subsequent turns.
+- Type any message: follow-ups stop and your message is handled normally.
+- `/autostop`: stops follow-ups and asks the model for a short progress report.
+- OpenCode's interrupt (Esc) ends the turn as *interrupted*; the plugin stops.
+- The permission settings in `opencode.jsonc` still apply. The plugin never
+  answers permission prompts or questions; a prompt ends the run.
+
+## Logs
+
+- `.opencode/auto-continue.log` (git-ignored): enable/follow-up/stop lines
+  with reasons and counts.
+- OpenCode's own log: `opencode debug paths` shows the `log` directory; look
+  for `loading plugin` and `failed to load plugin`.
+
+## Internals (for maintainers)
+
+- V2 Promise API: `export default { id, async setup(ctx) { ... return cleanup } }`.
+  Uses `ctx.command.transform` (+ `reload`) for the two commands,
+  `ctx.session.prompt`, `ctx.session.get`, `ctx.session.context` (transcript
+  since the last compaction), `ctx.session.hook("prompt")` for takeover
+  detection, and `ctx.event.subscribe()` for `session.execution.*`,
+  `permission.asked`, `form.created`, `session.deleted`.
+- Turn boundary = newest non-idle message is a completed assistant message
+  (`time.completed` set, `finish === "stop"`, or an `idle` message with
+  `outcome: succeeded` after it). A poll of `Session.time.idle` every
+  `pollMs` (10 s) backs up the event stream.
+- Commands registered by plugins do not appear in `GET /api/command`, but
+  `POST /api/session/{id}/command` and the TUI `/autocontinue` execute them.
 
 ## Verification
 
-Verified with OpenCode 1.18.32: configuration/plugin loading, command registration,
-and a live server run against a local mock model produced exactly one automatic
-follow-up and then stopped on `AUTOCONTINUE_DONE`. No paid model calls were used.
-The unit suite covers cancellation, session isolation, duplicate events, limits,
-completion/blocker markers, and SDK failures.
-
-Run the dependency-free tests from the repository root with Node.js 20 or newer:
+Unit tests (Node 20+):
 
 ```sh
 node --test .opencode/tests/*.test.js
 ```
 
-For a live check, start a new OpenCode session and run:
+Live check performed 2026-09-26 with OpenCode 2.0.16 and the local Qwen3.6
+model: a restricted probe session received `/autocontinue` via the API, the
+model answered once, the plugin sent follow-up 1/400 after 8 s, the model
+replied `AUTOCONTINUE_DONE`, and the plugin logged
+`stopped (AUTOCONTINUE_DONE); 1 automatic follow-ups`.
+
+To repeat it in the TUI, open a new session and run:
 
 ```text
-/autocontinue Read README.md without editing files. In the first turn report its purpose and the next action, without a completion marker. On the automatic follow-up report completion and finish with AUTOCONTINUE_DONE.
+/autocontinue VERIFICATION ONLY. Do not read, edit, or run anything, and ignore the numbered steps below. First turn: reply with one sentence and no marker. On the automatic follow-up reply with only the line AUTOCONTINUE_DONE.
 ```
 
-Expect one automatic follow-up and then an idle session. Test `/autostop` and a
-normal user message to confirm takeover in your installed OpenCode version.
-
-API references: [plugins](https://opencode.ai/docs/plugins/),
-[SDK](https://opencode.ai/docs/sdk/),
-[permissions](https://opencode.ai/docs/permissions/).
+Expect exactly one automatic follow-up, then an idle session.

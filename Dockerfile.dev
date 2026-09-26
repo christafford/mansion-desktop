@@ -1,23 +1,11 @@
-# Mansion Desktop development environment
+# Mansion Desktop development image (Arch Linux). Builds and runs the headless tests.
 FROM archlinux
 
-# Install dependencies
-RUN pacman -Sy --noconfirm \
-    wayland-devel \
-    libxkbcommon \
-    mesa \
-    wayland-egl \
-    meson \
+RUN pacman -Syu --noconfirm && pacman -S --noconfirm --needed \
+    base-devel git meson ninja pkgconf \
+    wayland wayland-protocols libxkbcommon mesa libx11 nodejs \
     weston \
-    git \
-    base-devel
+    && pacman -Scc --noconfirm
 
-# Set up environment
 WORKDIR /src
-COPY . /src
-
-# Build
-RUN meson setup build --buildtype=debug
-
-# Run
-CMD ["meson", "compile", "-C", "build"]
+CMD ["sh", "-c", "meson setup build --buildtype=debug && meson compile -C build && meson test -C build --print-errorlogs"]

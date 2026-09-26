@@ -228,6 +228,21 @@ struct MansionDisplay* create_display(struct MansionCompositor* compositor, stru
     return mansion_display;
 }
 
+struct MansionDisplay* create_display_headless(struct MansionCompositor* compositor, struct wl_display* wl_display) {
+    auto* mansion_display = new MansionDisplay;
+    mansion_display->compositor = compositor;
+    mansion_display->wl_display = wl_display;
+    mansion_display->egl_display = EGL_NO_DISPLAY;
+    mansion_display->egl_context = EGL_NO_CONTEXT;
+    mansion_display->egl_surface = EGL_NO_SURFACE;
+    mansion_display->egl_config = nullptr;
+    mansion_display->egl_config_count = 0;
+    mansion_display->window_width = 1024;
+    mansion_display->window_height = 768;
+    mansion_display->renderer = nullptr;
+    return mansion_display;
+}
+
 void destroy_display(struct MansionDisplay* display) {
     if (!display) return;
 
@@ -305,6 +320,7 @@ void destroy_renderer(struct MansionDisplay* display) {
 void render_surface(struct MansionDisplay* display, struct wl_resource* surface, int32_t x, int32_t y);
 
 void render(struct MansionDisplay* display) {
+    if (!display) return;
     auto* renderer = display->renderer;
     if (!renderer) return;
 

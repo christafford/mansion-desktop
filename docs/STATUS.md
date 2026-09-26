@@ -1,101 +1,96 @@
-# Project Status
+# Project status
 
-## Current State
+Updated 2026-09-26. This file is the single source of truth for what works.
+Use exactly these labels: **verified by automated test**, **verified by a
+person**, **not verified**. Never move an item to a "verified" list without
+running the check that proves it.
 
-### Completed
-- **Build system**: Meson configured, compiles with zero critical warnings
-- **Wayland display**: Socket creation, event loop, client connection management
-- **Globals**: `wl_compositor` (v4), `wl_shell` (v1), `wl_seat` (v4), `wl_shm` (via `wl_display_init_shm`)
-- **Client launcher**: `fork/exec` with proper child process cleanup (SIGTERM→wait→SIGKILL)
-- **EGL rendering**: X11+EGL platform, GLES2 context, Mesa3D shaders, frame rendering
-- **Surface management**: `wl_surface` commit handling, pending/current position tracking, dimension tracking
-- **Input handling**: evdev scanning (`/dev/input/`), 14 devices detected (keyboards + mice), event reading in non-blocking mode
-- **Seat**: Keyboard + pointer capabilities advertised, xkb keymap sent via memfd
+## Next task
 
-### Verified
-- Build compiles with `ninja -C build`
-- Compositor starts and binds socket
-- All 4 globals advertised
-- Client connection and protocol negotiation works
-- Seat events (name + capabilities) delivered to clients on second roundtrip
-- 14 input devices detected (Keychron Q10, USB Keyboard, Steam Controller, etc.)
-- Input events forwarded to Wayland clients (keyboard key events, pointer motion/buttons)
+**P1-T03 xdg-shell replaces wl_shell** in [TASKS.md](TASKS.md). Prerequisites
+(P1-T01, P1-T02) are ticked and pass with `meson test -C build`.
 
-### Not Yet Implemented
-- Surface buffer rendering (currently renders solid color placeholders)
-- Surface enter/leave events to clients
-- Focused surface tracking
-- Shell surface operations (ping/pong, move, resize, fullscreen)
-- wl_keyboard focus management (enter/leave events to clients)
-- wl_pointer enter/leave events (needs surface-under-cursor tracking)
+Continuation point: start by adding `wayland-scanner` code generation to
+`meson.build` (the commented block shows the shape), then create
+`src/xdg-shell.cpp` implementing `xdg_wm_base`, `xdg_surface`, `xdg_toplevel`,
+then extend `tests/mansion-test-client.c` with `--toplevel`, then add
+`tests/client_toplevel.sh` and its `meson.build` entry. Delete `src/shell.cpp`
+last, once the new test passes.
 
-## Next Steps
+## Verified by automated test
 
-### 1. Surface Enter Events
-- Send `wl_surface::enter` events when a surface is created/comitted
-- Track output association for multi-monitor setups
+Run `meson test -C build --print-errorlogs`.
 
-### 2. Keyboard Focus
-- Send `wl_keyboard::enter` event when surface gets focus
-- Track which surface has keyboard focus
-- Send `wl_keyboard::leave` when focus changes
+- `smoke-headless` (P1-T01): `mansion-desktop --headless --socket NAME
+  --exit-after-ms N` starts without a display, prints `MANSION_SOCKET=NAME`,
+  creates the socket and lock file in `$XDG_RUNTIME_DIR`, exits 0 on its own,
+  removes both files, and opens no input devices.
+- `client-globals` (P1-T02): `mansion-test-client` connects and sees
+  `wl_compositor`, `wl_shm`, `wl_seat`; the compositor survives the client
+  disconnecting and exits 0 on SIGTERM.
+- Auto-continue plugin: `node --test .opencode/tests/*.test.js` (34 tests),
+  plus one live run against OpenCode 2.0.16 with the local model on
+  2026-09-26 (see [OPENCODE-AUTOCONTINUE.md](OPENCODE-AUTOCONTINUE.md)).
 
-### 3. Pointer Enter/Leave
-- Track surface under pointer coordinates
-- Send `wl_pointer::enter` when pointer moves onto a surface
-- Send `wl_pointer::leave` when pointer moves off
+## Verified by a person
 
-### 4. Surface Rendering
-- Implement actual buffer rendering (textured quads from wl_shm buffers)
-- Handle buffer damage regions
-- Support surface stacking/z-order
+Nothing yet. No real Wayland client has ever opened a window on this
+compositor. `weston-terminal` is not installed in the development container
+(`sudo pacman -S weston` provides it).
 
-### 5. Shell Surface Operations
-- Handle `wl_shell_surface::ping` (send pong)
-- Implement `set_toplevel`, `set_popup`, `setfullscreen`
-- Implement `move` and `resize` grab support
+## Not verified / known broken
 
-## Test Commands
+- **No client can map a window.** Only the deprecated `wl_shell` is offered;
+  every current toolkit and terminal requires `xdg_shell` (P1-T03).
+- **Buffers are not drawn.** Committed `wl_shm` buffers are tracked as a
+  pointer only; the renderer draws untextured placeholder quads with pixel
+  coordinates fed to a clip-space shader, so nothing sensible appears (P1-T04,
+  P1-T05). No frame callbacks are sent, so clients that wait for `frame` stall.
+- **Input comes from `/dev/input`** in windowed mode and is forwarded to the
+  single most recent keyboard/pointer resource without focus, enter/leave,
+  modifiers, or serials. It reads the host machine's real keyboards while the
+  host desktop is running. Headless mode skips it. Replacement: P1-T06, P1-T07.
+- **Seat handles one client badly.** A second `get_keyboard` posts a protocol
+  error; `wl_seat` binds overwrite each other (P1-T06).
+- **Launcher** works for simple commands (whitespace split, environment set,
+  `DISPLAY` unset) but children are not reaped, `--launch` errors are only
+  logged, and exit status is not reported (P1-T08).
+- **Host window** has no event handling: no resize, no close button, no focus
+  tracking (P1-T07).
+- The X11 `Display*` and `Window` created in `create_display` are never stored
+  or destroyed; they leak until process exit.
 
-```bash
+## Environment facts (development container `mansion-dev`, Arch Linux)
+
+- meson 1.x, ninja 1.13, g++ (C++20), wayland 1.26, wayland-protocols 1.49,
+  libxkbcommon 1.13.2, mesa 26.2, libx11 1.8.13, node 26. `wayland-scanner`
+  present. `/dev/dri/renderD128` is world-accessible; `DISPLAY=:0` reaches the
+  host through XWayland.
+- Missing: wlroots, weston/weston-terminal, foot, Xvfb, eglinfo, wayland-info.
+  Installing packages needs `sudo`, which autonomous sessions must not use.
+  Ask a person: `sudo pacman -S weston`.
+- Host: Steam Deck (SteamOS) running a Wayland session; OpenCode 2.0.16 runs in
+  the container against a llama.cpp server on `127.0.0.1:8080` (Qwen3.6 35B A3B).
+
+## Commands
+
+```sh
+meson setup build --buildtype=debug   # first time
 meson compile -C build
-./build/mansion-desktop
-
-# Test client connects and receives seat events
-env WAYLAND_DISPLAY=mansion-desktop ./test_minimal
-
-# With a terminal (install foot or similar first)
-./build/mansion-desktop --launch=foot
+meson test -C build --print-errorlogs
+./build/mansion-desktop --help
+./build/mansion-desktop --headless --exit-after-ms 1000
+./build/mansion-desktop --launch weston-terminal        # needs a host DISPLAY and weston
 ```
-
-## Architecture Notes
-
-### Wayland Roundtrip Behavior
-Clients need **two roundtrips** to receive seat events:
-1. First roundtrip: get globals, bind to them (seat resource created, events queued)
-2. Second roundtrip: receive seat events (name, capabilities)
-
-This is because `wl_registry_bind()` sends a request synchronously, but the server sends seat events asynchronously after processing the bind request.
-
-### wl_seat_listener
-The listener struct must be a static/global variable. Inline stack allocation can cause memory corruption when libwayland copies the struct.
-
-## Known Issues
-
-1. **No surface rendering**: Surfaces show as solid color placeholders, not actual buffer content
-2. **No input focus**: Keyboard events are read from evdev but not associated with any focused surface
-3. **No pointer surface tracking**: Pointer coordinates tracked but no enter/leave events sent
-4. **Dead keyboard devices**: Power buttons detected as keyboards (filter by KEY_ENTER presence)
 
 ## Files
 
-- `src/main.cpp` - Main loop, signal handling, event dispatch
-- `src/compositor.cpp` - wl_compositor, surface management
-- `src/compositor-private.h` - MansionSurface struct, internal shared definitions
-- `src/display.cpp` - EGL/X11 rendering, Mesa shaders
-- `src/input.cpp` - evdev handling, seat creation, event forwarding
-- `src/shell.cpp` - wl_shell, wl_shell_surface
-- `src/launch.cpp` - Client launcher helper
-- `docs/STATUS.md` - This file
-- `docs/handoffs/01.md` - Handoff document
-- `PROJECT-ROADMAP.md` - Full implementation plan
+- `src/main.cpp` — options, startup/shutdown order, event loop
+- `src/compositor.cpp`, `compositor-private.h` — `wl_compositor`, `wl_surface` state
+- `src/shell.cpp` — `wl_shell` (to be replaced by xdg-shell in P1-T03)
+- `src/display.cpp` — X11 host window, EGL/GLES2 renderer, headless stub
+- `src/input.cpp` — `wl_seat`, evdev reading (to be replaced in P1-T06/T07)
+- `src/launch.cpp` — child process launcher
+- `tests/` — headless test client and shell tests ([tests/README.md](../tests/README.md))
+- `docs/TASKS.md` — task list; `docs/handoffs/` — per-project handoffs;
+  `docs/decisions/` — recorded decisions

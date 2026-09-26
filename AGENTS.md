@@ -614,6 +614,50 @@ Do not invent unrelated work.
 
 ---
 
+# Task Loop for This Repository
+
+The work is organised as small tasks in `docs/TASKS.md`; the verified state is
+in `docs/STATUS.md`. Every autonomous turn follows the same loop:
+
+1. Read `docs/STATUS.md` ("Next task") and `docs/TASKS.md`. Take the first
+   unchecked task in scope whose prerequisites are ticked. Do not skip ahead.
+2. Implement only that task. If it turns out too large, split it into
+   sub-tasks in `docs/TASKS.md` and do the first one.
+3. Build and test:
+
+   ```sh
+   meson compile -C build
+   meson test -C build --print-errorlogs
+   ```
+
+   Then run the task's own acceptance check. Fix failures before anything else.
+4. Only when the acceptance check has actually passed: tick the task, update
+   `docs/STATUS.md` (move items between "verified by automated test",
+   "verified by a person", "not verified" truthfully) and the current
+   `docs/handoffs/NN.md`, and commit locally:
+
+   ```sh
+   git add -A && git commit -q -m "<task id>: <summary>"
+   ```
+
+   Never push. Never amend or rewrite history.
+5. If the task cannot be finished this turn, leave the tree compiling and
+   tests passing, and write the exact continuation point under "Next task".
+
+Hard rules:
+
+- Tasks marked **(human)** are never performed, ticked, or claimed by an
+  autonomous session. Write the procedure; record the result as "not observed".
+- Never write "verified", "works", or "passes" about anything you did not run
+  in this turn. Screens cannot be seen from here; only `meson test` output,
+  logs, and screenshot pixel checks count as evidence.
+- Do not weaken, skip, or delete tests to get green. Record a blocker instead.
+- Do not add dependencies without a `docs/decisions/` record.
+- Do not use `sudo`, install packages, or touch files outside the repository.
+- Delete temporary debug output before committing.
+
+---
+
 # Preferred Decision Hierarchy
 
 When uncertain, prefer choices in this order:

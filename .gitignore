@@ -94,3 +94,6 @@ d coverage
 
 # Cargo
 Cargo.lock
+
+# Sanitizer and alternate build directories
+/build-*/
