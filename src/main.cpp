@@ -116,6 +116,11 @@ int main(int argc, char** argv) {
     // Initialize shared memory
     wl_display_init_shm(wl_display);
 
+    // Initialize evdev input
+    if (input_init() < 0) {
+        std::cerr << "Warning: Failed to initialize input devices" << std::endl;
+    }
+
     // Launch application if requested
     if (!launch_cmd.empty()) {
         auto* app = launch_app(wl_display, launch_cmd.c_str(), launch_cmd.c_str());
@@ -137,17 +142,33 @@ int main(int argc, char** argv) {
     std::cerr << "Mansion Desktop running on socket: " << socket_name << std::endl;
 
     // Run event loop
+    int frame_count = 0;
     while (running) {
         // Dispatch Wayland events with a short timeout to allow periodic rendering
-        wl_event_loop_dispatch(event_loop, 16);  // ~60fps
+        int result = wl_event_loop_dispatch(event_loop, 16);  // ~60fps
+        if (result < 0) {
+            std::cerr << "Event loop error: " << result << std::endl;
+            break;
+        }
+
+        // Flush pending writes to all connected clients
+        wl_display_flush_clients(wl_display);
+
+        // Process input events
+        input_process();
 
         // Render frame
         render(egl_display);
+        frame_count++;
+        if (frame_count % 30 == 0) {
+            std::cerr << "Frame " << frame_count << std::endl;
+        }
     }
 
-    std::cerr << "Mansion Desktop exiting" << std::endl;
+    std::cerr << "Mansion Desktop exiting (frames: " << frame_count << ")" << std::endl;
 
     // Cleanup - destroy in reverse order
+    input_destroy();
     destroy_seat(seat);
     destroy_shell(shell);
     destroy_display(egl_display);

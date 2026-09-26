@@ -253,6 +253,7 @@ EGLContext get_egl_context(struct MansionDisplay* display) {
 
 bool init_renderer(struct MansionDisplay* display) {
     static const char* vertex_shader_source =
+        "precision mediump float;\n"
         "attribute vec2 pos;\n"
         "attribute vec2 texcoord;\n"
         "varying vec2 v_texcoord;\n"
@@ -262,6 +263,7 @@ bool init_renderer(struct MansionDisplay* display) {
         "}\n";
 
     static const char* fragment_shader_source =
+        "precision mediump float;\n"
         "uniform vec4 color;\n"
         "uniform sampler2D tex;\n"
         "varying vec2 v_texcoord;\n"
@@ -337,13 +339,14 @@ void render_surface(struct MansionDisplay* display, struct wl_resource* surface,
     auto* renderer = display->renderer;
     if (!renderer) return;
 
+    // Determine surface size
+    float sw = (surface_data->width > 0) ? static_cast<float>(surface_data->width) : 200.0f;
+    float sh = (surface_data->height > 0) ? static_cast<float>(surface_data->height) : 150.0f;
+
     glUseProgram(renderer->program);
 
     if (surface_data->buffer_resource) {
         // Render with texture (TODO: actually bind the buffer texture)
-        float sw = 200.0f;
-        float sh = 150.0f;
-
         GLfloat attrib_data[] = {
             static_cast<GLfloat>(sx),     static_cast<GLfloat>(sy),       0.0f, 0.0f,
             static_cast<GLfloat>(sx) + sw, static_cast<GLfloat>(sy),       1.0f, 0.0f,
@@ -367,9 +370,6 @@ void render_surface(struct MansionDisplay* display, struct wl_resource* surface,
         glDisableVertexAttribArray(renderer->tex_attrib);
     } else {
         // Render solid color placeholder
-        float sw = 200.0f;
-        float sh = 150.0f;
-
         GLfloat attrib_data[] = {
             static_cast<GLfloat>(sx),     static_cast<GLfloat>(sy),
             static_cast<GLfloat>(sx) + sw, static_cast<GLfloat>(sy),

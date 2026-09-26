@@ -587,7 +587,28 @@ Therefore:
 
 At the same time, do not make increasingly risky changes simply to remain busy.
 
-If the original task is complete, stop.
+When assigned an individual task, stop after completing and verifying it.
+
+When the user explicitly authorizes an autonomous roadmap run, the assignment is
+the authorized milestone or project range. Completing an individual task or
+numbered project is a checkpoint, not the end of that assignment:
+
+1. Verify the completed work against its acceptance criteria.
+2. Update `docs/STATUS.md` and the applicable handoff with validation evidence,
+   limitations, and the next bounded task.
+3. Select the next eligible task within the authorized scope, respecting roadmap
+   dependencies and decision gates.
+4. Begin that task immediately without asking whether to continue.
+
+If a task is blocked by unavailable hardware, services, or human observation,
+record the blocker and continue with independent eligible work. Do not mark
+unperformed checks as passed or start dependent work whose prerequisites remain
+unverified. A handoff preserves progress; writing one does not require stopping.
+
+End an autonomous roadmap run when the authorized scope is verified, a
+user-specified run limit is reached, the user asks to stop, or no eligible work
+remains that can be performed safely. In the last case, document the remaining
+blockers and the evidence or action needed to resume.
 
 Do not invent unrelated work.
 

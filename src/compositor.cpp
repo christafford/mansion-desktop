@@ -113,6 +113,8 @@ static void compositor_create_surface(struct wl_client* client, struct wl_resour
     surface->buffer_destroyed = false;
     surface->has_pending_position = false;
     surface->has_current_position = false;
+    surface->width = 0;
+    surface->height = 0;
 }
 
 static void compositor_create_region(struct wl_client* client, struct wl_resource* compositor_resource,
@@ -161,6 +163,13 @@ struct MansionCompositor* create_compositor(struct wl_display* display) {
 
 struct MansionSurface* compositor_surface_from_resource(struct wl_resource* resource) {
     return static_cast<MansionSurface*>(wl_resource_get_user_data(resource));
+}
+
+void compositor_surface_set_size(struct MansionSurface* surface, int32_t width, int32_t height) {
+    if (surface) {
+        surface->width = width;
+        surface->height = height;
+    }
 }
 
 void destroy_compositor(struct MansionCompositor* compositor) {

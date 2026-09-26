@@ -13,6 +13,10 @@ struct MansionSurface {
     int32_t current_x, current_y;
     bool has_current_position;
     bool buffer_destroyed;
+
+    /* Surface dimensions (from buffer) */
+    int32_t width;
+    int32_t height;
 };
 
 /* Internal compositor structure - shared between compositor.cpp and display.cpp */

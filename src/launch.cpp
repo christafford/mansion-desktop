@@ -18,7 +18,25 @@ struct MansionApp {
 
 void destroy_app(struct MansionApp* app) {
     if (!app) return;
-    wl_list_remove(&app->link);
+
+    // Reap child process if still running
+    if (app->has_pid && app->pid > 0) {
+        int status;
+        pid_t result = waitpid(app->pid, &status, WNOHANG);
+        if (result == 0) {
+            // Process still running, send SIGTERM
+            kill(app->pid, SIGTERM);
+            // Wait briefly for graceful shutdown
+            usleep(100000);  // 100ms
+            result = waitpid(app->pid, &status, WNOHANG);
+            if (result == 0) {
+                // Force kill
+                kill(app->pid, SIGKILL);
+                waitpid(app->pid, &status, 0);
+            }
+        }
+    }
+
     free(app->name);
     delete app;
 }

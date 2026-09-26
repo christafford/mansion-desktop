@@ -16,3 +16,7 @@ See [GETTING_STARTED.md](GETTING_STARTED.md) for development setup and build ins
 - [docs/handoffs/](docs/handoffs/) - task handoffs
 - [docs/decisions/](docs/decisions/) - design decisions
 
+## Autonomous OpenCode runs
+
+See [OpenCode auto-continue](docs/OPENCODE-AUTOCONTINUE.md) for the project plugin,
+`/autocontinue <scope>`, stop controls, and run limits.

@@ -32,7 +32,9 @@ Use one repository and initially one executable, with internal boundaries for co
 
 Start with simple geometry, fixed placement slots, one host window, one supported machine/GPU configuration, and native Wayland clients. SQLite is a suitable starting point for placement metadata. Defer a physics engine until basic placement actually needs it.
 
-Each numbered project is a unit of work for a fresh AI session. Some graphics and protocol projects will require several sessions; use the same project brief with the previous handoff rather than expanding its scope. No credible session-count estimate exists before the first rendering experiment.
+Each numbered project is a separately verifiable unit of work. A fresh AI session is optional; an explicitly authorized autonomous roadmap run may complete several projects in sequence. Some graphics and protocol projects will require several sessions; use the same project brief with the previous handoff rather than expanding its scope. No credible session-count estimate exists before the first rendering experiment.
+
+During an autonomous roadmap run, verify each completed task, update the status and handoff, and immediately begin the next eligible task within the authorized milestone or project range. Preserve dependencies and decision gates. Record blocked requirements without claiming they passed, and continue with independent eligible work where possible. Follow the stopping conditions in AGENTS.md; finishing one project or writing a handoff is not itself a reason to stop the run.
 
 For every project, leave:
 
@@ -253,7 +255,7 @@ For these sessions, use the project number and acceptance boundary above with th
 
 None of these is necessary to prove the core concept.
 
-## Copyable prompt for each new AI session
+## Copyable prompt for a single project
 
 ```text
 Read mansion-desktop-concept.md and PROJECT-ROADMAP.md.
@@ -276,6 +278,35 @@ or hardware. Do not claim visual/input tests passed without running them.
 Update docs/STATUS.md and docs/handoffs/[NUMBER].md with what changed, exact run
 commands, validation evidence, limitations, unresolved decisions, and the next
 bounded task. If incomplete, leave a precise continuation point for a fresh session.
+```
+
+## Copyable prompt for an autonomous roadmap run
+
+Replace [FIRST] and [LAST] with the authorized project range before using this prompt.
+
+```text
+Read AGENTS.md, mansion-desktop-concept.md, and PROJECT-ROADMAP.md.
+Read docs/STATUS.md, relevant docs/decisions/, and the latest applicable
+docs/handoffs/. Inspect the current repository and preserve uncommitted work.
+Reconcile stale status claims with the implementation and verification evidence.
+
+Run an autonomous development sequence through Projects [FIRST]–[LAST].
+Select the next eligible bounded task in that range. Verify prerequisites,
+implement the stated scope, and run relevant checks and demonstrations.
+Respect recorded stack decisions, dependencies, exclusions, and decision gates.
+
+After each task, update docs/STATUS.md and the applicable handoff with changes,
+exact validation commands and results, limitations, and the next bounded task.
+Immediately begin the next eligible task without asking whether to continue.
+Do not end the run merely because one task or numbered project is complete.
+
+If verification requires unavailable hardware, services, or human observation,
+record the blocker and continue with independent eligible work. Do not claim
+unperformed checks passed or bypass an unverified prerequisite or decision gate.
+
+Stop when the authorized range is verified, a limit I specified is reached,
+I ask you to stop, or no eligible work remains that can be performed safely.
+On stopping, report verified results and any remaining blockers precisely.
 ```
 
 Start with **Project 1**, then make **Project 2** the main technical go/no-go experiment. The first product target is **Project 8**, a useful persistent nested workspace; the complete native desktop is a substantially larger undertaking.

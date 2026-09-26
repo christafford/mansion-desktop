@@ -2,166 +2,100 @@
 
 ## Current State
 
-- Repository created with concept and roadmap
-- Project 1 (nested compositor foundation) - partially implemented
-- Development environment setup documented
-- Docker development environment defined
-- Build system (Meson) configured
-- Wayland display and global protocols set up
-- Compositor and shell interfaces created (stubs)
+### Completed
+- **Build system**: Meson configured, compiles with zero critical warnings
+- **Wayland display**: Socket creation, event loop, client connection management
+- **Globals**: `wl_compositor` (v4), `wl_shell` (v1), `wl_seat` (v4), `wl_shm` (via `wl_display_init_shm`)
+- **Client launcher**: `fork/exec` with proper child process cleanup (SIGTERM→wait→SIGKILL)
+- **EGL rendering**: X11+EGL platform, GLES2 context, Mesa3D shaders, frame rendering
+- **Surface management**: `wl_surface` commit handling, pending/current position tracking, dimension tracking
+- **Input handling**: evdev scanning (`/dev/input/`), 14 devices detected (keyboards + mice), event reading in non-blocking mode
+- **Seat**: Keyboard + pointer capabilities advertised, xkb keymap sent via memfd
+
+### Verified
+- Build compiles with `ninja -C build`
+- Compositor starts and binds socket
+- All 4 globals advertised
+- Client connection and protocol negotiation works
+- Seat events (name + capabilities) delivered to clients on second roundtrip
+- 14 input devices detected (Keychron Q10, USB Keyboard, Steam Controller, etc.)
+- Input events forwarded to Wayland clients (keyboard key events, pointer motion/buttons)
+
+### Not Yet Implemented
+- Surface buffer rendering (currently renders solid color placeholders)
+- Surface enter/leave events to clients
+- Focused surface tracking
+- Shell surface operations (ping/pong, move, resize, fullscreen)
+- wl_keyboard focus management (enter/leave events to clients)
+- wl_pointer enter/leave events (needs surface-under-cursor tracking)
 
 ## Next Steps
 
-### Option 1: Set up native development environment
+### 1. Surface Enter Events
+- Send `wl_surface::enter` events when a surface is created/comitted
+- Track output association for multi-monitor setups
 
-Install required dependencies:
+### 2. Keyboard Focus
+- Send `wl_keyboard::enter` event when surface gets focus
+- Track which surface has keyboard focus
+- Send `wl_keyboard::leave` when focus changes
 
-On Arch Linux:
+### 3. Pointer Enter/Leave
+- Track surface under pointer coordinates
+- Send `wl_pointer::enter` when pointer moves onto a surface
+- Send `wl_pointer::leave` when pointer moves off
+
+### 4. Surface Rendering
+- Implement actual buffer rendering (textured quads from wl_shm buffers)
+- Handle buffer damage regions
+- Support surface stacking/z-order
+
+### 5. Shell Surface Operations
+- Handle `wl_shell_surface::ping` (send pong)
+- Implement `set_toplevel`, `set_popup`, `setfullscreen`
+- Implement `move` and `resize` grab support
+
+## Test Commands
+
 ```bash
-sudo pacman -S wayland-devel libxkbcommon mesa egl wayland-egl meson
-```
-
-On Debian/Ubuntu:
-```bash
-sudo apt get install libwayland-dev libxkbcommon-dev libegl1-mesa-dev mesa-common-dev wayland-protocols meson
-```
-
-Then build and test:
-```bash
-meson setup build --buildtype=debug
 meson compile -C build
-./build/mansion-desktop --launch=weston-terminal
+./build/mansion-desktop
+
+# Test client connects and receives seat events
+env WAYLAND_DISPLAY=mansion-desktop ./test_minimal
+
+# With a terminal (install foot or similar first)
+./build/mansion-desktop --launch=foot
 ```
 
-### Option 2: Use Docker development environment
+## Architecture Notes
 
-Build the container:
-```bash
-docker build -t mansion-desktop-dev -f Dockerfile.dev
-```
+### Wayland Roundtrip Behavior
+Clients need **two roundtrips** to receive seat events:
+1. First roundtrip: get globals, bind to them (seat resource created, events queued)
+2. Second roundtrip: receive seat events (name, capabilities)
 
-Run the container:
-```bash
-docker run -ti --net=host --volume="$PWD:/src" mansion-desktop-dev
-```
+This is because `wl_registry_bind()` sends a request synchronously, but the server sends seat events asynchronously after processing the bind request.
 
-Inside container, build and test:
-```bash
-meson setup build --buildtype=debug
-meson compile -C build
-./build/mansion-desktop --launch=weston-terminal
-```
+### wl_seat_listener
+The listener struct must be a static/global variable. Inline stack allocation can cause memory corruption when libwayland copies the struct.
 
-### Option 3: Start with a different language
+## Known Issues
 
-If Rust is made available, implement Project 1 using Rust and Smithay (as originally suggested in the roadmap).
+1. **No surface rendering**: Surfaces show as solid color placeholders, not actual buffer content
+2. **No input focus**: Keyboard events are read from evdev but not associated with any focused surface
+3. **No pointer surface tracking**: Pointer coordinates tracked but no enter/leave events sent
+4. **Dead keyboard devices**: Power buttons detected as keyboards (filter by KEY_ENTER presence)
 
-## Once dependencies are available
+## Files
 
-1. Implement EGL rendering (display.cpp)
-2. Implement input device handling (input.cpp)
-3. Implement surface commit handling (compositor.cpp)
-4. Implement client launcher (launch.cpp)
-5. Verify weston-terminal works
-
-Files to create/complete:
-- `meson.build` (configured)
-- `src/main.cpp` (partial)
-- `src/compositor.cpp` (partial)
-- `src/shell.cpp` (partial)
-- `src/display.cpp` (empty)
-- `src/input.cpp` (empty)
-- `src/launch.cpp` (empty)
-
-Test commands:
-```bash
-meson setup build --buildtype=debug
-meson compile -C build
-./build/mansion-desktop --launch=weston-terminal
-```
-
-## Documentation
-
-- [mansion-desktop-concept.md](mansion-desktop-concept.md) - high-level design
-- [PROJECT-ROADMAP.md](PROJECT-ROADMAP.md) - implementation plan
-- [IMPLEMENTATION-GUIDE.md](IMPLEMENTATION-GUIDE.md) - technical details for Project 1
-- [DEVELOPMENT.md](DEVELOPMENT.md) - setup instructions
-- [docs/handoffs/01.md](docs/handoffs/01.md) - detailed task list
-- [docs/decisions/01-md](docs/decisions/01-md) - technology stack
-
-## Next Steps
-
-### Option 1: Set up native development environment
-
-Install required dependencies:
-
-On Arch Linux:
-```bash
-sudo pacman -S wayland-devel libxkbcommon mesa egl wayland-egl meson
-```
-
-On Debian/Ubuntu:
-```bash
-sudo apt get install libwayland-dev libxkbcommon-dev libegl1-mesa-dev mesa-common-dev wayland-protocols meson
-```
-
-Then build and test:
-```bash
-meson setup build --buildtype=debug
-meson compile -C build
-./build/mansion-desktop --launch=weston-terminal
-```
-
-### Option 2: Use Docker development environment
-
-Build the container:
-```bash
-docker build -t mansion-desktop-dev -f Dockerfile.dev
-```
-
-Run the container:
-```bash
-docker run -ti --net=host --volume="$PWD:/src" mansion-desktop-dev
-```
-
-Inside container, build and test:
-```bash
-meson setup build --buildtype=debug
-meson compile -C build
-./build/mansion-desktop --launch=weston-terminal
-```
-
-### Option 3: Start with a different language
-
-If Rust is made available, implement Project 1 using Rust and Smithay (as originally suggested in the roadmap).
-
-## Once dependencies are available
-
-1. Implement a minimal Wayland compositor (see IMPLEMENTATION-GUIDE.md)
-2. Create a launcher helper
-3. Verify weston-terminal works
-
-Files to create:
-- `meson.build` (configured)
-- `src/main.cpp` (placeholder exists)
-- `src/compositor.cpp` - Core compositor logic
-- `src/display.cpp` - Display/EGL handling
-- `src/input.cpp` - Input device handling
-- `src/launch.cpp` - Client launcher
-
-Test commands:
-```bash
-meson setup build --build-type=debug
-meson compile -C build
-./build/mansion-desktop --launch=weston-terminal
-```
-
-## Documentation
-
-- [mansion-desktop-concept.md](mansion-desktop-concept.md) - high-level design
-- [PROJECT-ROADMAP.md](PROJECT-ROADMAP.md) - implementation plan
-- [IMPLEMENTATION-GUIDE.md](IMPLEMENTATION-GUIDE.md) - technical details for Project 1
-- [DEVELOPMENT.md](DEVELOPMENT.md) - setup instructions
-- [docs/handoffs/01.md](docs/handoffs/01.md) - detailed task list
-- [docs/decisions/01-md](docs/decisions/01-md) - technology stack
-
+- `src/main.cpp` - Main loop, signal handling, event dispatch
+- `src/compositor.cpp` - wl_compositor, surface management
+- `src/compositor-private.h` - MansionSurface struct, internal shared definitions
+- `src/display.cpp` - EGL/X11 rendering, Mesa shaders
+- `src/input.cpp` - evdev handling, seat creation, event forwarding
+- `src/shell.cpp` - wl_shell, wl_shell_surface
+- `src/launch.cpp` - Client launcher helper
+- `docs/STATUS.md` - This file
+- `docs/handoffs/01.md` - Handoff document
+- `PROJECT-ROADMAP.md` - Full implementation plan
