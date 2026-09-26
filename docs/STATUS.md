@@ -7,11 +7,11 @@ running the check that proves it.
 
 ## Next task
 
-**P1-T06 Seat objects done properly** in [TASKS.md](TASKS.md).
+**P1-T06-B Keymap, repeat_info, modifiers** — sub-task of P1-T06 in [TASKS.md](TASKS.md).
 
-Support several `wl_seat` binds, send keymap via xkbcommon, `repeat_info`,
-`modifiers`, keyboard `enter`/`leave`, and pointer `enter`/`leave`/`motion`.
-Add `--input-script FILE` for scripted input testing.
+Use `xkb_keymap_new_from_names` with `XKB_DEFAULT_*` (fallback `us`), send the
+keymap via memfd, compile xkbstate, send `repeat_info` for seat v4+, include
+modifiers in key events.
 
 ## Verified by automated test
 
@@ -23,7 +23,8 @@ Run `meson test -C build --print-errorlogs`.
   removes both files, and opens no input devices.
 - `client-globals` (P1-T02, P1-T03): `mansion-test-client` connects and sees
   `wl_compositor`, `wl_shm`, `wl_seat`, `xdg_wm_base`; the compositor survives
-  the client disconnecting and exits 0 on SIGTERM.
+  the client disconnecting and exits 0 on SIGTERM. The seat now supports
+  multiple `get_keyboard`/`get_pointer` binds per seat (P1-T06-A).
 - `client-toplevel` (P1-T03): the client creates `xdg_surface` + `xdg_toplevel`
   on a `wl_surface`, commits, and receives `xdg_toplevel.configure 800x600`
   followed by `xdg_surface.configure` with a serial. Protocol code is generated
@@ -68,7 +69,9 @@ compositor. `weston-terminal` is not installed in the development container
   modifiers, or serials. It reads the host machine's real keyboards while the
   host desktop is running. Headless mode skips it. Replacement: P1-T06, P1-T07.
 - **Seat handles one client badly.** A second `get_keyboard` posts a protocol
-  error; `wl_seat` binds overwrite each other (P1-T06).
+  error; `wl_seat` binds overwrite each other. Fixed in P1-T06-A (multi-seat
+  lists). Proper keymap (xkbcommon), repeat_info, modifiers, keyboard enter/leave,
+  pointer enter/leave/motion with hit testing in P1-T06-B through P1-T06-F.
 - **Launcher** works for simple commands (whitespace split, environment set,
   `DISPLAY` unset) but children are not reaped, `--launch` errors are only
   logged, and exit status is not reported (P1-T08).

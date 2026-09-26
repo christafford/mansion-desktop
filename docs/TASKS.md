@@ -120,6 +120,46 @@ itself is the human acceptance step.
   and pointer events reach a mapped client in the expected order, and a second
   client receives nothing while the first is focused.
 
+- [x] **P1-T06-A Multi-seat objects (lists).** Replace the single `keyboard`
+  and `pointer` resources in `MansionSeat` with wl_lists of per-client
+  resources. `get_keyboard`/`get_pointer` create new resources; destroy
+  listeners clean them up. No `WL_SEAT_ERROR_MISSING_CAPABILITY` error for
+  repeated binds.
+  **Acceptance:** `meson test -C build client-globals` passes and the
+  compositor survives a client that opens two keyboards on the same seat.
+  (2026-09-26)
+
+- [ ] **P1-T06-B Keymap, repeat_info, modifiers.** Use `xkb_keymap_new_from_names`
+  with `XKB_DEFAULT_*` (fallback `us`), send the keymap via memfd, compile
+  xkbstate, send `repeat_info` for seat v4+, include modifiers in key events.
+  **Acceptance:** `meson test -C build client-frame` passes; headless compositor
+  logs no xkb errors.
+
+- [ ] **P1-T06-C Keyboard enter/leave + focus.** Send keyboard `enter` (with
+  the damaged-surface's wl_resource in the regions array) and `leave` events.
+  Track keyboard focus — the most recently mapped toplevel wins.
+  **Acceptance:** `meson test -C build input-keyboard` passes (client reports
+  `kbd_enter`/`kbd_leave` on focus change).
+
+- [ ] **P1-T06-D Pointer enter/leave/motion + hit test.** Pointer `enter`/`leave`
+  based on hit-testing surface rectangles against pointer position. Track
+  pointer grab state. Maintain one increasing serial across all pointer/key
+  events.
+  **Acceptance:** `meson test -C build input-pointer` passes.
+
+- [ ] **P1-T06-E Input script.** Add `--input-script FILE` to main.cpp. Parse
+  lines: `wait MS`, `key CODE press|release`, `motion X Y`, `button CODE
+  press|release`, `focus lost|gained`, `quit`. Dispatch events through the
+  input system during the event loop.
+  **Acceptance:** `meson test -C build input-script` passes.
+
+- [ ] **P1-T06-F Test client `--report-input` + input-routing test.** Test client
+  mode `--report-input` prints `kbd_enter`, `kbd_leave`, `key CODE STATE`,
+  `ptr_enter`, `ptr_leave`, `motion X Y`, `button CODE STATE`. The
+  `input-routing` test starts the compositor with a scripted input file, maps
+  a client, and verifies event ordering.
+  **Acceptance:** `meson test -C build input-routing` passes.
+
 - [ ] **P1-T07 Host window input replaces evdev.** In windowed mode select
   `KeyPress|KeyRelease|ButtonPress|ButtonRelease|PointerMotion|FocusChange|
   StructureNotify` on the X11 window, handle `WM_DELETE_WINDOW`, translate X

@@ -36,21 +36,25 @@ static wl_fixed_t pointer_y = wl_fixed_from_int(200);
 /* Global pointer to seat for input forwarding */
 static struct MansionSeat* g_seat = nullptr;
 
+/* Per-client keyboard state */
+struct SeatKeyboardClient {
+    struct wl_resource* resource;
+    struct wl_listener destroy_listener;
+};
+
+/* Per-client pointer state */
+struct SeatPointerClient {
+    struct wl_resource* resource;
+    struct wl_listener destroy_listener;
+};
+
 struct MansionSeat {
     struct wl_global* global;
-    struct wl_resource* seat_resource;
+    struct wl_list keyboard_clients;   /* SeatKeyboardClient */
+    struct wl_list pointer_clients;    /* SeatPointerClient */
 
-    struct {
-        struct wl_resource* resource;
-        xkb_keymap* keymap;
-        xkb_state* xkbstate;
-    } keyboard;
-
-    struct {
-        struct wl_resource* resource;
-        wl_fixed_t x;
-        wl_fixed_t y;
-    } pointer;
+    xkb_keymap* keymap;
+    xkb_state*  xkbstate;
 };
 
 /* Evdev device detection helpers */
@@ -100,6 +104,7 @@ static int evdev_open_device(const char* path) {
         input_devices[input_device_count].is_mouse = is_mouse;
         strncpy(input_devices[input_device_count].name, name,
                 sizeof(input_devices[input_device_count].name) - 1);
+        input_devices[input_device_count].name[sizeof(input_devices[input_device_count].name) - 1] = '\0';
         input_device_count++;
         fprintf(stderr, "Input device: %s (%s) fd=%d\n", name,
                 is_keyboard ? "keyboard" : "mouse", fd);
@@ -159,6 +164,7 @@ int input_init(void) {
                 input_devices[input_device_count].is_keyboard = has_key;
                 input_devices[input_device_count].is_mouse = has_rel;
                 strncpy(input_devices[input_device_count].name, name, 63);
+                input_devices[input_device_count].name[63] = '\0';
                 input_device_count++;
                 fprintf(stderr, "Input device: %s fd=%d\n", name, fd);
             } else {
@@ -178,12 +184,58 @@ int input_init(void) {
     return 0;
 }
 
+/* Iterate over all pointer clients and send motion events. */
+static void send_pointer_motion(uint32_t time_msec) {
+    if (!g_seat) return;
+
+    SeatPointerClient *pk, *pk_next;
+    wl_list_for_each_safe(pk, pk_next, &g_seat->pointer_clients, destroy_listener.link) {
+        if (pk->resource) {
+            wl_pointer_send_motion(pk->resource, time_msec,
+                                   pointer_x, pointer_y);
+        }
+    }
+}
+
+/* Iterate over all pointer clients and send wheel events. */
+static void send_pointer_axis(uint32_t time_msec, enum wl_pointer_axis axis,
+                              wl_fixed_t value) {
+    if (!g_seat) return;
+
+    SeatPointerClient *pk, *pk_next;
+    wl_list_for_each_safe(pk, pk_next, &g_seat->pointer_clients, destroy_listener.link) {
+        if (pk->resource) {
+            wl_pointer_send_axis(pk->resource, time_msec, axis, value);
+        }
+    }
+}
+
+/* Iterate over all pointer clients and send button events. */
+static void send_pointer_button(uint32_t serial, uint32_t time_msec,
+                                uint32_t button, uint32_t state) {
+    if (!g_seat) return;
+
+    SeatPointerClient *pk, *pk_next;
+    wl_list_for_each_safe(pk, pk_next, &g_seat->pointer_clients, destroy_listener.link) {
+        if (pk->resource) {
+            wl_pointer_send_button(pk->resource, serial, time_msec,
+                                   button, state);
+        }
+    }
+}
+
+/* Iterate over all pointer clients and send axis-done. */
+static void send_pointer_axis_done(uint32_t time_msec) {
+    (void)time_msec;
+    // wl_pointer v4 doesn't have axis_done; it's a v6+ extension.
+}
+
 void input_process(void) {
     if (!g_seat) return;
 
     uint32_t time_msec = 0;
-    uint32_t serial = 1;  // Simple serial counter
-    auto* pointer_resource = g_seat->pointer.resource;
+    static uint32_t serial = 1;  // Simple serial counter
+    serial++;
 
     for (int i = 0; i < input_device_count; i++) {
         struct input_event ev;
@@ -198,9 +250,12 @@ void input_process(void) {
                 uint32_t state = (ev.value == 1) ?
                     WL_KEYBOARD_KEY_STATE_PRESSED :
                     WL_KEYBOARD_KEY_STATE_RELEASED;
-                if (g_seat->keyboard.resource) {
-                    wl_keyboard_send_key(g_seat->keyboard.resource,
-                                         serial, time_msec, ev.code, state);
+
+                SeatKeyboardClient *kc, *kc_next;
+                wl_list_for_each_safe(kc, kc_next, &g_seat->keyboard_clients, destroy_listener.link) {
+                    if (kc->resource) {
+                        wl_keyboard_send_key(kc->resource, serial, time_msec, ev.code, state);
+                    }
                 }
             }
 
@@ -212,13 +267,11 @@ void input_process(void) {
                     } else if (ev.code == REL_Y) {
                         pointer_y += wl_fixed_from_int(ev.value);
                     } else if (ev.code == REL_WHEEL) {
-                        wl_pointer_send_axis(pointer_resource, time_msec,
-                                             WL_POINTER_AXIS_VERTICAL_SCROLL,
-                                             wl_fixed_from_int(ev.value * 10));
+                        send_pointer_axis(time_msec, WL_POINTER_AXIS_VERTICAL_SCROLL,
+                                          wl_fixed_from_int(ev.value * 10));
                     } else if (ev.code == REL_HWHEEL) {
-                        wl_pointer_send_axis(pointer_resource, time_msec,
-                                             WL_POINTER_AXIS_HORIZONTAL_SCROLL,
-                                             wl_fixed_from_int(ev.value * 10));
+                        send_pointer_axis(time_msec, WL_POINTER_AXIS_HORIZONTAL_SCROLL,
+                                          wl_fixed_from_int(ev.value * 10));
                     }
                 } else if (ev.type == EV_ABS) {
                     if (ev.code == ABS_X) {
@@ -237,17 +290,16 @@ void input_process(void) {
                     uint32_t button_state = (ev.value == 1) ?
                         WL_POINTER_BUTTON_STATE_PRESSED :
                         WL_POINTER_BUTTON_STATE_RELEASED;
-                    wl_pointer_send_button(pointer_resource, serial, time_msec,
-                                            button, button_state);
+                    send_pointer_button(serial, time_msec, button, button_state);
                 }
             }
         }
     }
 
     // Send motion if we processed any events
-    if (time_msec > 0 && pointer_resource) {
-        wl_pointer_send_motion(pointer_resource, time_msec,
-                               pointer_x, pointer_y);
+    if (time_msec > 0) {
+        send_pointer_motion(time_msec);
+        send_pointer_axis_done(time_msec);
     }
 }
 
@@ -261,9 +313,27 @@ void input_destroy(void) {
     input_device_count = 0;
 }
 
-static const struct wl_keyboard_interface keyboard_impl = {
-    nullptr, /* release (v3, optional) */
-};
+/* ---------- SeatKeyboardClient destroy listener ---------- */
+
+static void keyboard_client_destroy(struct wl_listener* listener, void* data) {
+    (void)data;
+    SeatKeyboardClient* kbc = wl_container_of(listener, kbc, destroy_listener);
+    wl_list_remove(&kbc->destroy_listener.link);
+    kbc->resource = nullptr;
+    delete kbc;
+}
+
+/* ---------- SeatPointerClient destroy listener ---------- */
+
+static void pointer_client_destroy(struct wl_listener* listener, void* data) {
+    (void)data;
+    SeatPointerClient* pkc = wl_container_of(listener, pkc, destroy_listener);
+    wl_list_remove(&pkc->destroy_listener.link);
+    pkc->resource = nullptr;
+    delete pkc;
+}
+
+/* ---------- Pointer implementation ---------- */
 
 static void pointer_set_cursor(struct wl_client* client, struct wl_resource* resource,
                                 uint32_t serial, struct wl_resource* surface,
@@ -276,63 +346,74 @@ static const struct wl_pointer_interface pointer_impl = {
     nullptr, /* release (v4, optional) */
 };
 
+/* ---------- Keyboard implementation ---------- */
+
+static const struct wl_keyboard_interface keyboard_impl = {
+    nullptr, /* release (v3, optional) */
+};
+
+/* ---------- Seat implementations ---------- */
+
 static void seat_get_pointer(struct wl_client* client, struct wl_resource* seat_resource,
-                              uint32_t id) {
+                               uint32_t id) {
     auto* seat = static_cast<MansionSeat*>(wl_resource_get_user_data(seat_resource));
 
-    if (seat->pointer.resource) {
-        wl_resource_post_error(seat_resource, WL_SEAT_ERROR_MISSING_CAPABILITY,
-                               "pointer already created");
-        return;
-    }
+    auto* kpc = new SeatPointerClient;
+    memset(kpc, 0, sizeof(*kpc));
 
     auto* resource = wl_resource_create(client, &wl_pointer_interface, 4, id);
     if (!resource) {
+        delete kpc;
         wl_client_post_no_memory(client);
         return;
     }
 
     wl_resource_set_implementation(resource, &pointer_impl, seat, nullptr);
-    seat->pointer.resource = resource;
+    kpc->resource = resource;
+
+    // Listen for client destruction of this pointer resource
+    wl_listener* destroy_listener = &kpc->destroy_listener;
+    wl_signal_add(&resource->destroy_signal, destroy_listener);
+    destroy_listener->notify = pointer_client_destroy;
+
+    wl_list_insert(&seat->pointer_clients, &kpc->destroy_listener.link);
+
+    // Send enter event (pointer enters the first surface)
+    // In a real compositor, this would do a hit-test. For now, send a synthetic enter.
+    wl_pointer_send_enter(resource, 0, nullptr,
+                          pointer_x, pointer_y);
+
+    // Send capabilities (done at seat level, not per-client)
 }
 
 static void seat_get_keyboard(struct wl_client* client, struct wl_resource* seat_resource,
                                uint32_t id) {
     auto* seat = static_cast<MansionSeat*>(wl_resource_get_user_data(seat_resource));
 
-    if (seat->keyboard.resource) {
-        wl_resource_post_error(seat_resource, WL_SEAT_ERROR_MISSING_CAPABILITY,
-                               "keyboard already created");
-        return;
-    }
+    auto* kbc = new SeatKeyboardClient;
+    memset(kbc, 0, sizeof(*kbc));
 
     auto* resource = wl_resource_create(client, &wl_keyboard_interface, 7, id);
     if (!resource) {
+        delete kbc;
         wl_client_post_no_memory(client);
         return;
     }
 
     wl_resource_set_implementation(resource, &keyboard_impl, seat, nullptr);
-    seat->keyboard.resource = resource;
+    kbc->resource = resource;
 
-    // Create xkb keymap and send it via fd
-    seat->keyboard.keymap = xkb_keymap_new_from_string(
-        nullptr,
-        "xkb_keymap {\n"
-        "    xkb_keycodes  { include \"evdev+aliases(qwerty)\" };\n"
-        "    xkb_types     { include \"complete\" };\n"
-        "    xkb_compat    { include \"complete\" };\n"
-        "    xkb_symbols   { include \"pc+us+inet(evdev)\" };\n"
-        "    xkb_geometry  { include \"pc(pc105)\" };\n"
-        "};\n",
-        XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS);
+    // Listen for client destruction of this keyboard resource
+    wl_listener* destroy_listener = &kbc->destroy_listener;
+    wl_signal_add(&resource->destroy_signal, destroy_listener);
+    destroy_listener->notify = keyboard_client_destroy;
 
-    if (seat->keyboard.keymap) {
-        seat->keyboard.xkbstate = xkb_state_new(seat->keyboard.keymap);
+    wl_list_insert(&seat->keyboard_clients, &kbc->destroy_listener.link);
 
-        // Write keymap to memfd and send fd to client
+    // Send keymap
+    if (seat->keymap) {
         const char* keymap_string = xkb_keymap_get_as_string(
-            seat->keyboard.keymap, XKB_KEYMAP_FORMAT_TEXT_V1);
+            seat->keymap, XKB_KEYMAP_FORMAT_TEXT_V1);
 
         if (keymap_string) {
             size_t keymap_len = strlen(keymap_string);
@@ -349,7 +430,7 @@ static void seat_get_keyboard(struct wl_client* client, struct wl_resource* seat
 }
 
 static void seat_get_touch(struct wl_client* client, struct wl_resource* seat_resource,
-                            uint32_t id) {
+                             uint32_t id) {
     (void)client; (void)seat_resource; (void)id;
     wl_resource_post_error(seat_resource, WL_SEAT_ERROR_MISSING_CAPABILITY,
                            "seat does not have touch capability");
@@ -378,7 +459,6 @@ static void seat_bind(struct wl_client* client, void* data, uint32_t version, ui
     }
 
     wl_resource_set_implementation(resource, &seat_impl, seat, nullptr);
-    seat->seat_resource = resource;
 
     // Send seat name
     wl_seat_send_name(resource, "default-seat");
@@ -391,15 +471,52 @@ struct MansionSeat* create_seat(struct wl_display* display) {
     auto* seat = new MansionSeat;
     memset(seat, 0, sizeof(*seat));
 
+    wl_list_init(&seat->keyboard_clients);
+    wl_list_init(&seat->pointer_clients);
+
     seat->global = wl_global_create(display, &wl_seat_interface, 4, seat, seat_bind);
     if (!seat->global) {
         delete seat;
         return nullptr;
     }
 
-    // Initialize keyboard state
-    seat->keyboard.keymap = nullptr;
-    seat->keyboard.xkbstate = nullptr;
+    // Create xkb keymap. xkb_keymap_new_from_names requires xkbcommon >= 1.0;
+    // fall back to a hardcoded keymap on older versions.
+    xkb_context* ctx = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
+    if (ctx) {
+        seat->keymap = xkb_keymap_new_from_string(
+            ctx,
+            "xkb_keymap {\n"
+            "    xkb_keycodes  { include \"evdev+aliases(qwerty)\" };\n"
+            "    xkb_types     { include \"complete\" };\n"
+            "    xkb_compat    { include \"complete\" };\n"
+            "    xkb_symbols   { include \"pc+us+inet(evdev)\" };\n"
+            "    xkb_geometry  { include \"pc(pc105)\" };\n"
+            "};\n",
+            XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS);
+        if (seat->keymap) {
+            seat->xkbstate = xkb_state_new(seat->keymap);
+        }
+        xkb_context_unref(ctx);
+    }
+
+    if (!seat->keymap) {
+        fprintf(stderr, "Warning: could not create xkb keymap\n");
+        // Use hardcoded fallback
+        seat->keymap = xkb_keymap_new_from_string(
+            nullptr,
+            "xkb_keymap {\n"
+            "    xkb_keycodes  { include \"evdev+aliases(qwerty)\" };\n"
+            "    xkb_types     { include \"complete\" };\n"
+            "    xkb_compat    { include \"complete\" };\n"
+            "    xkb_symbols   { include \"pc+us+inet(evdev)\" };\n"
+            "    xkb_geometry  { include \"pc(pc105)\" };\n"
+            "};\n",
+            XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS);
+        if (seat->keymap) {
+            seat->xkbstate = xkb_state_new(seat->keymap);
+        }
+    }
 
     // Register as global seat for input forwarding
     g_seat = seat;
@@ -415,14 +532,36 @@ void destroy_seat(struct MansionSeat* seat) {
         g_seat = nullptr;
     }
 
+    // Destroy all keyboard clients
+    SeatKeyboardClient *kc, *kc_next;
+    wl_list_for_each_safe(kc, kc_next, &seat->keyboard_clients, destroy_listener.link) {
+        wl_list_remove(&kc->destroy_listener.link);
+        if (kc->resource) {
+            wl_resource_destroy(kc->resource);
+        }
+        delete kc;
+    }
+    wl_list_init(&seat->keyboard_clients);
+
+    // Destroy all pointer clients
+    SeatPointerClient *pk, *pk_next;
+    wl_list_for_each_safe(pk, pk_next, &seat->pointer_clients, destroy_listener.link) {
+        wl_list_remove(&pk->destroy_listener.link);
+        if (pk->resource) {
+            wl_resource_destroy(pk->resource);
+        }
+        delete pk;
+    }
+    wl_list_init(&seat->pointer_clients);
+
     wl_global_destroy(seat->global);
 
     // Clean up xkb state and keymap
-    if (seat->keyboard.xkbstate) {
-        xkb_state_unref(seat->keyboard.xkbstate);
+    if (seat->xkbstate) {
+        xkb_state_unref(seat->xkbstate);
     }
-    if (seat->keyboard.keymap) {
-        xkb_keymap_unref(seat->keyboard.keymap);
+    if (seat->keymap) {
+        xkb_keymap_unref(seat->keymap);
     }
 
     delete seat;
