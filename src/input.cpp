@@ -27,68 +27,9 @@ struct MansionSeat {
     } pointer;
 };
 
-static void keyboard_handle_key(void* data, struct wl_keyboard* wl_keyboard,
-                                 uint32_t serial, uint32_t time, uint32_t key,
-                                 uint32_t state) {
-    (void)wl_keyboard; (void)time; (void)serial;
-    auto* seat = static_cast<MansionSeat*>(data);
-    (void)key; (void)state;
-    (void)seat;
-}
-
-static void keyboard_handle_modifiers(void* data, struct wl_keyboard* wl_keyboard,
-                                       uint32_t serial, uint32_t mod_depressed,
-                                       uint32_t mod_latched, uint32_t mod_locked,
-                                       uint32_t group) {
-    (void)wl_keyboard; (void)serial; (void)mod_depressed;
-    (void)mod_latched; (void)mod_locked; (void)group;
-    auto* seat = static_cast<MansionSeat*>(data);
-    (void)seat;
-}
-
-static void keyboard_handle_enter(void* data, struct wl_keyboard* wl_keyboard,
-                                   uint32_t serial, struct wl_resource* surface,
-                                   struct wl_array* keys) {
-    (void)data; (void)wl_keyboard; (void)serial; (void)surface; (void)keys;
-}
-
-static void keyboard_handle_leave(void* data, struct wl_keyboard* wl_keyboard,
-                                   uint32_t serial, struct wl_resource* surface) {
-    (void)data; (void)wl_keyboard; (void)serial; (void)surface;
-}
-
 static const struct wl_keyboard_interface keyboard_impl = {
     nullptr, /* release (v3, optional) */
 };
-
-static void pointer_handle_motion(void* data, struct wl_pointer* wl_pointer,
-                                   uint32_t time, wl_fixed_t x, wl_fixed_t y) {
-    (void)wl_pointer; (void)time;
-    auto* seat = static_cast<MansionSeat*>(data);
-    seat->pointer.x = x;
-    seat->pointer.y = y;
-}
-
-static void pointer_handle_button(void* data, struct wl_pointer* wl_pointer,
-                                   uint32_t time, uint32_t button, uint32_t state) {
-    (void)data; (void)wl_pointer; (void)time; (void)button; (void)state;
-}
-
-static void pointer_handle_axis(void* data, struct wl_pointer* wl_pointer,
-                                 uint32_t time, uint32_t axis, wl_fixed_t value) {
-    (void)data; (void)wl_pointer; (void)time; (void)axis; (void)value;
-}
-
-static void pointer_handle_enter(void* data, struct wl_pointer* wl_pointer,
-                                  uint32_t serial, struct wl_resource* surface,
-                                  wl_fixed_t x, wl_fixed_t y) {
-    (void)data; (void)wl_pointer; (void)serial; (void)surface; (void)x; (void)y;
-}
-
-static void pointer_handle_leave(void* data, struct wl_pointer* wl_pointer,
-                                  uint32_t serial, struct wl_resource* surface) {
-    (void)data; (void)wl_pointer; (void)serial; (void)surface;
-}
 
 static void pointer_set_cursor(struct wl_client* client, struct wl_resource* resource,
                                 uint32_t serial, struct wl_resource* surface,
