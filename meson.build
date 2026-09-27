@@ -107,6 +107,9 @@ test('present-fullsize', find_program('tests/present_fullsize.sh'),
 test('select-panel', find_program('tests/select_panel.sh'),
     args: [mansion_exe, test_client], env: test_env, suite: 'p3', timeout: 30)
 
+test('app-exit', find_program('tests/app_exit.sh'),
+    args: [mansion_exe, test_client], env: test_env, suite: 'p3', timeout: 45)
+
 # P2-T01: header-only math module unit test
 math_test = executable('test_math',
     'tests/test_math.cpp',

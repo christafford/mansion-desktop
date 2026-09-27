@@ -4,6 +4,7 @@
 #include <cmath>
 #include <vector>
 #include <algorithm>
+#include <iostream>
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -62,12 +63,14 @@ struct MansionCompositor* g_compositor = nullptr;
 struct SeatKeyboardClient {
     struct wl_resource* resource;
     struct wl_listener destroy_listener;
+    struct wl_list seat_link;         /* Link in seat->keyboard_clients */
 };
 
 /* Per-client pointer state */
 struct SeatPointerClient {
     struct wl_resource* resource;
     struct wl_listener destroy_listener;
+    struct wl_list seat_link;         /* Link in seat->pointer_clients */
 };
 
 struct MansionSeat {
@@ -103,12 +106,20 @@ void input_destroy(void) {
     /* Nothing to clean up — X11 is managed by the display. */
 }
 
+/* P3-T06: Clear all seat-level focus pointers to prevent dangling references
+ * when a focused surface is destroyed. */
+void seat_clear_focus_state(void) {
+    if (!g_seat) return;
+    g_seat->focused_surface_resource = nullptr;
+    g_seat->pointer_surface_resource = nullptr;
+}
+
 /* Iterate over all pointer clients and send motion events. */
 static void send_pointer_motion(uint32_t time_msec) {
     if (!g_seat) return;
 
     SeatPointerClient *pk, *pk_next;
-    wl_list_for_each_safe(pk, pk_next, &g_seat->pointer_clients, destroy_listener.link) {
+    wl_list_for_each_safe(pk, pk_next, &g_seat->pointer_clients, seat_link) {
         if (pk->resource) {
             wl_pointer_send_motion(pk->resource, time_msec,
                                    pointer_x, pointer_y);
@@ -122,7 +133,7 @@ static void send_pointer_axis(uint32_t time_msec, enum wl_pointer_axis axis,
     if (!g_seat) return;
 
     SeatPointerClient *pk, *pk_next;
-    wl_list_for_each_safe(pk, pk_next, &g_seat->pointer_clients, destroy_listener.link) {
+    wl_list_for_each_safe(pk, pk_next, &g_seat->pointer_clients, seat_link) {
         if (pk->resource) {
             wl_pointer_send_axis(pk->resource, time_msec, axis, value);
         }
@@ -135,7 +146,7 @@ static void send_pointer_button(uint32_t serial, uint32_t time_msec,
     if (!g_seat) return;
 
     SeatPointerClient *pk, *pk_next;
-    wl_list_for_each_safe(pk, pk_next, &g_seat->pointer_clients, destroy_listener.link) {
+    wl_list_for_each_safe(pk, pk_next, &g_seat->pointer_clients, seat_link) {
         if (pk->resource) {
             wl_pointer_send_button(pk->resource, serial, time_msec,
                                    button, state);
@@ -163,7 +174,7 @@ static void send_keymap_modifiers(uint32_t serial) {
         xkb_state_serialize_layout(g_seat->xkbstate, XKB_STATE_LAYOUT_EFFECTIVE);
 
     SeatKeyboardClient *kc, *kc_next;
-    wl_list_for_each_safe(kc, kc_next, &g_seat->keyboard_clients, destroy_listener.link) {
+    wl_list_for_each_safe(kc, kc_next, &g_seat->keyboard_clients, seat_link) {
         if (kc->resource) {
             wl_keyboard_send_modifiers(kc->resource, serial,
                                        depressed, latched, locked, group);
@@ -183,7 +194,7 @@ static void exit_application_mode(void) {
     /* Send key release for every pressed key. */
     for (uint32_t key : g_seat->pressed_keys) {
         SeatKeyboardClient *kc, *kc_next;
-        wl_list_for_each_safe(kc, kc_next, &g_seat->keyboard_clients, destroy_listener.link) {
+        wl_list_for_each_safe(kc, kc_next, &g_seat->keyboard_clients, seat_link) {
             if (kc->resource)
                 wl_keyboard_send_key(kc->resource, serial, 0, key,
                     WL_KEYBOARD_KEY_STATE_RELEASED);
@@ -194,22 +205,32 @@ static void exit_application_mode(void) {
     /* Send empty modifiers. */
     send_keymap_modifiers(serial);
 
-    /* Send keyboard leave. */
+    /* Send keyboard leave.
+     * Only send to clients whose resource belongs to the same client
+     * as the focused surface — libwayland rejects cross-client pointers. */
     if (g_seat->focused_surface_resource) {
         SeatKeyboardClient *kc, *kc_next;
-        wl_list_for_each_safe(kc, kc_next, &g_seat->keyboard_clients, destroy_listener.link) {
-            if (kc->resource)
+        struct wl_client *old_client = wl_resource_get_client(
+            g_seat->focused_surface_resource);
+        wl_list_for_each_safe(kc, kc_next, &g_seat->keyboard_clients, seat_link) {
+            if (kc->resource &&
+                wl_resource_get_client(kc->resource) == old_client)
                 wl_keyboard_send_leave(kc->resource, serial,
                     g_seat->focused_surface_resource);
         }
         g_seat->focused_surface_resource = nullptr;
     }
 
-    /* Send pointer leave. */
+    /* Send pointer leave.
+     * Only send to clients whose resource belongs to the same client
+     * as the pointer surface. */
     if (g_seat->pointer_surface_resource) {
         SeatPointerClient *pk, *pk_next;
-        wl_list_for_each_safe(pk, pk_next, &g_seat->pointer_clients, destroy_listener.link) {
-            if (pk->resource)
+        struct wl_client *surf_client = wl_resource_get_client(
+            g_seat->pointer_surface_resource);
+        wl_list_for_each_safe(pk, pk_next, &g_seat->pointer_clients, seat_link) {
+            if (pk->resource &&
+                wl_resource_get_client(pk->resource) == surf_client)
                 wl_pointer_send_leave(pk->resource, serial,
                     g_seat->pointer_surface_resource);
         }
@@ -261,7 +282,7 @@ static void pointer_check_focus(uint32_t serial) {
         /* Leave old surface. */
         if (g_seat->pointer_surface_resource) {
             SeatPointerClient *pk, *pk_next;
-            wl_list_for_each_safe(pk, pk_next, &g_seat->pointer_clients, destroy_listener.link) {
+            wl_list_for_each_safe(pk, pk_next, &g_seat->pointer_clients, seat_link) {
                 if (pk->resource) {
                     wl_pointer_send_leave(pk->resource, serial,
                                           g_seat->pointer_surface_resource);
@@ -280,7 +301,7 @@ static void pointer_check_focus(uint32_t serial) {
                 wl_fixed_t rx = pointer_x - wl_fixed_from_int(ms->current_x);
                 wl_fixed_t ry = pointer_y - wl_fixed_from_int(ms->current_y);
                 SeatPointerClient *pk, *pk_next;
-                wl_list_for_each_safe(pk, pk_next, &g_seat->pointer_clients, destroy_listener.link) {
+                wl_list_for_each_safe(pk, pk_next, &g_seat->pointer_clients, seat_link) {
                     if (pk->resource) {
                         wl_pointer_send_enter(pk->resource, serial,
                                               new_surface, rx, ry);
@@ -339,7 +360,7 @@ int input_process_x11(struct MansionDisplay* m_display) {
             {
                 SeatKeyboardClient *kc, *kc_next;
                 wl_list_for_each_safe(kc, kc_next,
-                    &g_seat->keyboard_clients, destroy_listener.link) {
+                    &g_seat->keyboard_clients, seat_link) {
                     if (kc->resource)
                         wl_keyboard_send_key(kc->resource,
                             serial, time_msec, linux_keycode, state);
@@ -612,7 +633,7 @@ int input_script_step(struct InputScript* s,
                 xkb_state_update_key(seat->xkbstate, keycode + 8,
                     state == WL_KEYBOARD_KEY_STATE_PRESSED ? XKB_KEY_DOWN : XKB_KEY_UP);
             SeatKeyboardClient *kc, *kc_next;
-            wl_list_for_each_safe(kc, kc_next, &seat->keyboard_clients, destroy_listener.link)
+            wl_list_for_each_safe(kc, kc_next, &seat->keyboard_clients, seat_link)
                 if (kc->resource)
                     wl_keyboard_send_key(kc->resource, serial, 0, keycode, state);
             send_keymap_modifiers(serial);
@@ -764,9 +785,10 @@ static void keyboard_client_destroy(struct wl_listener* listener, void* data) {
 static void pointer_client_destroy(struct wl_listener* listener, void* data) {
     (void)data;
     SeatPointerClient* pkc = wl_container_of(listener, pkc, destroy_listener);
-    wl_list_remove(&pkc->destroy_listener.link);
+    /* Do NOT remove from the list or delete here — the Wayland library
+     * may still hold references during teardown and we crash.
+     * Instead we just null the resource; destroy_seat will clean up. */
     pkc->resource = nullptr;
-    delete pkc;
 }
 
 /* ---------- Pointer implementation ---------- */
@@ -809,10 +831,11 @@ static void seat_get_pointer(struct wl_client* client, struct wl_resource* seat_
 
     // Listen for client destruction of this pointer resource
     wl_listener* destroy_listener = &kpc->destroy_listener;
-    wl_signal_add(&resource->destroy_signal, destroy_listener);
     destroy_listener->notify = pointer_client_destroy;
+    wl_signal_add(&resource->destroy_signal, destroy_listener);
 
-    wl_list_insert(&seat->pointer_clients, &kpc->destroy_listener.link);
+    // Track in seat's client list using a separate link
+    wl_list_insert(&seat->pointer_clients, &kpc->seat_link);
 
     /* Don't send a synthetic enter here; proper enter/leave is handled
        by pointer_check_focus() when the pointer position changes. */
@@ -839,10 +862,11 @@ static void seat_get_keyboard(struct wl_client* client, struct wl_resource* seat
 
     // Listen for client destruction of this keyboard resource
     wl_listener* destroy_listener = &kbc->destroy_listener;
-    wl_signal_add(&resource->destroy_signal, destroy_listener);
     destroy_listener->notify = keyboard_client_destroy;
+    wl_signal_add(&resource->destroy_signal, destroy_listener);
 
-    wl_list_insert(&seat->keyboard_clients, &kbc->destroy_listener.link);
+    // Track in seat's client list using a separate link
+    wl_list_insert(&seat->keyboard_clients, &kbc->seat_link);
 
     // Send keymap
     if (seat->keymap) {
@@ -979,8 +1003,8 @@ void destroy_seat(struct MansionSeat* seat) {
     // here; wl_display_destroy handles it.
     {
         SeatKeyboardClient *kc, *kc_next;
-        wl_list_for_each_safe(kc, kc_next, &seat->keyboard_clients, destroy_listener.link) {
-            wl_list_remove(&kc->destroy_listener.link);
+        wl_list_for_each_safe(kc, kc_next, &seat->keyboard_clients, seat_link) {
+            wl_list_remove(&kc->seat_link);
             delete kc;
         }
     }
@@ -988,8 +1012,8 @@ void destroy_seat(struct MansionSeat* seat) {
     // Destroy all pointer clients.
     {
         SeatPointerClient *pk, *pk_next;
-        wl_list_for_each_safe(pk, pk_next, &seat->pointer_clients, destroy_listener.link) {
-            wl_list_remove(&pk->destroy_listener.link);
+        wl_list_for_each_safe(pk, pk_next, &seat->pointer_clients, seat_link) {
+            wl_list_remove(&pk->seat_link);
             delete pk;
         }
     }
@@ -1015,11 +1039,17 @@ void seat_set_keyboard_focus(struct MansionSeat* seat,
                               MansionCompositor* comp) {
     comp->keyboard_focus_serial++;
 
-    /* Send leave to the old focused surface. */
+    /* Send leave to the old focused surface's keyboard clients.
+     * Only send to clients whose resource belongs to the same client
+     * as the old focused surface — libwayland validates this and
+     * rejects cross-client surface pointers as a protocol error. */
     if (comp->focused_surface_resource) {
         SeatKeyboardClient *kc, *kc_next;
-        wl_list_for_each_safe(kc, kc_next, &seat->keyboard_clients, destroy_listener.link) {
-            if (kc->resource) {
+        struct wl_client *old_client = wl_resource_get_client(
+            comp->focused_surface_resource);
+        wl_list_for_each_safe(kc, kc_next, &seat->keyboard_clients, seat_link) {
+            if (kc->resource &&
+                wl_resource_get_client(kc->resource) == old_client) {
                 wl_keyboard_send_leave(kc->resource,
                                        comp->keyboard_focus_serial,
                                        comp->focused_surface_resource);
@@ -1029,13 +1059,17 @@ void seat_set_keyboard_focus(struct MansionSeat* seat,
     comp->focused_surface_resource = surface;
     seat->focused_surface_resource = surface;
 
-    /* Send enter to the new surface. */
+    /* Send enter to the new surface's keyboard clients.
+     * Only send to clients whose resource belongs to the same client
+     * as the new surface. */
     if (surface) {
         struct wl_array keys;
         wl_array_init(&keys);
         SeatKeyboardClient *kc, *kc_next;
-        wl_list_for_each_safe(kc, kc_next, &seat->keyboard_clients, destroy_listener.link) {
-            if (kc->resource) {
+        struct wl_client *new_client = wl_resource_get_client(surface);
+        wl_list_for_each_safe(kc, kc_next, &seat->keyboard_clients, seat_link) {
+            if (kc->resource &&
+                wl_resource_get_client(kc->resource) == new_client) {
                 wl_keyboard_send_enter(kc->resource,
                                        comp->keyboard_focus_serial,
                                        surface, &keys);

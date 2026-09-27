@@ -34,6 +34,15 @@ static void surface_destroy_callback(struct wl_resource* resource) {
      * otherwise focused_surface_resource becomes a dangling pointer. */
     if (surface->compositor->focused_surface_resource == surface->resource) {
         surface->compositor->focused_surface_resource = nullptr;
+        seat_clear_focus_state();
+
+        /* P3-T06: If the focused surface disappears while in Application
+         * mode, return to World. Do NOT call exit_application_mode() here
+         * — it sends Wayland events that may crash when the Wayland library
+         * is simultaneously processing the client's resource destruction. */
+        if (input_mode_get() == InputMode::Application) {
+            input_mode_set(InputMode::World);
+        }
     }
 
     wl_list_insert(surface->compositor->orphaned_surfaces.prev, &surface->link);

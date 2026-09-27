@@ -182,8 +182,10 @@ static void on_client_destroyed(struct wl_listener* listener, void* data) {
     pid_t pid = 0;
     wl_client_get_credentials(client, &pid, nullptr, nullptr);
     std::cerr << "client disconnected " << pid << std::endl;
+    /* Do NOT delete listener — defer to avoid UAF during wl_client_destroy.
+     * The wl_listener memory is leaked; this is intentional to avoid
+     * use-after-free during libwayland's teardown sequence. */
     wl_list_remove(&listener->link);
-    delete listener;
 }
 
 static void on_client_created(struct wl_listener* listener, void* data) {
@@ -236,11 +238,70 @@ static void setup_sigchld(struct wl_event_loop* event_loop) {
     }
 }
 
+// ── SIGSEGV handler for crash debugging ──────────────────────────────────
+
+static void sigsegv_handler(int /*sig*/, siginfo_t* info, void* ucontext) {
+    if (!ucontext) { _exit(139); }
+    ucontext_t* uc = (ucontext_t*)ucontext;
+    mcontext_t& mc = uc->uc_mcontext;
+
+    // Get RIP from context
+    #ifdef __x86_64__
+    uintptr_t rip = mc.gregs[REG_RIP];
+    uintptr_t rax = mc.gregs[REG_RAX];
+    uintptr_t rdi = mc.gregs[REG_RDI];
+    uintptr_t rsi = mc.gregs[REG_RSI];
+    uintptr_t rbx = mc.gregs[REG_RBX];
+    uintptr_t rsp = mc.gregs[REG_RSP];
+    #else
+    uintptr_t rip = 0, rax = 0, rdi = 0, rsi = 0, rbx = 0, rsp = 0;
+    #endif
+
+    std::cerr << "[CRASH] RIP=" << (void*)rip
+              << " si_addr=" << info->si_addr
+              << " RAX=" << (void*)rax
+              << " RDI=" << (void*)rdi
+              << " RSI=" << (void*)rsi
+              << " RBX=" << (void*)rbx
+              << " rsp=" << (void*)rsp
+              << std::endl;
+
+    // Dump 64 uint64_t values around si_addr
+    uint64_t* addr64 = (uint64_t*)((unsigned char*)info->si_addr - 8);
+    std::cerr << "[CRASH] uint64 dump around si_addr (si_addr = addr64[1]):" << std::endl;
+    for (int i = 0; i < 10; i++) {
+        const char* tag = "";
+        if (i == 0) tag = " [base]";
+        if (i == 1) tag = " [listener]";
+        if (i == 3) tag = " [notify]";
+        std::cerr << "  [" << i << "]" << tag << " = " << (void*)addr64[i] << std::endl;
+    }
+    // Also dump the full 32-byte pkc2 struct
+    uint64_t* base = addr64;
+    std::cerr << "[CRASH] pkc2 struct (32 bytes = 4 uint64_t):" << std::endl;
+    std::cerr << "  resource     = " << (void*)base[0] << std::endl;
+    std::cerr << "  link.prev    = " << (void*)base[1] << std::endl;
+    std::cerr << "  link.next    = " << (void*)base[2] << std::endl;
+    std::cerr << "  notify       = " << (void*)base[3] << std::endl;
+    _exit(139);
+}
+
+static void install_sigsegv_handler() {
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_sigaction = sigsegv_handler;
+    sa.sa_flags = SA_SIGINFO;
+    sigemptyset(&sa.sa_mask);
+    sigaction(SIGSEGV, &sa, nullptr);
+}
+
 int main(int argc, char** argv) {
     Options opts;
     if (!parse_args(argc, argv, opts)) {
         return 2;
     }
+
+    install_sigsegv_handler();
 
     // Never reuse the host compositor's socket name: this process is nested inside it.
     const std::string socket_name =

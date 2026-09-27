@@ -82,10 +82,13 @@ const struct xdg_positioner_interface positioner_impl = {
 /* ── xdg_toplevel ────────────────────────────────────────────────── */
 
 void toplevel_resource_destroyed(struct wl_resource* resource) {
+    (void)resource;
     auto* toplevel = user_data<MansionXdgToplevel>(resource);
     if (!toplevel) return;
-    if (toplevel->xdg_surface) toplevel->xdg_surface->toplevel = nullptr;
-    delete toplevel;
+    MansionXdgSurface* xdg_surf = toplevel->xdg_surface;
+    toplevel->xdg_surface = nullptr;
+    if (xdg_surf) xdg_surf->toplevel = nullptr;
+    /* Do NOT delete toplevel here — defer to xdg_shell destruction. */
 }
 
 void toplevel_ignore(struct wl_client*, struct wl_resource*) {}
@@ -125,11 +128,12 @@ void xdg_surface_detach_wl_surface(MansionXdgSurface* xdg_surface) {
 }
 
 void xdg_surface_resource_destroyed(struct wl_resource* resource) {
+    (void)resource;
     auto* xdg_surface = user_data<MansionXdgSurface>(resource);
     if (!xdg_surface) return;
     if (xdg_surface->toplevel) xdg_surface->toplevel->xdg_surface = nullptr;
     xdg_surface_detach_wl_surface(xdg_surface);
-    delete xdg_surface;
+    /* Do NOT delete xdg_surface here — defer to xdg_shell destruction. */
 }
 
 // The wl_surface went away first (client disconnect or protocol misuse).

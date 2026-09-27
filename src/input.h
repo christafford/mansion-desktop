@@ -37,6 +37,10 @@ void seat_set_keyboard_focus(struct MansionSeat* seat,
 void compositor_set_seat(struct MansionCompositor* compositor,
                           struct MansionSeat* seat);
 
+/* P3-T06: Clear all seat-level focus pointers to prevent dangling references
+ * when a focused surface is destroyed. */
+void seat_clear_focus_state(void);
+
 /* ---------- Input script (P1-T06-E) ---------- */
 
 /* Camera movement state (P2-T06). */
