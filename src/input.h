@@ -9,6 +9,16 @@ struct MansionCompositor;
 struct MansionSeat* create_seat(struct wl_display* display);
 void destroy_seat(struct MansionSeat* seat);
 
+/* ---------- Input mode (P3-T01) ---------- */
+
+enum class InputMode { World, Application };
+
+/* Set the global input mode. In World mode, input drives the camera
+ * (clients receive nothing). In Application mode, input goes to the
+ * focused surface. */
+void input_mode_set(InputMode mode);
+InputMode input_mode_get(void);
+
 /* External globals for main.cpp to set. */
 extern struct MansionSeat* g_seat;
 extern struct MansionCompositor* g_compositor;

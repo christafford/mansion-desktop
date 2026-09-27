@@ -281,11 +281,11 @@ Depends on Project 1 automated tasks (P1-T10 may still be unobserved).
 
 ## Project 3: world/application input state machine
 
-- [ ] **P3-T01 Explicit modes.** `enum class InputMode { World, Application }`
+- [x] **P3-T01 Explicit modes.** `enum class InputMode { World, Application }`
   with one owner. World mode: input drives the camera, clients get nothing.
   Application mode: input goes to the focused surface. `--input-script` gains
   `mode world|app`.
-  **Acceptance:** `meson test -C build mode-routing` passes.
+  **Acceptance:** `meson test -C build mode-routing` passes. (2026-09-27)
 
 - [ ] **P3-T02 Reserved shortcut and clean exit from application mode.**
   Configurable `--world-key` (default `F12`, evdev code 88) returns to world

@@ -28,6 +28,17 @@ extern "C" int memfd_create(const char *name, unsigned int flags);
 static wl_fixed_t pointer_x = wl_fixed_from_int(300);
 static wl_fixed_t pointer_y = wl_fixed_from_int(200);
 
+/* ---------- Input mode (P3-T01) ---------- */
+static InputMode g_input_mode = InputMode::Application;
+
+void input_mode_set(InputMode mode) {
+    g_input_mode = mode;
+}
+
+InputMode input_mode_get(void) {
+    return g_input_mode;
+}
+
 /* Global pointer to seat for input forwarding */
 struct MansionSeat* g_seat = nullptr;
 /* Global pointer to compositor for pointer hit testing. */
@@ -463,6 +474,13 @@ int input_script_step(struct InputScript* s,
     if (strncmp(line, "wait ", 5) == 0) {
         s->remaining_wait_ms = strtol(line + 5, nullptr, 10);
         return 0;
+    } else if (strncmp(line, "mode ", 5) == 0) {
+        if (strcmp(line + 5, "world") == 0) {
+            input_mode_set(InputMode::World);
+        } else if (strcmp(line + 5, "app") == 0) {
+            input_mode_set(InputMode::Application);
+        }
+        return 0;
     } else if (strncmp(line, "key ", 4) == 0) {
         char code_str[16] = {}, action[16] = {};
         sscanf(line + 4, "%15s %15s", code_str, action);
@@ -470,16 +488,22 @@ int input_script_step(struct InputScript* s,
         uint32_t state = (strcmp(action, "press") == 0) ?
             WL_KEYBOARD_KEY_STATE_PRESSED : WL_KEYBOARD_KEY_STATE_RELEASED;
         uint32_t serial = ++seat->serial;
-        if (seat->xkbstate)
-            xkb_state_update_key(seat->xkbstate, keycode + 8,
-                state == WL_KEYBOARD_KEY_STATE_PRESSED ? XKB_KEY_DOWN : XKB_KEY_UP);
-        SeatKeyboardClient *kc, *kc_next;
-        wl_list_for_each_safe(kc, kc_next, &seat->keyboard_clients, destroy_listener.link)
-            if (kc->resource)
-                wl_keyboard_send_key(kc->resource, serial, 0, keycode, state);
-        send_keymap_modifiers(serial);
 
-        /* P2-T06: WASD + arrow keys → camera movement. */
+        /* P3-T01: In World mode, key events are consumed (drive camera only).
+         * In Application mode, events go to the focused surface. */
+        if (g_input_mode == InputMode::Application) {
+            if (seat->xkbstate)
+                xkb_state_update_key(seat->xkbstate, keycode + 8,
+                    state == WL_KEYBOARD_KEY_STATE_PRESSED ? XKB_KEY_DOWN : XKB_KEY_UP);
+            SeatKeyboardClient *kc, *kc_next;
+            wl_list_for_each_safe(kc, kc_next, &seat->keyboard_clients, destroy_listener.link)
+                if (kc->resource)
+                    wl_keyboard_send_key(kc->resource, serial, 0, keycode, state);
+            send_keymap_modifiers(serial);
+        }
+
+        /* P2-T06 / P3-T01: WASD + arrow keys always drive camera movement
+         * regardless of input mode. */
         if (state == WL_KEYBOARD_KEY_STATE_PRESSED) {
             switch (keycode) {
             case KEY_W:      s->movement.w = true;     break;
@@ -512,7 +536,8 @@ int input_script_step(struct InputScript* s,
             /* P2-T06: mouse look — accumulate delta. */
             s->movement.mouseX += static_cast<double>(x);
             s->movement.mouseY += static_cast<double>(y);
-        } else {
+        } else if (g_input_mode == InputMode::Application) {
+            /* P3-T01: pointer motion only goes to clients in Application mode. */
             pointer_x = wl_fixed_from_int(x);
             pointer_y = wl_fixed_from_int(y);
             uint32_t serial = ++seat->serial;
@@ -533,8 +558,11 @@ int input_script_step(struct InputScript* s,
         /* P2-T06: track right button state for mouse look. */
         if (button == BTN_RIGHT)
             s->movement.right_button_pressed = (button_state == WL_POINTER_BUTTON_STATE_PRESSED);
-        uint32_t serial = ++seat->serial;
-        send_pointer_button(serial, 0, button, button_state);
+        /* P3-T01: pointer button events only go to clients in Application mode. */
+        if (g_input_mode == InputMode::Application) {
+            uint32_t serial = ++seat->serial;
+            send_pointer_button(serial, 0, button, button_state);
+        }
     } else if (strcmp(line, "focus gained") == 0) {
         if (comp && comp->focused_surface_resource)
             seat_set_keyboard_focus(seat, comp->focused_surface_resource, comp);

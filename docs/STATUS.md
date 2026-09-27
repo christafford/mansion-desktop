@@ -7,11 +7,12 @@ running the check that proves it.
 
 ## Next task
 
-**P3-T01 Explicit modes.** `enum class InputMode { World, Application }`
-with one owner. World mode: input drives the camera, clients get nothing.
-Application mode: input goes to the focused surface. `--input-script` gains
-`mode world|app`.
-**Acceptance:** `meson test -C build mode-routing` passes.
+**P3-T02 Reserved shortcut and clean exit from application mode.** Configurable
+`--world-key` (default `F12`, evdev code 88) returns to world mode. Leaving
+application mode releases held keys (send `key` release for every pressed key),
+sends `modifiers`, keyboard `leave`, pointer `leave`.
+**Acceptance:** `meson test -C build mode-exit` passes (held key released,
+leave events observed).
 
 ## Verified by automated test
 
@@ -124,6 +125,13 @@ Run `meson test -C build --print-errorlogs`.
 - **P2-T08 Project 2 wrap-up.** All P2 tasks (T01–T07) ticked. Handoff updated
   with gate A decision: continue with current renderer/compositor integration.
   `meson test -C build` passes (14/14).
+- **P3-T01 Explicit modes.** `enum class InputMode { World, Application }` with
+  one owner. World mode: input drives the camera, clients get nothing.
+  Application mode: input goes to the focused surface. `--input-script` gains
+  `mode world|app`. Key/motion/button events only reach clients in Application
+  mode; in World mode they are consumed by the world input system.
+  `meson test -C build mode-routing` passes.
+
 - Auto-continue plugin: `node --test .opencode/tests/*.test.js` (49 tests),
   plus one live run against OpenCode 2.0.16 with the local model on
   2026-09-26 (see [OPENCODE-AUTOCONTINUE.md](OPENCODE-AUTOCONTINUE.md)). The
