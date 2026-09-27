@@ -7,10 +7,11 @@ running the check that proves it.
 
 ## Next task
 
-**P1-T08 Launcher: child lifecycle.** In [TASKS.md](TASKS.md) the launcher
-already reaps children with `SIGCHLD` via `signalfd`. The remaining acceptance
-is to verify reaping in an automated test: launch a child that exits, confirm
-the compositor continues running and `apps` vector is empty.
+**P1-T09 Lifecycle robustness.** Client disconnect while mapped removes the
+surface, textures, focus, and pending callbacks without use-after-free. Two
+toplevels stack (later on top). Host window resize sends a new configure to
+the focused toplevel. Build once with `-Db_sanitize=address,undefined` in a
+separate `build-asan` directory and run the whole test suite.
 
 ## Verified by automated test
 
@@ -52,6 +53,10 @@ Run `meson test -C build --print-errorlogs`.
   ConfigureNotify/WM_DELETE_WINDOW in windowed mode. `grep -r "/dev/input" src`
   finds nothing. All 6 tests still pass. Windowed mode — not observed (requires
   DISPLAY).
+- **P1-T08 Launcher child lifecycle.** Children are reaped automatically via
+  SIGCHLD using `signalfd` added to the Wayland event loop. `wl_display_add_client_created_listener`
+  logs `client connected <pid>` and `client disconnected <pid>` with the client PID
+  from `wl_client_get_credentials`. `meson test -C build launch-client` passes.
 - Auto-continue plugin: `node --test .opencode/tests/*.test.js` (49 tests),
   plus one live run against OpenCode 2.0.16 with the local model on
   2026-09-26 (see [OPENCODE-AUTOCONTINUE.md](OPENCODE-AUTOCONTINUE.md)). The
@@ -79,8 +84,9 @@ compositor. `weston-terminal` is not installed in the development container
   lists). Proper keymap (xkbcommon), repeat_info, modifiers, keyboard enter/leave,
   pointer enter/leave/motion with hit testing in P1-T06-B through P1-T06-F.
 - **Launcher** works for simple commands (whitespace split, environment set,
-  `DISPLAY` unset) but children are not reaped, `--launch` errors are only
-  logged, and exit status is not reported (P1-T08).
+  `DISPLAY` unset), children are reaped via SIGCHLD, and client connect/disconnect
+  is logged. Exit status from `--launch` errors is still only logged (not
+  propagated) (P1-T08 partial).
 
 ## Environment facts (development container `mansion-dev`, Arch Linux)
 

@@ -67,3 +67,5 @@ test('render-shm', find_program('tests/render_shm.sh'),
     args: [mansion_exe, test_client], env: test_env, suite: 'p1', timeout: 30)
 test('input-routing', find_program('tests/input_routing.sh'),
     args: [mansion_exe, test_client], env: test_env, suite: 'p1', timeout: 30)
+test('launch-client', find_program('tests/launch_client.sh'),
+    args: [mansion_exe, test_client], env: test_env, suite: 'p1', timeout: 30)

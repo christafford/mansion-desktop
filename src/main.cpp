@@ -8,6 +8,8 @@
 #include <string>
 #include <vector>
 
+#include <sys/signalfd.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <wayland-server.h>
 
@@ -123,6 +125,67 @@ void signal_handler(int) {
 
 } // namespace
 
+// ── Client lifecycle logging ──────────────────────────────────────────────
+
+static void on_client_destroyed(struct wl_listener* listener, void* data) {
+    struct wl_client* client = static_cast<struct wl_client*>(data);
+    pid_t pid = 0;
+    wl_client_get_credentials(client, &pid, nullptr, nullptr);
+    std::cerr << "client disconnected " << pid << std::endl;
+    wl_list_remove(&listener->link);
+    delete listener;
+}
+
+static void on_client_created(struct wl_listener* listener, void* data) {
+    (void)listener;
+    struct wl_client* client = static_cast<struct wl_client*>(data);
+    pid_t pid = 0;
+    wl_client_get_credentials(client, &pid, nullptr, nullptr);
+    std::cerr << "client connected " << pid << std::endl;
+
+    auto* l = new struct wl_listener;
+    l->notify = on_client_destroyed;
+    wl_list_init(&l->link);
+    wl_client_add_destroy_listener(client, l);
+}
+
+// ── SIGCHLD reaping ───────────────────────────────────────────────────────
+
+static int g_sigchld_fd = -1;
+
+static int sigchld_handler(int fd, uint32_t /*mask*/, void* /*data*/) {
+    struct signalfd_siginfo si;
+    ssize_t s = read(fd, &si, sizeof(si));
+    if (s < static_cast<ssize_t>(sizeof(si))) return 0;
+
+    int status;
+    pid_t pid;
+    while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
+        int exit_code = 0;
+        if (WIFEXITED(status)) {
+            exit_code = WEXITSTATUS(status);
+        } else if (WIFSIGNALED(status)) {
+            exit_code = 128 + WTERMSIG(status);
+        }
+        std::cerr << "child " << pid << " exited " << exit_code << std::endl;
+    }
+    return 0;
+}
+
+static void setup_sigchld(struct wl_event_loop* event_loop) {
+    // Block SIGCHLD so signalfd receives it.
+    sigset_t mask;
+    sigemptyset(&mask);
+    sigaddset(&mask, SIGCHLD);
+    sigprocmask(SIG_BLOCK, &mask, nullptr);
+
+    g_sigchld_fd = signalfd(-1, &mask, SFD_NONBLOCK | SFD_CLOEXEC);
+    if (g_sigchld_fd >= 0) {
+        wl_event_loop_add_fd(event_loop, g_sigchld_fd, WL_EVENT_READABLE,
+                             sigchld_handler, nullptr);
+    }
+}
+
 int main(int argc, char** argv) {
     Options opts;
     if (!parse_args(argc, argv, opts)) {
@@ -145,6 +208,14 @@ int main(int argc, char** argv) {
     }
     auto* event_loop = wl_display_get_event_loop(wl_display);
 
+    // Set up SIGCHLD reaping and client lifecycle logging.
+    setup_sigchld(event_loop);
+
+    struct wl_listener client_created_listener;
+    client_created_listener.notify = on_client_created;
+    wl_list_init(&client_created_listener.link);
+    wl_display_add_client_created_listener(wl_display, &client_created_listener);
+
     MansionCompositor* compositor = nullptr;
     MansionDisplay* display = nullptr;
     MansionXdgShell* xdg_shell = nullptr;
@@ -156,6 +227,10 @@ int main(int argc, char** argv) {
     auto cleanup = [&]() {
         for (auto* app : apps) destroy_app(app);
         apps.clear();
+        if (g_sigchld_fd >= 0) {
+            close(g_sigchld_fd);
+            g_sigchld_fd = -1;
+        }
         if (input_started) input_destroy();
         destroy_seat(seat);
         destroy_xdg_shell(xdg_shell);

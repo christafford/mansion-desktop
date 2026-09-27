@@ -172,7 +172,7 @@ itself is the human acceptance step.
   `grep -r "/dev/input" src` finds nothing; windowed mode — not observed
   (requires DISPLAY). (2026-09-26)
 
-- [ ] **P1-T08 Launcher: child lifecycle.** Already done in `src/launch.cpp`:
+- [x] **P1-T08 Launcher: child lifecycle.** Already done in `src/launch.cpp`:
   children inherit the environment with `WAYLAND_DISPLAY=<our socket>`,
   `DISPLAY` unset, `GDK_BACKEND`/`QT_QPA_PLATFORM=wayland`, `XDG_RUNTIME_DIR`
   unchanged; whitespace argv split; repeatable `--launch`; SIGTERM then SIGKILL
@@ -183,7 +183,7 @@ itself is the human acceptance step.
   `wl_display_add_client_created_listener`).
   **Acceptance:** `meson test -C build launch-client` passes: the compositor
   launches `tests/mansion-test-client --toplevel --buffer 64x64 --exit-after-ms 300`
-  headless, logs its connection and exit, and exits 0 itself.
+  headless, logs its connection and exit, and exits 0 itself. (2026-09-26)
 
 - [ ] **P1-T09 Lifecycle robustness.** Client disconnect while mapped removes the
   surface, textures, focus, and pending callbacks without use-after-free. Two
