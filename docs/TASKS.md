@@ -354,8 +354,10 @@ Depends on Project 1 automated tasks (P1-T10 may still be unobserved).
   with `weston-terminal` in a host session. Record observations in
   `docs/STATUS.md`.
 
-- [ ] **P4-T05 Project 4 wrap-up and Decision gate A.** Handoff 04, status,
+- [x] **P4-T05 Project 4 wrap-up and Decision gate A.** Handoff 04, status,
   and an explicit gate decision in `docs/decisions/`.
+  **Acceptance:** `meson test -C build milestone1` passes (all 24 tests).
+  (2026-09-27)
 
 ---
 

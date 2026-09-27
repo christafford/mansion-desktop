@@ -7,8 +7,8 @@ running the check that proves it.
 
 ## Next task
 
-**P4-T05 Project 4 wrap-up and Decision gate A.** Handoff 04, status,
-and an explicit gate decision in `docs/decisions/`.
+**P5-T00 Expand Project 5** (multiple windows and application lifecycle)
+into tasks of the same shape as above: window registry, several toplevels,
 
 ## Verified by automated test
 
@@ -49,6 +49,11 @@ and an explicit gate decision in `docs/decisions/`.
   panel with Enter (entering Application mode), type keys (client reports them),
   return to world mode with F12, and verify the client is still connected.
   `meson test -C build milestone1` passes. All 24 tests pass.
+
+- **P4-T05 Project 4 wrap-up.** Handoff 04 created with full architectural
+  documentation (room geometry, collision, teleport, texture swizzle fix).
+  Decision gate A recorded in `docs/decisions/04-room-gate.md`: continue to
+  Project 5 (multi-room expansion). All 24 tests pass.
 
 - `smoke-headless` (P1-T01): `mansion-desktop --headless --socket NAME
   --exit-after-ms N` starts without a display, prints `MANSION_SOCKET=NAME`,
