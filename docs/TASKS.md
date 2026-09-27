@@ -218,7 +218,7 @@ itself is the human acceptance step.
 
 Depends on Project 1 automated tasks (P1-T10 may still be unobserved).
 
-- [ ] **P2-T01 Math module.** `src/math.h` with `vec3`, `mat4`, `perspective`,
+- [x] **P2-T01 Math module.** `src/math.h` with `vec3`, `mat4`, `perspective`,
   `look_at`, `translate`, `rotate_y/x`, `multiply`, `transform_point`. Header
   only, no dependency. Unit test executable `tests/test_math.cpp`.
   **Acceptance:** `meson test -C build math` passes (projection of known points

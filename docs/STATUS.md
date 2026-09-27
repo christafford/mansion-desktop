@@ -7,14 +7,9 @@ running the check that proves it.
 
 ## Next task
 
-**P1-T10 (human) Terminal smoke test.** Install `weston` (provides
-`weston-terminal`). Run `./build/mansion-desktop --launch weston-terminal`
-from a host session with `DISPLAY` set. Type, click, resize the host window,
-close the terminal from its own UI, confirm Mansion keeps running, quit
-Mansion, confirm the host desktop is fine. Record the result and
-versions in `docs/STATUS.md` under "Verified by a person". Write the
-procedure in `docs/ACCEPTANCE.md` (autonomous sessions write the procedure;
-a person performs it).
+**P2-T02 Perspective panel.** Add an MVP uniform to the shader. Introduce a
+`Camera` (position, yaw, pitch) and a `Panel` (position, size, normal). Draw
+the focused surface's texture on the panel; keep the 2D path behind `--flat`.
 
 ## Verified by automated test
 
@@ -70,6 +65,12 @@ Run `meson test -C build --print-errorlogs`.
   `configure`. `meson test -C build lifecycle` passes.
   `meson test -C build-asan` (address + undefined sanitizers) reports no sanitizer
   errors (all 8 tests pass).
+- **P2-T01 Math module.** Header-only `src/math.h` with `vec3`, `mat4`,
+  `perspective`, `look_at`, `translate`, `rotate_y/x`, `multiply`,
+  `transform_point`. Unit test executable `tests/test_math.cpp` verifies identity,
+  matrix multiply associativity, rotation of known vectors, perspective projection,
+  look_at camera, and a full VP pipeline. `meson test -C build math` passes
+  (9 test groups, within 1e-3 tolerance).
 - Auto-continue plugin: `node --test .opencode/tests/*.test.js` (49 tests),
   plus one live run against OpenCode 2.0.16 with the local model on
   2026-09-26 (see [OPENCODE-AUTOCONTINUE.md](OPENCODE-AUTOCONTINUE.md)). The
