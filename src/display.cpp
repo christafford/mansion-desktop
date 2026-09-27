@@ -15,6 +15,7 @@
 #include "display.h"
 #include "compositor.h"
 #include "compositor-private.h"
+#include "xdg-shell.h"
 
 struct MansionRenderer {
     GLuint program;
@@ -352,6 +353,15 @@ void display_resize(struct MansionDisplay* display) {
     glUniform2f(display->renderer->viewport_uniform,
                 static_cast<GLfloat>(display->window_width),
                 static_cast<GLfloat>(display->window_height));
+
+    /* Send a new configure to the focused toplevel so it can resize. */
+    if (display->compositor->focused_surface_resource) {
+        auto* surface = compositor_surface_from_resource(display->compositor->focused_surface_resource);
+        if (surface && surface->xdg_surface && xdg_surface_has_toplevel(surface->xdg_surface)) {
+            xdg_shell_send_configure_resize(surface->xdg_surface,
+                                            display->window_width, display->window_height);
+        }
+    }
 }
 
 void destroy_display(struct MansionDisplay* display) {
@@ -475,16 +485,22 @@ void render(struct MansionDisplay* display) {
 
     glClear(GL_COLOR_BUFFER_BIT);
 
-    // Render all surfaces from the compositor
-    struct MansionSurface *surface, *next;
-    wl_list_for_each_safe(surface, next, &display->compositor->surface_list, link) {
-        render_surface(display, surface->resource, 0, 0);
+    // Render all surfaces from the compositor.
+    // Iterate in reverse order (oldest first) so newer surfaces render on top.
+    {
+        struct MansionSurface *surface;
+        wl_list_for_each_reverse(surface, &display->compositor->surface_list, link) {
+            render_surface(display, surface->resource, 0, 0);
+        }
     }
 
     // Render orphaned surfaces (surfaces that survived client disconnect).
-    // These no longer have a valid wl_resource, so render directly via surface pointer.
-    wl_list_for_each_safe(surface, next, &display->compositor->orphaned_surfaces, link) {
-        render_surface_from_data(display, surface, 0, 0);
+    // Iterate in reverse order so newer orphaned surfaces render on top.
+    {
+        struct MansionSurface *surface;
+        wl_list_for_each_reverse(surface, &display->compositor->orphaned_surfaces, link) {
+            render_surface_from_data(display, surface, 0, 0);
+        }
     }
 
     swap_buffers(display);

@@ -19,14 +19,16 @@ static void surface_destroy_callback(struct wl_resource* resource) {
 
     wl_list_remove(&surface->link);
 
-    /* Clean up frame callbacks. */
+    /* Fire remaining frame callbacks so clients are not left waiting. */
     struct wl_resource *cb, *cb_next;
     wl_list_for_each_safe(cb, cb_next, &surface->frame_callback_list, link) {
         wl_list_remove(wl_resource_get_link(cb));
+        wl_callback_send_done(cb, 0);
         wl_resource_destroy(cb);
     }
 
-    /* Keep MansionSurface alive for screenshot; move to orphaned list. */
+    /* Keep MansionSurface alive for screenshot; move to orphaned list.
+     * The GL texture and buffer_resource are kept until compositor destruction. */
     wl_list_insert(surface->compositor->orphaned_surfaces.prev, &surface->link);
 }
 

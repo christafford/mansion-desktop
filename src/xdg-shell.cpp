@@ -260,6 +260,26 @@ void xdg_shell_on_surface_commit(struct MansionXdgSurface* xdg_surface) {
     xdg_surface->configured = true;
 }
 
+void xdg_shell_send_configure_resize(struct MansionXdgSurface* xdg_surface,
+                                     int32_t width, int32_t height) {
+    if (!xdg_surface || !xdg_surface->toplevel) return;
+    xdg_surface->toplevel->width = width;
+    xdg_surface->toplevel->height = height;
+
+    struct wl_array states;
+    wl_array_init(&states);
+    xdg_toplevel_send_configure(xdg_surface->toplevel->resource, width, height, &states);
+    wl_array_release(&states);
+
+    auto* display = wl_client_get_display(wl_resource_get_client(xdg_surface->resource));
+    uint32_t serial = wl_display_next_serial(display);
+    xdg_surface_send_configure(xdg_surface->resource, serial);
+}
+
+bool xdg_surface_has_toplevel(struct MansionXdgSurface* xdg_surface) {
+    return xdg_surface && xdg_surface->toplevel != nullptr;
+}
+
 struct MansionXdgShell* create_xdg_shell(struct MansionCompositor*, struct wl_display* display) {
     auto* shell = new MansionXdgShell{};
     shell->global = wl_global_create(display, &xdg_wm_base_interface, kWmBaseVersion,

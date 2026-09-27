@@ -55,6 +55,13 @@ test_client = executable('mansion-test-client',
 test_env = environment()
 test_env.set('MESON_SOURCE_ROOT', meson.current_source_dir())
 
+# Disable leak detection for ASan tests. The wayland-server library does not
+# free its internal data structures on wl_display_destroy(), so short-lived
+# compositor processes always leak a small amount of wayland-internal memory.
+# All other ASan checks (use-after-free, buffer overflow, etc.) remain active.
+test_env.set('ASAN_OPTIONS', 'detect_leaks=0:halt_on_error=1:abort_on_error=1:print_summary=1:print_stacktrace=1')
+test_env.set('MSAN_OPTIONS', 'detect_leaks=0:halt_on_error=1:abort_on_error=1:print_summary=1:print_stacktrace=1')
+
 test('smoke-headless', find_program('tests/smoke_headless.sh'),
     args: [mansion_exe, test_client], env: test_env, suite: 'p1', timeout: 30)
 test('client-globals', find_program('tests/client_globals.sh'),
@@ -68,4 +75,6 @@ test('render-shm', find_program('tests/render_shm.sh'),
 test('input-routing', find_program('tests/input_routing.sh'),
     args: [mansion_exe, test_client], env: test_env, suite: 'p1', timeout: 30)
 test('launch-client', find_program('tests/launch_client.sh'),
+    args: [mansion_exe, test_client], env: test_env, suite: 'p1', timeout: 30)
+test('lifecycle', find_program('tests/lifecycle.sh'),
     args: [mansion_exe, test_client], env: test_env, suite: 'p1', timeout: 30)

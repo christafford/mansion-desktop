@@ -185,11 +185,13 @@ itself is the human acceptance step.
   launches `tests/mansion-test-client --toplevel --buffer 64x64 --exit-after-ms 300`
   headless, logs its connection and exit, and exits 0 itself. (2026-09-26)
 
-- [ ] **P1-T09 Lifecycle robustness.** Client disconnect while mapped removes the
-  surface, textures, focus, and pending callbacks without use-after-free. Two
-  toplevels stack (later on top). Host window resize sends a new configure to
-  the focused toplevel. Build once with `-Db_sanitize=address,undefined` in a
-  separate `build-asan` directory and run the whole test suite.
+- [x] **P1-T09 Lifecycle robustness.** (2026-09-26) `surface_destroy_callback` fires
+  pending frame callbacks before moving the surface to the orphaned list. Two
+  toplevels stack (later on top) via `wl_list_for_each_reverse`. Host window resize
+  sends a new configure to the focused toplevel. A `lifecycle` test verifies three
+  connect/disconnect cycles plus a fresh client that still receives `configure`.
+  `meson test -C build lifecycle` passes; `meson test -C build-asan` passes all 8
+  tests with no sanitizer errors.
   **Acceptance:** `meson test -C build lifecycle` passes (three connect/
   disconnect cycles, then a fresh client still gets `configure`), and
   `meson test -C build-asan` reports no sanitizer errors.

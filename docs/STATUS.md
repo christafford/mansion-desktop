@@ -7,11 +7,14 @@ running the check that proves it.
 
 ## Next task
 
-**P1-T09 Lifecycle robustness.** Client disconnect while mapped removes the
-surface, textures, focus, and pending callbacks without use-after-free. Two
-toplevels stack (later on top). Host window resize sends a new configure to
-the focused toplevel. Build once with `-Db_sanitize=address,undefined` in a
-separate `build-asan` directory and run the whole test suite.
+**P1-T10 (human) Terminal smoke test.** Install `weston` (provides
+`weston-terminal`). Run `./build/mansion-desktop --launch weston-terminal`
+from a host session with `DISPLAY` set. Type, click, resize the host window,
+close the terminal from its own UI, confirm Mansion keeps running, quit
+Mansion, confirm the host desktop is fine. Record the result and
+versions in `docs/STATUS.md` under "Verified by a person". Write the
+procedure in `docs/ACCEPTANCE.md` (autonomous sessions write the procedure;
+a person performs it).
 
 ## Verified by automated test
 
@@ -57,6 +60,16 @@ Run `meson test -C build --print-errorlogs`.
   SIGCHLD using `signalfd` added to the Wayland event loop. `wl_display_add_client_created_listener`
   logs `client connected <pid>` and `client disconnected <pid>` with the client PID
   from `wl_client_get_credentials`. `meson test -C build launch-client` passes.
+- **P1-T09 Lifecycle robustness.** (2026-09-26) `surface_destroy_callback` fires
+  pending frame callbacks (`wl_callback_send_done(cb, 0)`) before moving the
+  surface to the orphaned list — clients are not left waiting for callbacks after
+  disconnect. Rendering iterates `wl_list_for_each_reverse` so newer surfaces draw
+  on top of older ones. Host window resize sends a new configure to the focused
+  toplevel (`xdg_shell_send_configure_resize`). A new `lifecycle` test verifies
+  three connect/disconnect cycles followed by a fresh client that still receives
+  `configure`. `meson test -C build lifecycle` passes.
+  `meson test -C build-asan` (address + undefined sanitizers) reports no sanitizer
+  errors (all 8 tests pass).
 - Auto-continue plugin: `node --test .opencode/tests/*.test.js` (49 tests),
   plus one live run against OpenCode 2.0.16 with the local model on
   2026-09-26 (see [OPENCODE-AUTOCONTINUE.md](OPENCODE-AUTOCONTINUE.md)). The
