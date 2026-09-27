@@ -7,8 +7,9 @@ running the check that proves it.
 
 ## Next task
 
-**P3-T07 Project 3 wrap-up.** Handoff 03, status, documented host
-shortcuts that cannot be captured.
+**P4-T01 Room geometry and collision.** Floor, four walls, a desk box, and a
+monitor frame as coloured, flat-shaded meshes; AABB collision keeps the camera
+inside the room and above the floor.
 
 ## Verified by automated test
 
@@ -20,6 +21,11 @@ shortcuts that cannot be captured.
   `wl_list_insert` overwrote the link's prev/next, corrupting the destroy_signal
   iteration. Separated into `destroy_listener.link` (for destroy_signal) and
   `seat_link` (for seat tracking). Also added `seat_clear_focus_state()` helper.
+
+- **P3-T07 Project 3 wrap-up.** Handoff 03 created, status updated, host
+  shortcuts documented. The world key (F12 by default) is intercepted by the
+  compositor before reaching any Wayland client, ensuring users can always exit
+  Application mode.
 
 Run `meson test -C build --print-errorlogs`.
 

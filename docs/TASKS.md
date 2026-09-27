@@ -320,8 +320,9 @@ Depends on Project 1 automated tasks (P1-T10 may still be unobserved).
   `seat_link` (for seat tracking). Also added `seat_clear_focus_state()` helper
   and SIGSEGV handler for diagnostics.
 
-- [ ] **P3-T07 Project 3 wrap-up.** Handoff 03, status, documented host
-  shortcuts that cannot be captured.
+- [x] **P3-T07 Project 3 wrap-up.** Handoff 03 created, status updated, host
+  shortcuts documented. The world key (F12, evdev code 88) is intercepted by the
+  compositor before reaching any Wayland client.
 
 ---
 
