@@ -104,7 +104,7 @@ itself is the human acceptance step.
   buffer at the origin produces red at pixel (100,50) and the clear colour at
   (600,500). (2026-09-26)
 
-- [ ] **P1-T06 Seat objects done properly.** Support several `wl_seat` binds and
+- [x] **P1-T06 Seat objects done properly.** Support several `wl_seat` binds and
   several `wl_keyboard`/`wl_pointer` objects per seat (keep lists, remove on
   destroy). Send `keymap` (xkbcommon, `xkb_keymap_new_from_names` with
   `XKB_DEFAULT_*`, fallback `us`), `repeat_info` (seat v4+), `modifiers`, and
@@ -118,7 +118,7 @@ itself is the human acceptance step.
   `motion X Y`, `button CODE STATE`.
   **Acceptance:** `meson test -C build input-routing` passes: scripted key
   and pointer events reach a mapped client in the expected order, and a second
-  client receives nothing while the first is focused.
+  client receives nothing while the first is focused. (2026-09-27)
 
 - [x] **P1-T06-A Multi-seat objects (lists).** Replace the single `keyboard`
   and `pointer` resources in `MansionSeat` with wl_lists of per-client
