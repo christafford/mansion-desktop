@@ -7,13 +7,19 @@ running the check that proves it.
 
 ## Next task
 
-**P1-T06-F Test client `--report-input` + input-routing test** — sub-task of
-P1-T06 in [TASKS.md](TASKS.md).
+**P1-T07 Host window input replaces evdev** — sub-task of
+P1-T07 in [TASKS.md](TASKS.md).
 
-Test client mode `--report-input` prints `kbd_enter`, `kbd_leave`, `key CODE
-STATE`, `ptr_enter`, `ptr_leave`, `motion X Y`, `button CODE STATE`. The
-`input-routing` test starts the compositor with a scripted input file, maps a
-client, and verifies event ordering.
+In windowed mode select `KeyPress|KeyRelease|ButtonPress|ButtonRelease|
+PointerMotion|FocusChange|StructureNotify` on the X11 window, handle
+`WM_DELETE_WINDOW`, translate X keycodes (minus 8) and buttons
+(1→BTN_LEFT 0x110, 2→BTN_MIDDLE 0x112, 3→BTN_RIGHT 0x111, 4/5→vertical
+axis) into the same internal event path used by `--input-script`.
+`ConfigureNotify` updates the viewport. Remove all `/dev/input` code.
+
+**Acceptance:** `meson test -C build` still passes; `grep -r "/dev/input" src`
+finds nothing; `./build/mansion-desktop --exit-after-ms 500` exits 0 with
+`DISPLAY` set and prints no "input device" lines.
 
 ## Verified by automated test
 

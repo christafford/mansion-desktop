@@ -153,12 +153,12 @@ itself is the human acceptance step.
   input system during the event loop.
   **Acceptance:** `meson test -C build input-script` passes. (2026-09-26)
 
-- [ ] **P1-T06-F Test client `--report-input` + input-routing test.** Test client
+- [x] **P1-T06-F Test client `--report-input` + input-routing test.** Test client
   mode `--report-input` prints `kbd_enter`, `kbd_leave`, `key CODE STATE`,
   `ptr_enter`, `ptr_leave`, `motion X Y`, `button CODE STATE`. The
   `input-routing` test starts the compositor with a scripted input file, maps
   a client, and verifies event ordering.
-  **Acceptance:** `meson test -C build input-routing` passes.
+  **Acceptance:** `meson test -C build input-routing` passes. (2026-09-26)
 
 - [ ] **P1-T07 Host window input replaces evdev.** In windowed mode select
   `KeyPress|KeyRelease|ButtonPress|ButtonRelease|PointerMotion|FocusChange|
