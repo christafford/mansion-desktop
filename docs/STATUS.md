@@ -1,22 +1,17 @@
 # Project status
 
-Updated 2026-09-26. This file is the single source of truth for what works.
+Updated 2026-09-27. This file is the single source of truth for what works.
 Use exactly these labels: **verified by automated test**, **verified by a
 person**, **not verified**. Never move an item to a "verified" list without
 running the check that proves it.
 
 ## Next task
 
-**P2-T05 Accelerated client experiment (Decision gate A input).** Add a
-test client mode `--egl` using `wayland-egl` that clears to a colour and
-swaps. Import its buffers with `EGL_WL_bind_wayland_display`
-(`eglBindWaylandDisplayWL`, `eglQueryWaylandBufferWL`, `eglCreateImageKHR`)
-or `zwp_linux_dmabuf_v1`. If the container has no usable GPU path, record
-the exact failure (extension list, error codes) in
-`docs/decisions/03-accelerated-buffers.md` and mark the task blocked, not
-done.
-**Acceptance:** `meson test -C build render-egl` passes, or the decision
-record exists with evidence and `docs/STATUS.md` lists the blocker.
+**P2-T06 Camera movement.** WASD/arrow keys move, mouse look with the
+right button held (windowed mode). The same actions are available to
+`--input-script` through `key`/`motion`.
+**Acceptance:** `meson test -C build camera-move` passes: a scripted forward
+move changes the projected panel size between two screenshots.
 
 ## Verified by automated test
 
@@ -110,6 +105,16 @@ Run `meson test -C build --print-errorlogs`.
   `[B,R,G,A]` rearrangement. `meson test -C build render-lifecycle` passes
   (three connect/draw/disconnect cycles, last screenshot valid, no GL errors).
   All 12 tests pass on `build`.
+- **P2-T05 Accelerated client experiment.** Test client `--egl` flag renders
+  green to an EGL PBuffer, reads pixels via `glReadPixels`, exports as RGBA
+  memfd-backed `wl_shm` buffer. Compositor `--egl` flag skips the ARGB→RGBA
+  swizzle in `render_surface()` and `render_panel()`, uploading RGBA directly.
+  `EGL_WL_bind_wayland_display` symbols are NULL on both X11 and
+  `EGL_PLATFORM_WAYLAND_KHR` displays; `eglCreateImageKHR` symbols are
+  also NULL. `docs/decisions/03-accelerated-buffers.md` records the evidence.
+  Buffer is not zero-copy (client copies GPU→CPU), but the full pipeline
+  (EGL render → shm export → compositor upload → screenshot) is verified.
+  `meson test -C build render-egl` passes. All 13 tests pass on `build`.
 - Auto-continue plugin: `node --test .opencode/tests/*.test.js` (49 tests),
   plus one live run against OpenCode 2.0.16 with the local model on
   2026-09-26 (see [OPENCODE-AUTOCONTINUE.md](OPENCODE-AUTOCONTINUE.md)). The

@@ -22,6 +22,9 @@
 
 #include <wayland-client.h>
 #include "xdg-shell-client-protocol.h"
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
+#include <GLES2/gl2.h>
 
 struct client {
     struct wl_display* display;
@@ -272,7 +275,8 @@ static void usage(void) {
             "  --buffer WxH        create a WxH ARGB8888 shm buffer (implies --toplevel)\n"
             "  --color RRGGBB      fill buffer with color (default ff0000 = red)\n"
             "  --commit-color RRGGBB  after first frame, commit another buffer with this colour\n"
-            "  --report-input      bind keyboard+pointer and print input events to stdout\n");
+            "  --report-input      bind keyboard+pointer and print input events to stdout\n"
+            "  --egl               use EGL PBuffer rendering (requires --buffer, outputs green)\n");
 }
 
 /* Create a shm pool, map it, fill with color, create buffer, attach to surface. */
@@ -359,6 +363,7 @@ int main(int argc, char** argv) {
     int have_commit_color = 0;
     int commit_cr = 0, commit_cg = 0, commit_cb = 0;
     int report_input = 0;
+    int egl_mode = 0;
 
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--socket") == 0 && i + 1 < argc) {
@@ -394,6 +399,8 @@ int main(int argc, char** argv) {
             have_commit_color = 1;
         } else if (strcmp(argv[i], "--report-input") == 0) {
             report_input = 1;
+        } else if (strcmp(argv[i], "--egl") == 0) {
+            egl_mode = 1;
         } else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
             usage();
             return 0;
@@ -425,7 +432,119 @@ int main(int argc, char** argv) {
     printf("connected\n");
     fflush(stdout);
 
-    /* Bind keyboard + pointer when --report-input is requested. */
+    /* EGL mode: render with EGL PBuffer and export as RGBA shm buffer. */
+    if (buffer_mode && egl_mode) {
+        if (!c.compositor || !c.xdg_wm_base) {
+            fprintf(stderr, "egl mode needs wl_compositor and xdg_wm_base\n");
+            wl_display_disconnect(c.display);
+            return 1;
+        }
+        c.surface = wl_compositor_create_surface(c.compositor);
+        c.xdg_surface = xdg_wm_base_get_xdg_surface(c.xdg_wm_base, c.surface);
+        c.toplevel = xdg_surface_get_toplevel(c.xdg_surface);
+        xdg_toplevel_set_title(c.toplevel, "test-client-egl");
+        xdg_toplevel_set_app_id(c.toplevel, "mansion-test-client");
+        xdg_surface_set_window_geometry(c.xdg_surface, 0, 0, bw, bh);
+        xdg_toplevel_add_listener(c.toplevel, &toplevel_listener, &c);
+        xdg_surface_add_listener(c.xdg_surface, &surface_listener, &c);
+
+        /* Render with EGL PBuffer */
+        EGLDisplay egl_dpy = eglGetPlatformDisplay(EGL_PLATFORM_SURFACELESS_MESA, NULL, NULL);
+        if (egl_dpy != EGL_NO_DISPLAY) {
+            EGLint egl_major, egl_minor;
+            if (eglInitialize(egl_dpy, &egl_major, &egl_minor)) {
+                EGLint pbuf_attr[] = { EGL_WIDTH, bw, EGL_HEIGHT, bh, EGL_NONE };
+                EGLint ctx_attr[] = { EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE };
+                EGLint cfg_attr[] = {
+                    EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
+                    EGL_RED_SIZE, 8, EGL_GREEN_SIZE, 8, EGL_BLUE_SIZE, 8, EGL_ALPHA_SIZE, 8,
+                    EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT, EGL_NONE, EGL_NONE
+                };
+                EGLConfig egl_cfg;
+                EGLint num_cfg = 0;
+                if (eglChooseConfig(egl_dpy, cfg_attr, &egl_cfg, 1, &num_cfg) && num_cfg > 0) {
+                    EGLSurface egl_surf = eglCreatePbufferSurface(egl_dpy, egl_cfg, pbuf_attr);
+                    if (egl_surf != EGL_NO_SURFACE) {
+                        EGLContext egl_ctx = eglCreateContext(egl_dpy, egl_cfg, EGL_NO_CONTEXT, ctx_attr);
+                        if (egl_ctx != EGL_NO_CONTEXT) {
+                            if (eglMakeCurrent(egl_dpy, egl_surf, egl_surf, egl_ctx) == EGL_TRUE) {
+                                /* Render solid green */
+                                glClearColor(0.0f, 1.0f, 0.0f, 1.0f);
+                                glClear(GL_COLOR_BUFFER_BIT);
+
+                                /* Read pixels (RGBA format) */
+                                uint8_t* rgba = (uint8_t*)malloc(bw * bh * 4);
+                                if (rgba) {
+                                    glReadPixels(0, 0, bw, bh, GL_RGBA, GL_UNSIGNED_BYTE, rgba);
+
+                                    /* Create memfd-backed shm buffer with RGBA data */
+                                    int32_t stride = bw * 4;
+                                    int32_t size = stride * bh;
+                                    int fd = memfd_create("mansion-egl", 0);
+                                    if (fd >= 0) {
+                                        if (ftruncate(fd, size) == 0) {
+                                            void* ptr = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+                                            if (ptr != MAP_FAILED) {
+                                                memcpy(ptr, rgba, size);
+                                            munmap(ptr, size);
+
+                                            struct wl_shm_pool* pool = wl_shm_create_pool(c.shm, fd, size);
+                                            struct wl_buffer* buffer = wl_shm_pool_create_buffer(pool, 0, bw, bh, stride, WL_SHM_FORMAT_ARGB8888);
+                                            wl_shm_pool_destroy(pool);
+                                            close(fd);
+
+                                            wl_buffer_add_listener(buffer, &buffer_listener, &c);
+                                            c.buffer_width = bw;
+                                            c.buffer_height = bh;
+                                            wl_surface_attach(c.surface, buffer, 0, 0);
+                                            wl_surface_damage(c.surface, 0, 0, bw, bh);
+                                            wl_surface_commit(c.surface);
+                                            struct wl_callback* cb = wl_surface_frame(c.surface);
+                                            wl_callback_add_listener(cb, &callback_listener, &c);
+                                            c.have_buffer = 1;
+                                        } else {
+                                            close(fd);
+                                        }
+                                    } else {
+                                        close(fd);
+                                    }
+                                } else {
+                                    perror("memfd_create (egl)");
+                                }
+                            }
+                            free(rgba);
+                            }
+                            eglMakeCurrent(egl_dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+                            eglDestroyContext(egl_dpy, egl_ctx);
+                        }
+                        eglDestroySurface(egl_dpy, egl_surf);
+                    }
+                }
+                eglTerminate(egl_dpy);
+            }
+        }
+
+        /* Wait for configure */
+        long deadline = now_ms() + 2000;
+        while (!c.received_configure && now_ms() < deadline) {
+            if (dispatch_with_timeout(&c, deadline) < 0) goto error;
+        }
+
+        /* Wait for frame and release */
+        long frame_deadline = now_ms() + 2000;
+        while (!c.frame_done && now_ms() < frame_deadline) {
+            if (dispatch_with_timeout(&c, frame_deadline) < 0) goto error;
+        }
+
+        long rel_deadline = now_ms() + 2000;
+        while (!c.got_release && now_ms() < rel_deadline) {
+            if (dispatch_with_timeout(&c, rel_deadline) < 0) goto error;
+        }
+
+        xdg_toplevel_destroy(c.toplevel);
+        xdg_surface_destroy(c.xdg_surface);
+        wl_surface_destroy(c.surface);
+    } else
     if (c.report_input && c.seat_name > 0) {
         c.seat = wl_registry_bind(c.registry, c.seat_name,
                                    &wl_seat_interface, c.seat_version);

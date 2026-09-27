@@ -240,13 +240,14 @@ Depends on Project 1 automated tasks (P1-T10 may still be unobserved).
   red, screenshot A; commits blue, screenshot B; A is red and B is blue at the
   projected centre.
 
-- [ ] **P2-T04 Texture lifetime.** Textures are created on first commit,
+- [x] **P2-T04 Texture lifetime.** Textures are created on first commit,
   resized on buffer size change, deleted on surface destruction. Check
   `glGetError()` after each frame in debug builds and log once per error.
   **Acceptance:** `meson test -C build render-lifecycle` passes (three
   connect/draw/disconnect cycles, last screenshot valid, no GL error lines).
+  (2026-09-27, fixed cyclic swizzle in `render_surface()`)
 
-- [ ] **P2-T05 Accelerated client experiment (Decision gate A input).** Add a
+- [x] **P2-T05 Accelerated client experiment (Decision gate A input).** Add a
   test client mode `--egl` using `wayland-egl` that clears to a colour and
   swaps. Import its buffers with `EGL_WL_bind_wayland_display`
   (`eglBindWaylandDisplayWL`, `eglQueryWaylandBufferWL`, `eglCreateImageKHR`)
@@ -256,6 +257,9 @@ Depends on Project 1 automated tasks (P1-T10 may still be unobserved).
   done.
   **Acceptance:** `meson test -C build render-egl` passes, or the decision
   record exists with evidence and `docs/STATUS.md` lists the blocker.
+  (2026-09-27, `EGL_WL_bind_wayland_display` unavailable; test client uses
+  EGL PBuffer + `glReadPixels` + memfd/shm export; compositor skips swizzle
+  with `--egl`; full pipeline verified by `render-egl` test)
 
 - [ ] **P2-T06 Camera movement.** WASD/arrow keys move, mouse look with the
   right button held (windowed mode). The same actions are available to

@@ -573,25 +573,31 @@ static void render_panel(struct MansionDisplay* display) {
                 GLuint tex = 0;
                 glGenTextures(1, &tex);
                 glBindTexture(GL_TEXTURE_2D, tex);
-                /* Swizzle ABGR→RGBA. Mesa EGL surfaceless renderer
-                 * interprets GL_RGBA data as cyclically shifted
-                 * [B,R,G,A] internally, so we compensate. */
-                std::vector<uint8_t> rgba(w * h * 4);
-                for (int y = 0; y < h; ++y) {
-                    for (int x = 0; x < w; ++x) {
-                        int idx = (y * w + x) * 4;
-                        rgba[idx + 0] =
-                            ((const uint8_t*)data)[idx + 1];
-                        rgba[idx + 1] =
-                            ((const uint8_t*)data)[idx + 2];
-                        rgba[idx + 2] =
-                            ((const uint8_t*)data)[idx + 0];
-                        rgba[idx + 3] =
-                            ((const uint8_t*)data)[idx + 3];
+                if (display->egl_mode) {
+                    /* P2-T05: EGL mode — RGBA, no swizzle */
+                    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
+                                 GL_RGBA, GL_UNSIGNED_BYTE, data);
+                } else {
+                    /* Swizzle ABGR→RGBA. Mesa EGL surfaceless renderer
+                     * interprets GL_RGBA data as cyclically shifted
+                     * [B,R,G,A] internally, so we compensate. */
+                    std::vector<uint8_t> rgba(w * h * 4);
+                    for (int y = 0; y < h; ++y) {
+                        for (int x = 0; x < w; ++x) {
+                            int idx = (y * w + x) * 4;
+                            rgba[idx + 0] =
+                                ((const uint8_t*)data)[idx + 1];
+                            rgba[idx + 1] =
+                                ((const uint8_t*)data)[idx + 2];
+                            rgba[idx + 2] =
+                                ((const uint8_t*)data)[idx + 0];
+                            rgba[idx + 3] =
+                                ((const uint8_t*)data)[idx + 3];
+                        }
                     }
+                    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
+                                 GL_RGBA, GL_UNSIGNED_BYTE, rgba.data());
                 }
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
-                             GL_RGBA, GL_UNSIGNED_BYTE, rgba.data());
                 glTexParameteri(GL_TEXTURE_2D,
                                 GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D,
@@ -756,9 +762,6 @@ void render_surface(struct MansionDisplay* display, struct wl_resource* surface,
                 static_cast<GLfloat>(display->window_height));
 
     if (surface_data->buffer_resource) {
-        /* Upload buffer pixels as a GL texture. The source is ARGB8888 which on
-         * little-endian is BGRA in memory. OpenGL's BGRA→RGBA conversion swaps
-         * R↔B, so we swizzle on the CPU to get correct colours. */
         struct wl_shm_buffer* shm_buf = wl_shm_buffer_get(surface_data->buffer_resource);
         if (shm_buf) {
             wl_shm_buffer_begin_access(shm_buf);
@@ -770,24 +773,27 @@ void render_surface(struct MansionDisplay* display, struct wl_resource* surface,
                 glGenTextures(1, &tex);
                 glBindTexture(GL_TEXTURE_2D, tex);
 
-                /* Swizzle BGRA → RGBA on CPU, compensating for Mesa EGL
-                 * surfaceless renderer's internal [B,R,G,A] rearrangement.
-                 * Cyclic shift (R←G, G←B, B←R) is the only one that works
-                 * for all colours; a naive R↔B swap only happens to work
-                 * for red where R and B are both zero. */
-                std::vector<uint8_t> rgba(w * h * 4);
-                for (int y = 0; y < h; y++) {
-                    for (int x = 0; x < w; x++) {
-                        int idx = (y * w + x) * 4;
-                        rgba[idx + 0] = ((const uint8_t*)data)[idx + 1];
-                        rgba[idx + 1] = ((const uint8_t*)data)[idx + 2];
-                        rgba[idx + 2] = ((const uint8_t*)data)[idx + 0];
-                        rgba[idx + 3] = ((const uint8_t*)data)[idx + 3];
+                if (display->egl_mode) {
+                    /* P2-T05: EGL mode — client wrote RGBA directly, no swizzle */
+                    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA,
+                                 GL_UNSIGNED_BYTE, data);
+                } else {
+                    /* Default: source is ARGB8888 which on little-endian is BGRA.
+                     * Swizzle to RGBA, compensating for Mesa EGL surfaceless
+                     * renderer's internal [B,R,G,A] rearrangement. */
+                    std::vector<uint8_t> rgba(w * h * 4);
+                    for (int y = 0; y < h; y++) {
+                        for (int x = 0; x < w; x++) {
+                            int idx = (y * w + x) * 4;
+                            rgba[idx + 0] = ((const uint8_t*)data)[idx + 1];
+                            rgba[idx + 1] = ((const uint8_t*)data)[idx + 2];
+                            rgba[idx + 2] = ((const uint8_t*)data)[idx + 0];
+                            rgba[idx + 3] = ((const uint8_t*)data)[idx + 3];
+                        }
                     }
+                    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA,
+                                 GL_UNSIGNED_BYTE, rgba.data());
                 }
-
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA,
-                             GL_UNSIGNED_BYTE, rgba.data());
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
                 surface_data->gl_texture = tex;

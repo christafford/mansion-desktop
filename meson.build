@@ -49,7 +49,7 @@ mansion_exe = executable('mansion-desktop',
 test_client = executable('mansion-test-client',
     files('tests/mansion-test-client.c'), xdg_shell_client_h, xdg_shell_code,
     c_args: ['-Wall', '-Wextra'],
-    dependencies: [wayland_client],
+    dependencies: [wayland_client, egl, glesv2],
 )
 
 test_env = environment()
@@ -84,6 +84,9 @@ test('render-panel', find_program('tests/render_panel.sh'),
 test('render-update', find_program('tests/render-update.sh'),
     args: [mansion_exe, test_client], env: test_env, suite: 'p2', timeout: 45)
 test('render-lifecycle', find_program('tests/render_lifecycle.sh'),
+    args: [mansion_exe, test_client], env: test_env, suite: 'p2', timeout: 45)
+
+test('render-egl', find_program('tests/render_egl.sh'),
     args: [mansion_exe, test_client], env: test_env, suite: 'p2', timeout: 45)
 
 # P2-T01: header-only math module unit test

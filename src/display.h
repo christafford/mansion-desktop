@@ -42,6 +42,9 @@ struct MansionDisplay {
     Camera camera;
     Panel panel;
     bool flat_mode = false;  /* true = 2D rendering, false = 3D panel */
+
+    /* P2-T05: EGL mode — buffers are RGBA (no swizzle needed) */
+    bool egl_mode = false;
 };
 
 struct MansionDisplay* create_display(struct MansionCompositor* compositor, struct wl_display* wl_display);
