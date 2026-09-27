@@ -7,11 +7,8 @@ running the check that proves it.
 
 ## Next task
 
-**P2-T06 Camera movement.** WASD/arrow keys move, mouse look with the
-right button held (windowed mode). The same actions are available to
-`--input-script` through `key`/`motion`.
-**Acceptance:** `meson test -C build camera-move` passes: a scripted forward
-move changes the projected panel size between two screenshots.
+**P2-T08 Project 2 wrap-up and gate A record.** Handoff, status, decision
+on whether to continue with the current renderer/compositor integration.
 
 ## Verified by automated test
 
@@ -115,6 +112,12 @@ Run `meson test -C build --print-errorlogs`.
   Buffer is not zero-copy (client copies GPU→CPU), but the full pipeline
   (EGL render → shm export → compositor upload → screenshot) is verified.
   `meson test -C build render-egl` passes. All 13 tests pass on `build`.
+- **P2-T07 Frame timing.** Compositor gains `--stats` flag. `render()` tracks
+  wall-clock time via `std::chrono::steady_clock` and accumulates
+  `MansionRenderer::bytes_uploaded` (set at each `glTexImage2D` call as
+  `w × h × 4`). Every 60 frames the accumulated averages are printed to stderr
+  as `fps` and `KiB uploaded`, then counters reset. `meson test -C build`
+  passes unchanged. Measured numbers in `docs/handoffs/02.md`.
 - Auto-continue plugin: `node --test .opencode/tests/*.test.js` (49 tests),
   plus one live run against OpenCode 2.0.16 with the local model on
   2026-09-26 (see [OPENCODE-AUTOCONTINUE.md](OPENCODE-AUTOCONTINUE.md)). The

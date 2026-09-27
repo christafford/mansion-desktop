@@ -30,6 +30,7 @@ struct Options {
     std::string input_script; // if set, execute scripted input events
     bool flat = false;       // P2-T02: 2D rendering instead of 3D panel
     bool egl_mode = false;   // P2-T05: client buffers are RGBA (no swizzle)
+    bool stats = false;      // P2-T07: print frame timing / bytes uploaded
     float camera[5] = {0, 0, 10, 0, 0}; // X,Y,Z,yaw,pitch for P2-T02
     bool camera_specified = false; // true if --camera was explicitly passed
 };
@@ -47,6 +48,7 @@ void print_help() {
         "  --exit-after-ms N    exit with status 0 after N milliseconds\n"
         "  --screenshot FILE    write a binary PPM screenshot after the loop\n"
         "  --input-script FILE  execute scripted input events during the loop\n"
+        "  --stats              print per-frame render time and bytes uploaded every 60 frames (P2-T07)\n"
         "  -h, --help           show this help\n"
         "The socket name is printed to stdout as MANSION_SOCKET=<name>.\n";
 }
@@ -150,6 +152,8 @@ bool parse_args(int argc, char** argv, Options& opts) {
                 return false;
             }
             opts.input_script = value;
+        } else if (name == "--stats") {
+            opts.stats = true;
         } else {
             std::cerr << "Error: unknown argument " << arg << "\n";
             return false;
@@ -303,6 +307,8 @@ int main(int argc, char** argv) {
     display->flat_mode = opts.flat || !opts.camera_specified;
     /* P2-T05: EGL mode — buffers from client are RGBA, no swizzle */
     display->egl_mode = opts.egl_mode;
+    /* P2-T07: frame timing stats */
+    display->stats_enabled = opts.stats;
     if (opts.camera_specified) {
         display->camera.x = opts.camera[0];
         display->camera.y = opts.camera[1];
@@ -394,6 +400,8 @@ int main(int argc, char** argv) {
             if (elapsed >= opts.exit_after_ms) break;
         }
 
+        auto frame_start = clock::now();
+
         // Process X11 events (windowed mode only) — must run before Wayland
         // dispatch so input events reach clients promptly.
         if (!opts.headless && display) {
@@ -416,7 +424,7 @@ int main(int argc, char** argv) {
 
         /* Execute next script command, if any. */
         if (script) {
-            int rc = input_script_step(script, seat, compositor);
+            int rc = input_script_step(script, seat, compositor, display);
             if (rc == 1) {
                 /* Script requested quit. */
                 running = 0;
@@ -431,6 +439,13 @@ int main(int argc, char** argv) {
                 input_script_destroy(script);
                 script = nullptr;
             }
+        }
+
+        /* P2-T06: apply accumulated camera movement / mouse look. */
+        if (script && display) {
+            auto now = clock::now();
+            double delta = std::chrono::duration<double, std::milli>(now - frame_start).count();
+            input_script_apply_movement(script, display, delta);
         }
 
         render(display);

@@ -1,5 +1,6 @@
 #include <cstring>
 #include <cmath>
+#include <chrono>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -34,6 +35,9 @@ struct MansionRenderer {
     GLint mvp_uniform;
     GLint color_3d_uniform; /* color uniform */
     GLint tex_3d_uniform;   /* sampler2D uniform */
+
+    /* P2-T07: bytes uploaded since last stats print (cumulative) */
+    long long bytes_uploaded = 0;
 };
 
 // Forward declarations
@@ -577,6 +581,7 @@ static void render_panel(struct MansionDisplay* display) {
                     /* P2-T05: EGL mode — RGBA, no swizzle */
                     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
                                  GL_RGBA, GL_UNSIGNED_BYTE, data);
+                    renderer->bytes_uploaded += static_cast<long long>(w) * h * 4;
                 } else {
                     /* Swizzle ABGR→RGBA. Mesa EGL surfaceless renderer
                      * interprets GL_RGBA data as cyclically shifted
@@ -597,6 +602,7 @@ static void render_panel(struct MansionDisplay* display) {
                     }
                     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
                                  GL_RGBA, GL_UNSIGNED_BYTE, rgba.data());
+                    renderer->bytes_uploaded += static_cast<long long>(w) * h * 4;
                 }
                 glTexParameteri(GL_TEXTURE_2D,
                                 GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -677,6 +683,9 @@ static void render_panel(struct MansionDisplay* display) {
 void render(struct MansionDisplay* display) {
     if (!display) return;
 
+    /* P2-T07: track frame timing when --stats is enabled. */
+    auto frame_start = std::chrono::steady_clock::now();
+
     // Fire frame callbacks on every render tick (needed even in headless mode).
     fire_frame_callbacks(display->compositor);
 
@@ -705,6 +714,25 @@ void render(struct MansionDisplay* display) {
     }
 
     swap_buffers(display);
+
+    /* P2-T07: accumulate stats and print every 60 frames. */
+    auto frame_end = std::chrono::steady_clock::now();
+    if (display->stats_enabled && renderer) {
+        auto us = std::chrono::duration_cast<std::chrono::microseconds>(frame_end - frame_start).count();
+        display->stats_total_render_us += us;
+        display->stats_total_bytes_up += renderer->bytes_uploaded;
+        display->stats_frame_count++;
+        if (display->stats_frame_count >= 60) {
+            double avg_us = static_cast<double>(display->stats_total_render_us) / display->stats_frame_count;
+            double avg_fps = 1'000'000.0 / avg_us;
+            std::cerr << "stats: " << display->stats_frame_count << " frames, "
+                      << avg_fps << " fps, "
+                      << display->stats_total_bytes_up / 1024.0 << " KiB uploaded" << std::endl;
+            display->stats_total_render_us = 0;
+            display->stats_total_bytes_up = 0;
+            display->stats_frame_count = 0;
+        }
+    }
 
     /* P2-T04: Check for GL errors after each frame in debug builds.
      * Log each unique error once per frame so we don't spam the log. */
@@ -777,6 +805,7 @@ void render_surface(struct MansionDisplay* display, struct wl_resource* surface,
                     /* P2-T05: EGL mode — client wrote RGBA directly, no swizzle */
                     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA,
                                  GL_UNSIGNED_BYTE, data);
+                    renderer->bytes_uploaded += static_cast<long long>(w) * h * 4;
                 } else {
                     /* Default: source is ARGB8888 which on little-endian is BGRA.
                      * Swizzle to RGBA, compensating for Mesa EGL surfaceless
@@ -793,6 +822,7 @@ void render_surface(struct MansionDisplay* display, struct wl_resource* surface,
                     }
                     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA,
                                  GL_UNSIGNED_BYTE, rgba.data());
+                    renderer->bytes_uploaded += static_cast<long long>(w) * h * 4;
                 }
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);

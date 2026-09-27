@@ -89,6 +89,9 @@ test('render-lifecycle', find_program('tests/render_lifecycle.sh'),
 test('render-egl', find_program('tests/render_egl.sh'),
     args: [mansion_exe, test_client], env: test_env, suite: 'p2', timeout: 45)
 
+test('camera-move', find_program('tests/camera-move.sh'),
+    args: [mansion_exe, test_client], env: test_env, suite: 'p2', timeout: 60)
+
 # P2-T01: header-only math module unit test
 math_test = executable('test_math',
     'tests/test_math.cpp',

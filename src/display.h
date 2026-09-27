@@ -45,6 +45,12 @@ struct MansionDisplay {
 
     /* P2-T05: EGL mode — buffers are RGBA (no swizzle needed) */
     bool egl_mode = false;
+
+    /* P2-T07: frame timing / stats (accumulated, printed every 60 frames) */
+    bool stats_enabled = false;
+    long long stats_frame_count = 0;       /* frames since last print */
+    long long stats_total_render_us = 0;   /* total render time (us) */
+    long long stats_total_bytes_up = 0;    /* total bytes uploaded */
 };
 
 struct MansionDisplay* create_display(struct MansionCompositor* compositor, struct wl_display* wl_display);

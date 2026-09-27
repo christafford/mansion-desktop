@@ -261,16 +261,16 @@ Depends on Project 1 automated tasks (P1-T10 may still be unobserved).
   EGL PBuffer + `glReadPixels` + memfd/shm export; compositor skips swizzle
   with `--egl`; full pipeline verified by `render-egl` test)
 
-- [ ] **P2-T06 Camera movement.** WASD/arrow keys move, mouse look with the
+- [x] **P2-T06 Camera movement.** WASD/arrow keys move, mouse look with the
   right button held (windowed mode). The same actions are available to
   `--input-script` through `key`/`motion`.
   **Acceptance:** `meson test -C build camera-move` passes: a scripted forward
   move changes the projected panel size between two screenshots.
 
-- [ ] **P2-T07 Frame timing.** `--stats` prints per-frame render time and bytes
+- [x] **P2-T07 Frame timing.** `--stats` prints per-frame render time and bytes
   uploaded every 60 frames; record numbers for the shm path in the handoff.
   **Acceptance:** `meson test -C build` passes; `docs/handoffs/02.md` contains
-  measured numbers with the machine description.
+  measured numbers with the machine description. (2026-09-27)
 
 - [ ] **P2-T08 Project 2 wrap-up and gate A record.** Handoff, status, decision
   on whether to continue with the current renderer/compositor integration.

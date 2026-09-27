@@ -1,6 +1,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <cstdio>
+#include <cmath>
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -360,9 +361,25 @@ int input_process_x11(struct MansionDisplay* m_display) {
 
 /* ---------- Input script execution (P1-T06-E) ---------- */
 
+/* Movement key codes (evdev / linux/input-event-codes.h). */
+static constexpr unsigned KEY_W       = 17;
+static constexpr unsigned KEY_A       = 30;
+static constexpr unsigned KEY_S       = 31;
+static constexpr unsigned KEY_D       = 32;
+static constexpr unsigned KEY_UP      = 103;
+static constexpr unsigned KEY_DOWN    = 108;
+static constexpr unsigned KEY_LEFT    = 105;
+static constexpr unsigned KEY_RIGHT   = 106;
+
+/* Movement speed: 0.01 units per millisecond.
+ * Moving from Z=10 to Z=5 takes 500 ms. */
+static constexpr double MOVEMENT_SPEED = 0.01;
+
+/* Mouse-look sensitivity in radians per pixel. */
+static constexpr double MOUSE_SENSITIVITY = 0.002;
+
 struct InputScript* input_script_init(const char* filename) {
-    auto* s = new InputScript;
-    memset(s, 0, sizeof(*s));
+    auto* s = new InputScript();
     s->fp = fopen(filename, "r");
     if (!s->fp) {
         fprintf(stderr, "Failed to open input script: %s\n", filename);
@@ -372,11 +389,61 @@ struct InputScript* input_script_init(const char* filename) {
     return s;
 }
 
+static void apply_movement(MansionDisplay* display, double delta_ms,
+                           MovementState* ms) {
+    if (!display || !ms || !display->renderer || delta_ms <= 0) return;
+    if (display->flat_mode) return;
+
+    auto* cam = &display->camera;
+    float yaw = cam->yaw;
+    float pitch = cam->pitch;
+
+    float forwardX = -std::sin(yaw) * std::cos(pitch);
+    float forwardY = std::sin(pitch);
+    float forwardZ = -std::cos(yaw) * std::cos(pitch);
+
+    float rightX =  std::cos(yaw);
+    float rightZ = -std::sin(yaw);
+
+    float dx = 0, dy = 0, dz = 0;
+    float speed = static_cast<float>(MOVEMENT_SPEED * delta_ms);
+
+    if (ms->w) { dx += forwardX * speed; dy += forwardY * speed; dz += forwardZ * speed; }
+    if (ms->s) { dx -= forwardX * speed; dy -= forwardY * speed; dz -= forwardZ * speed; }
+    if (ms->a) { dx -= rightX * speed;   dz -= rightZ * speed; }
+    if (ms->d) { dx += rightX * speed;   dz += rightZ * speed; }
+    if (ms->up)    dy += speed;
+    if (ms->down)  dy -= speed;
+
+    cam->x += dx;
+    cam->y += dy;
+    cam->z += dz;
+}
+
+static void apply_mouse_look(MansionDisplay* display,
+                             MovementState* ms) {
+    if (!display || !ms || !display->renderer || display->flat_mode) return;
+    if (!ms->right_button_pressed) return;
+
+    auto* cam = &display->camera;
+    cam->yaw   += static_cast<float>(ms->mouseX * MOUSE_SENSITIVITY);
+    cam->pitch += static_cast<float>(ms->mouseY * MOUSE_SENSITIVITY);
+
+    /* Clamp pitch to ±89° to avoid flipping. */
+    const float MAX_PITCH = 89.0f * 3.14159265f / 180.0f;
+    if (cam->pitch > MAX_PITCH) cam->pitch = MAX_PITCH;
+    if (cam->pitch < -MAX_PITCH) cam->pitch = -MAX_PITCH;
+
+    ms->mouseX = 0;
+    ms->mouseY = 0;
+}
+
 /* Execute the next command from the script. Returns 0 if more commands
    remain, 1 if quit, -1 on EOF. */
 int input_script_step(struct InputScript* s,
                       struct MansionSeat* seat,
-                      struct MansionCompositor* comp) {
+                      struct MansionCompositor* comp,
+                      struct MansionDisplay* display) {
     if (!s || s->done) return -1;
     if (!seat || !comp) return -1;
     if (s->remaining_wait_ms > 0) return 0;
@@ -390,8 +457,8 @@ int input_script_step(struct InputScript* s,
     size_t len = strlen(line);
     while (len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r'))
         line[--len] = '\0';
-    if (len == 0) return input_script_step(s, seat, comp);
-    if (line[0] == '#') return input_script_step(s, seat, comp);
+    if (len == 0) return input_script_step(s, seat, comp, display);
+    if (line[0] == '#') return input_script_step(s, seat, comp, display);
 
     if (strncmp(line, "wait ", 5) == 0) {
         s->remaining_wait_ms = strtol(line + 5, nullptr, 10);
@@ -411,15 +478,48 @@ int input_script_step(struct InputScript* s,
             if (kc->resource)
                 wl_keyboard_send_key(kc->resource, serial, 0, keycode, state);
         send_keymap_modifiers(serial);
+
+        /* P2-T06: WASD + arrow keys → camera movement. */
+        if (state == WL_KEYBOARD_KEY_STATE_PRESSED) {
+            switch (keycode) {
+            case KEY_W:      s->movement.w = true;     break;
+            case KEY_A:      s->movement.a = true;     break;
+            case KEY_S:      s->movement.s = true;     break;
+            case KEY_D:      s->movement.d = true;     break;
+            case KEY_UP:     s->movement.up = true;    break;
+            case KEY_DOWN:   s->movement.down = true;  break;
+            case KEY_LEFT:   s->movement.left = true;  break;
+            case KEY_RIGHT:  s->movement.right = true; break;
+            default: break;
+            }
+        } else {
+            switch (keycode) {
+            case KEY_W:      s->movement.w = false;     break;
+            case KEY_A:      s->movement.a = false;     break;
+            case KEY_S:      s->movement.s = false;     break;
+            case KEY_D:      s->movement.d = false;     break;
+            case KEY_UP:     s->movement.up = false;    break;
+            case KEY_DOWN:   s->movement.down = false;  break;
+            case KEY_LEFT:   s->movement.left = false;  break;
+            case KEY_RIGHT:  s->movement.right = false; break;
+            default: break;
+            }
+        }
     } else if (strncmp(line, "motion ", 7) == 0) {
         int x = 0, y = 0;
         sscanf(line + 7, "%d %d", &x, &y);
-        pointer_x = wl_fixed_from_int(x);
-        pointer_y = wl_fixed_from_int(y);
-        uint32_t serial = ++seat->serial;
-        pointer_check_focus(serial);
-        send_pointer_motion(0);
-        send_pointer_axis_done(0);
+        if (s->movement.right_button_pressed) {
+            /* P2-T06: mouse look — accumulate delta. */
+            s->movement.mouseX += static_cast<double>(x);
+            s->movement.mouseY += static_cast<double>(y);
+        } else {
+            pointer_x = wl_fixed_from_int(x);
+            pointer_y = wl_fixed_from_int(y);
+            uint32_t serial = ++seat->serial;
+            pointer_check_focus(serial);
+            send_pointer_motion(0);
+            send_pointer_axis_done(0);
+        }
     } else if (strncmp(line, "button ", 7) == 0) {
         char code_str[16] = {}, action[16] = {};
         sscanf(line + 7, "%15s %15s", code_str, action);
@@ -430,6 +530,9 @@ int input_script_step(struct InputScript* s,
             seat->grab_surface_resource = seat->pointer_surface_resource;
         else
             seat->grab_surface_resource = nullptr;
+        /* P2-T06: track right button state for mouse look. */
+        if (button == BTN_RIGHT)
+            s->movement.right_button_pressed = (button_state == WL_POINTER_BUTTON_STATE_PRESSED);
         uint32_t serial = ++seat->serial;
         send_pointer_button(serial, 0, button, button_state);
     } else if (strcmp(line, "focus gained") == 0) {
@@ -447,6 +550,14 @@ void input_script_destroy(struct InputScript* s) {
     if (!s) return;
     if (s->fp) fclose(s->fp);
     delete s;
+}
+
+void input_script_apply_movement(struct InputScript* s,
+                                 struct MansionDisplay* display,
+                                 double delta_ms) {
+    if (!s || !display) return;
+    apply_movement(display, delta_ms, &s->movement);
+    apply_mouse_look(display, &s->movement);
 }
 
 
