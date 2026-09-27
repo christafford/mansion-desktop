@@ -576,10 +576,13 @@ int input_script_step(struct InputScript* s,
             }
         } else if (strcmp(line + 5, "app") == 0) {
             input_mode_set(InputMode::Application);
-            /* P3-T04: switch to flat/fullscreen rendering. */
+            /* P3-T04: switch to flat/fullscreen rendering.
+             * Save the current flat_mode so it can be restored, then set it
+             * to false so render_application_fullscreen() is invoked instead of
+             * the generic surface-list path. */
             if (display) {
                 display->flat_mode_prev = display->flat_mode;
-                display->flat_mode = true;
+                display->flat_mode = false;
             }
             /* Save the toplevel's current size and resize to window dimensions. */
             if (comp && comp->focused_surface_resource && display) {
@@ -627,6 +630,16 @@ int input_script_step(struct InputScript* s,
             if (state == WL_KEYBOARD_KEY_STATE_PRESSED && keycode == g_world_key) {
                 exit_application_mode();
                 input_mode_set(InputMode::World);
+                return 0;
+            }
+        }
+
+        /* P3-T05: In World mode, Enter (key 28) on a targeted panel
+         * enters Application mode. */
+        if (g_input_mode == InputMode::World &&
+            display && display->panel_targeted) {
+            if (state == WL_KEYBOARD_KEY_STATE_PRESSED && keycode == 28) {
+                input_mode_set(InputMode::Application);
                 return 0;
             }
         }

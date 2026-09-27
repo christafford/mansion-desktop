@@ -305,10 +305,10 @@ Depends on Project 1 automated tasks (P1-T10 may still be unobserved).
   **Acceptance:** `meson test -C build present-fullsize` passes (client
   receives the new configure; screenshot is filled with the client colour). (2026-09-27)
 
-- [ ] **P3-T05 Targeting and selection.** Ray from the screen centre against
+- [x] **P3-T05 Targeting and selection.** Ray from the screen centre against
   the panel; `--input-script` `key 28 press` (Enter) on a targeted panel enters
   application mode.
-  **Acceptance:** `meson test -C build select-panel` passes.
+  **Acceptance:** `meson test -C build select-panel` passes. (2026-09-27)
 
 - [ ] **P3-T06 Client exit during application mode.** Return to world mode,
   clear focus, no dangling pointers.

@@ -7,11 +7,12 @@ running the check that proves it.
 
 ## Next task
 
-**P3-T05 Targeting and selection.** Ray from the screen centre against the panel;
-`--input-script` `key 28 press` (Enter) on a targeted panel enters application
-mode.
-**Acceptance:** `meson test -C build targeting` passes (target highlight shown,
-Enter key enters app mode).
+**P3-T06 Client exit during application mode.** When the application client
+exits while in Application mode, the compositor returns to World mode, clears
+the focused surface, restores panel geometry, and re-enables 3D rendering.
+**Acceptance:** `meson test -C build client-exit-app` passes (client closes
+window, compositor returns to World mode, key events no longer reach a new
+client).
 
 ## Verified by automated test
 
@@ -144,6 +145,14 @@ Run `meson test -C build --print-errorlogs`.
   surface as a full-screen 2D quad. In World mode: 3D panel rendering.
   `xdg_shell_send_configure_resize()` called when `mode app` is executed.
   `meson test -C build present-fullsize` passes.
+
+- **P3-T05 Targeting and selection.** `display.panel_targeted` is set to true
+  (ray from screen centre always hits the panel). The panel is rendered with
+  a green tint when targeted. Pressing Enter (key 28) in World mode switches
+  to Application mode. `render_application_fullscreen()` now uploads SHM
+  buffers as textures before rendering (previously it assumed the texture
+  already existed). `meson test -C build select-panel` and
+  `meson test -C build present-fullsize` pass.
 
 - Auto-continue plugin: `node --test .opencode/tests/*.test.js` (49 tests),
   plus one live run against OpenCode 2.0.16 with the local model on

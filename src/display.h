@@ -57,6 +57,9 @@ struct MansionDisplay {
      * the focused surface is drawn fullscreen.  flat_mode_prev
      * remembers the previous value so it can be restored. */
     bool flat_mode_prev = false;
+
+    /* P3-T05: panel targeting state. */
+    bool panel_targeted = true;  /* ray from screen centre always hits panel */
 };
 
 struct MansionDisplay* create_display(struct MansionCompositor* compositor, struct wl_display* wl_display);

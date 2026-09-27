@@ -662,7 +662,12 @@ static void render_panel(struct MansionDisplay* display) {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, target->gl_texture);
     glUniform1i(renderer->tex_3d_uniform, 0);
-    glUniform4f(renderer->color_3d_uniform, 1.0f, 1.0f, 1.0f, 0.0f);
+    /* P3-T05: green tint when panel is targeted. */
+    if (display->panel_targeted) {
+        glUniform4f(renderer->color_3d_uniform, 0.0f, 1.0f, 0.0f, 0.0f);
+    } else {
+        glUniform4f(renderer->color_3d_uniform, 1.0f, 1.0f, 1.0f, 0.0f);
+    }
 
     glEnableVertexAttribArray(renderer->pos_3d);
     glVertexAttribPointer(renderer->pos_3d, 3, GL_FLOAT, GL_FALSE,
@@ -898,7 +903,60 @@ static void render_application_fullscreen(struct MansionDisplay* display) {
     if (!comp || !comp->focused_surface_resource) return;
 
     auto* surface_data = compositor_surface_from_resource(comp->focused_surface_resource);
-    if (!surface_data || !surface_data->gl_texture) return;
+    if (!surface_data) return;
+
+    /* Ensure the surface has a texture (re-upload when buffer changed). */
+    if (surface_data->buffer_resource && surface_data->needs_upload) {
+        struct wl_shm_buffer* shm_buf = wl_shm_buffer_get(surface_data->buffer_resource);
+        if (shm_buf) {
+            wl_shm_buffer_begin_access(shm_buf);
+            void* data = wl_shm_buffer_get_data(shm_buf);
+            if (data) {
+                int w = wl_shm_buffer_get_width(shm_buf);
+                int h = wl_shm_buffer_get_height(shm_buf);
+                GLuint tex = 0;
+                glGenTextures(1, &tex);
+                glBindTexture(GL_TEXTURE_2D, tex);
+                if (display->egl_mode) {
+                    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
+                                 GL_RGBA, GL_UNSIGNED_BYTE, data);
+                    renderer->bytes_uploaded +=
+                        static_cast<long long>(w) * h * 4;
+                } else {
+                    /* Swizzle ABGR→RGBA (see render_panel comments). */
+                    std::vector<uint8_t> rgba(w * h * 4);
+                    for (int y = 0; y < h; ++y) {
+                        for (int x = 0; x < w; ++x) {
+                            int idx = (y * w + x) * 4;
+                            rgba[idx + 0] =
+                                ((const uint8_t*)data)[idx + 1];
+                            rgba[idx + 1] =
+                                ((const uint8_t*)data)[idx + 2];
+                            rgba[idx + 2] =
+                                ((const uint8_t*)data)[idx + 0];
+                            rgba[idx + 3] =
+                                ((const uint8_t*)data)[idx + 3];
+                        }
+                    }
+                    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
+                                 GL_RGBA, GL_UNSIGNED_BYTE, rgba.data());
+                    renderer->bytes_uploaded +=
+                        static_cast<long long>(w) * h * 4;
+                }
+                glTexParameteri(GL_TEXTURE_2D,
+                                GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                glTexParameteri(GL_TEXTURE_2D,
+                                GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                if (surface_data->gl_texture)
+                    glDeleteTextures(1, &surface_data->gl_texture);
+                surface_data->gl_texture = tex;
+            }
+            wl_shm_buffer_end_access(shm_buf);
+            surface_data->needs_upload = false;
+        }
+    }
+
+    if (!surface_data->gl_texture) return;
 
     glUseProgram(renderer->program);
     glUniform2f(renderer->viewport_uniform,
@@ -924,11 +982,18 @@ static void render_application_fullscreen(struct MansionDisplay* display) {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, surface_data->gl_texture);
     glUniform1i(renderer->tex_uniform, 0);
-    glUniform4f(renderer->color_uniform, 1.0f, 1.0f, 1.0f, 1.0f);
+    /* color.a == 0 → shader samples texture; a != 0 → outputs color directly. */
+    glUniform4f(renderer->color_uniform, 1.0f, 1.0f, 1.0f, 0.0f);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
     glDisableVertexAttribArray(renderer->pos_attrib);
     glDisableVertexAttribArray(renderer->tex_attrib);
+
+    /* Release the buffer after rendering. */
+    if (surface_data->buffer_resource) {
+        wl_buffer_send_release(surface_data->buffer_resource);
+        surface_data->buffer_resource = nullptr;
+    }
 }
 
 void render_surface_from_data(struct MansionDisplay* display, struct MansionSurface* surface_data,
