@@ -83,7 +83,7 @@ Run `meson test -C build --print-errorlogs`.
 
 Nothing yet. No real Wayland client has ever opened a window on this
 compositor. `weston-terminal` is not installed in the development container
-(`sudo pacman -S weston` provides it).
+(`sudo pacman -S weston` provides it). P1-T10 not observed (human task).
 
 ## Not verified / known broken
 
@@ -91,7 +91,7 @@ compositor. `weston-terminal` is not installed in the development container
   only: one fixed 800x600 configure, `ack_configure` serial stored but not
   checked, `set_window_geometry`/title/app_id/min/max ignored, `xdg_positioner`
   accepted and ignored, `get_popup` posts a protocol error. No `ping` is sent.
-  Resize configures arrive in P1-T09, popups in Project 5.
+  Resize configures on host window resize (P1-T09), popups in Project 5.
 - **Seat handles one client badly.** A second `get_keyboard` posts a protocol
   error; `wl_seat` binds overwrite each other. Fixed in P1-T06-A (multi-seat
   lists). Proper keymap (xkbcommon), repeat_info, modifiers, keyboard enter/leave,

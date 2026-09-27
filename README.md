@@ -35,8 +35,7 @@ Run headless (no display needed):
 ```
 
 Run in a host window and launch a client (needs `DISPLAY` and a Wayland
-terminal such as `weston-terminal`; note that no client can map a window until
-task P1-T03 lands):
+terminal such as `weston-terminal`):
 
 ```sh
 ./build/mansion-desktop --launch weston-terminal

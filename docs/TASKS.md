@@ -205,7 +205,7 @@ itself is the human acceptance step.
   procedure in `docs/ACCEPTANCE.md` (autonomous sessions write the procedure;
   a person performs it).
 
-- [ ] **P1-T11 Project 1 wrap-up.** Reconcile `docs/STATUS.md`, finish
+- [x] **P1-T11 Project 1 wrap-up.** Reconcile `docs/STATUS.md`, finish
   `docs/handoffs/01.md` (what changed, exact commands, evidence, limitations,
   the first Project 2 task), and update `README.md`/`GETTING_STARTED.md` if
   commands changed.
