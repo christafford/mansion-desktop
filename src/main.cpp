@@ -263,6 +263,16 @@ int main(int argc, char** argv) {
             if (elapsed >= opts.exit_after_ms) break;
         }
 
+        // Process X11 events (windowed mode only) — must run before Wayland
+        // dispatch so input events reach clients promptly.
+        if (!opts.headless && display) {
+            if (input_process_x11(display)) {
+                // WM_DELETE_WINDOW received; exit gracefully.
+                running = 0;
+                break;
+            }
+        }
+
         // Dispatch Wayland events with a short timeout so rendering runs at roughly 60 Hz.
         if (wl_event_loop_dispatch(event_loop, 16) < 0) {
             std::cerr << "Event loop error: " << strerror(errno) << std::endl;

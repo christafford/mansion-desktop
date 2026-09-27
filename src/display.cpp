@@ -1,11 +1,11 @@
 #include <cstring>
 #include <iostream>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include <X11/Xatom.h>
 #include <wayland-server-protocol.h>
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
@@ -128,12 +128,21 @@ struct MansionDisplay* create_display(struct MansionCompositor* compositor, stru
     XMapWindow(x_display, x_window);
     XFlush(x_display);
 
-    // Store X11 display and window - keep alive for EGL lifetime
-    auto* x11_data = new std::pair<Display*, Window>(x_display, x_window);
+    // Store X11 display and window directly in MansionDisplay.
+    mansion_display->x_display = x_display;
+    mansion_display->x_window  = x_window;
     XSetWindowBorderWidth(x_display, x_window, 2);
     Colormap border_color = XCreateColormap(x_display, DefaultRootWindow(x_display),
                                             DefaultVisual(x_display, screen), AllocNone);
     XSetWindowBorder(x_display, x_window, border_color);
+    XFlush(x_display);
+
+    // Select input events we care about.
+    XSelectInput(x_display, x_window,
+        KeyPressMask | KeyReleaseMask |
+        ButtonPressMask | ButtonReleaseMask |
+        PointerMotionMask |
+        FocusChangeMask | StructureNotifyMask);
     XFlush(x_display);
 
     // Create EGL display for X11
@@ -142,7 +151,6 @@ struct MansionDisplay* create_display(struct MansionCompositor* compositor, stru
         std::cerr << "Failed to get EGL display" << std::endl;
         XDestroyWindow(x_display, x_window);
         XCloseDisplay(x_display);
-        delete x11_data;
         delete mansion_display;
         return nullptr;
     }
@@ -153,7 +161,6 @@ struct MansionDisplay* create_display(struct MansionCompositor* compositor, stru
         XDestroyWindow(x_display, x_window);
         XCloseDisplay(x_display);
         eglTerminate(mansion_display->egl_display);
-        delete x11_data;
         delete mansion_display;
         return nullptr;
     }
@@ -164,7 +171,6 @@ struct MansionDisplay* create_display(struct MansionCompositor* compositor, stru
         XDestroyWindow(x_display, x_window);
         XCloseDisplay(x_display);
         eglTerminate(mansion_display->egl_display);
-        delete x11_data;
         delete mansion_display;
         return nullptr;
     }
@@ -178,7 +184,6 @@ struct MansionDisplay* create_display(struct MansionCompositor* compositor, stru
         XDestroyWindow(x_display, x_window);
         XCloseDisplay(x_display);
         eglTerminate(mansion_display->egl_display);
-        delete x11_data;
         delete mansion_display;
         return nullptr;
     }
@@ -194,7 +199,6 @@ struct MansionDisplay* create_display(struct MansionCompositor* compositor, stru
         XDestroyWindow(x_display, x_window);
         XCloseDisplay(x_display);
         eglTerminate(mansion_display->egl_display);
-        delete x11_data;
         delete mansion_display;
         return nullptr;
     }
@@ -208,7 +212,6 @@ struct MansionDisplay* create_display(struct MansionCompositor* compositor, stru
         XDestroyWindow(x_display, x_window);
         XCloseDisplay(x_display);
         eglTerminate(mansion_display->egl_display);
-        delete x11_data;
         delete mansion_display;
         return nullptr;
     }
@@ -224,7 +227,6 @@ struct MansionDisplay* create_display(struct MansionCompositor* compositor, stru
         XDestroyWindow(x_display, x_window);
         XCloseDisplay(x_display);
         eglTerminate(mansion_display->egl_display);
-        delete x11_data;
         delete mansion_display;
         return nullptr;
     }
@@ -244,6 +246,8 @@ struct MansionDisplay* create_display_headless(struct MansionCompositor* composi
     mansion_display->window_width = 1024;
     mansion_display->window_height = 768;
     mansion_display->renderer = nullptr;
+    mansion_display->x_display = nullptr;
+    mansion_display->x_window  = None;
 
     /* Try to set up EGL with surfaceless Mesa for offscreen rendering.
      * If EGL is unavailable, keep running without a renderer and still
@@ -342,10 +346,25 @@ struct MansionDisplay* create_display_headless(struct MansionCompositor* composi
     return mansion_display;
 }
 
+void display_resize(struct MansionDisplay* display) {
+    if (!display || !display->renderer) return;
+    glViewport(0, 0, display->window_width, display->window_height);
+    glUniform2f(display->renderer->viewport_uniform,
+                static_cast<GLfloat>(display->window_width),
+                static_cast<GLfloat>(display->window_height));
+}
+
 void destroy_display(struct MansionDisplay* display) {
     if (!display) return;
 
     destroy_renderer(display);
+
+    if (display->x_display) {
+        if (display->x_window) {
+            XDestroyWindow(display->x_display, display->x_window);
+        }
+        XCloseDisplay(display->x_display);
+    }
 
     if (display->egl_display != EGL_NO_DISPLAY) {
         eglMakeCurrent(display->egl_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);

@@ -1,15 +1,11 @@
 #include <cstring>
+#include <cstdlib>
+#include <cstdio>
 #include <fcntl.h>
-#include <linux/input.h>
-#include <linux/input-event-codes.h>
-#include <linux/uinput.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <dirent.h>
 #include <unistd.h>
-#include <poll.h>
-#include <time.h>
+
+#include <X11/Xlib.h>
+#include <X11/Xatom.h>
 
 #include <wayland-server-protocol.h>
 #include <xkbcommon/xkbcommon.h>
@@ -19,17 +15,13 @@
 #include "display.h"
 #include "input.h"
 
-/* Maximum number of input devices to track */
-#define MAX_INPUT_DEVICES 16
+/* Evdev button codes (from linux/input-event-codes.h). */
+static constexpr uint32_t BTN_LEFT   = 0x110;
+static constexpr uint32_t BTN_RIGHT  = 0x111;
+static constexpr uint32_t BTN_MIDDLE = 0x112;
 
-/* Evdev device state */
-static struct {
-    int fd;
-    bool is_keyboard;
-    bool is_mouse;
-    char name[64];
-} input_devices[MAX_INPUT_DEVICES];
-static int input_device_count = 0;
+/* memfd_create may not be declared without _GNU_SOURCE. */
+extern "C" int memfd_create(const char *name, unsigned int flags);
 
 /* Current pointer state */
 static wl_fixed_t pointer_x = wl_fixed_from_int(300);
@@ -69,131 +61,14 @@ struct MansionSeat {
     uint32_t serial;                              /* shared serial for all events */
 };
 
-/* Evdev device detection helpers */
-
-static int evdev_open_device(const char* path) {
-    int fd = open(path, O_RDONLY | O_NONBLOCK);
-    if (fd < 0) return -1;
-
-    // Check if this is a keyboard or mouse
-    unsigned char key_bits[32];
-    memset(key_bits, 0, sizeof(key_bits));
-    if (ioctl(fd, EVIOCGBIT(EV_KEY, sizeof(key_bits)), key_bits) < 0) {
-        close(fd);
-        return -1;
-    }
-
-    bool is_keyboard = false;
-    bool is_mouse = false;
-
-    // Keyboard: has KEY_* codes (e.g., KEY_ENTER, KEY_A, etc.)
-    if (key_bits[KEY_ENTER / 8] & (1 << (KEY_ENTER % 8))) {
-        is_keyboard = true;
-    }
-
-    // Mouse: has REL_X or REL_Y in EV_REL
-    unsigned char rel_bits[32];
-    memset(rel_bits, 0, sizeof(rel_bits));
-    if (ioctl(fd, EVIOCGBIT(EV_REL, sizeof(rel_bits)), rel_bits) >= 0) {
-        if (rel_bits[REL_X / 8] & (1 << (REL_X % 8))) {
-            is_mouse = true;
-        }
-    }
-
-    if (!is_keyboard && !is_mouse) {
-        close(fd);
-        return -1;
-    }
-
-    // Get device name
-    char name[64] = {0};
-    ioctl(fd, EVIOCGNAME(sizeof(name)), name);
-
-    // Store device info
-    if (input_device_count < MAX_INPUT_DEVICES) {
-        input_devices[input_device_count].fd = fd;
-        input_devices[input_device_count].is_keyboard = is_keyboard;
-        input_devices[input_device_count].is_mouse = is_mouse;
-        strncpy(input_devices[input_device_count].name, name,
-                sizeof(input_devices[input_device_count].name) - 1);
-        input_devices[input_device_count].name[sizeof(input_devices[input_device_count].name) - 1] = '\0';
-        input_device_count++;
-        fprintf(stderr, "Input device: %s (%s) fd=%d\n", name,
-                is_keyboard ? "keyboard" : "mouse", fd);
-    } else {
-        close(fd);
-    }
-
-    return fd;
+int input_init(void) {
+    /* X11 input is handled via input_process_x11() in the main loop
+     * (windowed mode) or via --input-script (headless / tests). */
+    return 0;
 }
 
-int input_init(void) {
-    DIR* dir = opendir("/dev/input");
-    if (!dir) {
-        fprintf(stderr, "Failed to open /dev/input\n");
-        return -1;
-    }
-
-    input_device_count = 0;
-    for (int i = 0; i < MAX_INPUT_DEVICES; i++) {
-        input_devices[i].fd = -1;
-    }
-
-    struct dirent* entry;
-    while ((entry = readdir(dir)) != NULL) {
-        // Match event* files only
-        if (entry->d_type != DT_CHR && entry->d_name[0] != 'e') continue;
-
-        char path[256];
-        snprintf(path, sizeof(path), "/dev/input/%s", entry->d_name);
-
-        // Try direct open first (handles char devices properly)
-        if (evdev_open_device(path) < 0) {
-            // Fallback: try to open and check bits manually
-            int fd = open(path, O_RDONLY | O_NONBLOCK);
-            if (fd < 0) continue;
-
-            unsigned char evbits[32];
-            memset(evbits, 0, sizeof(evbits));
-            if (ioctl(fd, EVIOCGBIT(0, sizeof(evbits)), evbits) < 0) {
-                close(fd);
-                continue;
-            }
-
-            // EV_KEY = 0x01, EV_REL = 0x02
-            bool has_key = evbits[EV_KEY / 32] & (1 << (EV_KEY % 32));
-            bool has_rel = evbits[EV_REL / 32] & (1 << (EV_REL % 32));
-
-            if (!has_key && !has_rel) {
-                close(fd);
-                continue;
-            }
-
-            if (input_device_count < MAX_INPUT_DEVICES) {
-                char name[64] = {0};
-                ioctl(fd, EVIOCGNAME(sizeof(name)), name);
-                input_devices[input_device_count].fd = fd;
-                input_devices[input_device_count].is_keyboard = has_key;
-                input_devices[input_device_count].is_mouse = has_rel;
-                strncpy(input_devices[input_device_count].name, name, 63);
-                input_devices[input_device_count].name[63] = '\0';
-                input_device_count++;
-                fprintf(stderr, "Input device: %s fd=%d\n", name, fd);
-            } else {
-                close(fd);
-            }
-        }
-    }
-
-    closedir(dir);
-
-    if (input_device_count == 0) {
-        fprintf(stderr, "No input devices found\n");
-        return -1;
-    }
-
-    fprintf(stderr, "Initialized %d input devices\n", input_device_count);
-    return 0;
+void input_destroy(void) {
+    /* Nothing to clean up — X11 is managed by the display. */
 }
 
 /* Iterate over all pointer clients and send motion events. */
@@ -337,112 +212,150 @@ static void pointer_check_focus(uint32_t serial) {
 }
 
 void input_process(void) {
-    if (!g_seat) return;
-
-    uint32_t time_msec = 0;
-    uint32_t serial = ++g_seat->serial;
-
-    for (int i = 0; i < input_device_count; i++) {
-        struct input_event ev;
-        ssize_t bytes;
-
-        while ((bytes = read(input_devices[i].fd, &ev, sizeof(ev))) >= (ssize_t)sizeof(ev)) {
-            time_msec = ev.time.tv_sec * 1000 + ev.time.tv_usec / 1000;
-
-            // Handle keyboard events
-            if (input_devices[i].is_keyboard && ev.type == EV_KEY &&
-                ev.code >= KEY_MIN_INTERESTING) {
-                uint32_t state = (ev.value == 1) ?
-                    WL_KEYBOARD_KEY_STATE_PRESSED :
-                    WL_KEYBOARD_KEY_STATE_RELEASED;
-
-                // Update xkb state so modifiers are tracked correctly.
-                // ev.code is a Linux keycode; xkb uses the same range.
-                if (g_seat->xkbstate) {
-                    xkb_state_update_key(g_seat->xkbstate,
-                                         ev.code + 8,  // evdev -> xkb offset
-                                         state == WL_KEYBOARD_KEY_STATE_PRESSED ?
-                                             XKB_KEY_DOWN : XKB_KEY_UP);
-                }
-
-                SeatKeyboardClient *kc, *kc_next;
-                wl_list_for_each_safe(kc, kc_next, &g_seat->keyboard_clients, destroy_listener.link) {
-                    if (kc->resource) {
-                        wl_keyboard_send_key(kc->resource, serial, time_msec, ev.code, state);
-                    }
-                }
-
-                // Send updated modifier state
-                send_keymap_modifiers(serial);
-            }
-
-            // Handle mouse events
-            if (input_devices[i].is_mouse) {
-                if (ev.type == EV_REL) {
-                    if (ev.code == REL_X) {
-                        pointer_x += wl_fixed_from_int(ev.value);
-                    } else if (ev.code == REL_Y) {
-                        pointer_y += wl_fixed_from_int(ev.value);
-                    } else if (ev.code == REL_WHEEL) {
-                        serial = ++g_seat->serial;
-                        send_pointer_axis(time_msec, WL_POINTER_AXIS_VERTICAL_SCROLL,
-                                          wl_fixed_from_int(ev.value * 10));
-                    } else if (ev.code == REL_HWHEEL) {
-                        serial = ++g_seat->serial;
-                        send_pointer_axis(time_msec, WL_POINTER_AXIS_HORIZONTAL_SCROLL,
-                                          wl_fixed_from_int(ev.value * 10));
-                    }
-                } else if (ev.type == EV_ABS) {
-                    if (ev.code == ABS_X) {
-                        pointer_x = wl_fixed_from_int(ev.value);
-                    } else if (ev.code == ABS_Y) {
-                        pointer_y = wl_fixed_from_int(ev.value);
-                    }
-                } else if (ev.type == EV_KEY) {
-                    uint32_t button = 0;
-                    switch (ev.code) {
-                        case BTN_LEFT:   button = BTN_LEFT;   break;
-                        case BTN_RIGHT:  button = BTN_RIGHT;  break;
-                        case BTN_MIDDLE: button = BTN_MIDDLE; break;
-                        default: continue;
-                    }
-                    uint32_t button_state = (ev.value == 1) ?
-                        WL_POINTER_BUTTON_STATE_PRESSED :
-                        WL_POINTER_BUTTON_STATE_RELEASED;
-
-                    if (button_state == WL_POINTER_BUTTON_STATE_PRESSED) {
-                        /* Set grab on button press. */
-                        g_seat->grab_surface_resource =
-                            g_seat->pointer_surface_resource;
-                    } else {
-                        /* Clear grab on button release. */
-                        g_seat->grab_surface_resource = nullptr;
-                    }
-
-                    serial = ++g_seat->serial;
-                    send_pointer_button(serial, time_msec, button, button_state);
-                }
-            }
-        }
-    }
-
-    // Send motion if we processed any events
-    if (time_msec > 0) {
-        serial = ++g_seat->serial;
-        pointer_check_focus(serial);
-        send_pointer_motion(time_msec);
-        send_pointer_axis_done(time_msec);
-    }
+    /* X11 events are processed via input_process_x11() in windowed mode.
+     * Evdev is no longer used. */
 }
 
-void input_destroy(void) {
-    for (int i = 0; i < input_device_count; i++) {
-        if (input_devices[i].fd >= 0) {
-            close(input_devices[i].fd);
-            input_devices[i].fd = -1;
+/* ---------- X11 event processing (P1-T07) ---------- */
+
+static Atom wm_delete_window_atom = None;
+
+int input_process_x11(struct MansionDisplay* m_display) {
+    if (!m_display || !m_display->x_display) return 0;
+
+    Display* xdpy = m_display->x_display;
+
+    /* Lazily create the WM_DELETE_WINDOW atom. */
+    if (!wm_delete_window_atom) {
+        wm_delete_window_atom =
+            XInternAtom(xdpy, "WM_DELETE_WINDOW", False);
+    }
+
+    XEvent ev;
+    while (XPending(xdpy) > 0) {
+        XNextEvent(xdpy, &ev);
+
+        switch (ev.type) {
+        /* ---- Key events ---- */
+        case KeyPress:
+        case KeyRelease: {
+            uint32_t x11_keycode = ev.xkey.keycode;   /* X11 keycode (≥ 8) */
+            uint32_t linux_keycode = x11_keycode - 8; /* → evdev / Linux keycode */
+            uint32_t time_msec   = ev.xkey.time;
+            uint32_t state       = (ev.type == KeyPress) ?
+                WL_KEYBOARD_KEY_STATE_PRESSED :
+                WL_KEYBOARD_KEY_STATE_RELEASED;
+
+            /* Update xkb state (xkbcommon uses X11 keycode range). */
+            if (g_seat && g_seat->xkbstate) {
+                xkb_state_update_key(g_seat->xkbstate, x11_keycode,
+                    state == WL_KEYBOARD_KEY_STATE_PRESSED ?
+                        XKB_KEY_DOWN : XKB_KEY_UP);
+            }
+
+            uint32_t serial = ++g_seat->serial;
+
+            /* Send key event to all keyboard clients. */
+            {
+                SeatKeyboardClient *kc, *kc_next;
+                wl_list_for_each_safe(kc, kc_next,
+                    &g_seat->keyboard_clients, destroy_listener.link) {
+                    if (kc->resource)
+                        wl_keyboard_send_key(kc->resource,
+                            serial, time_msec, linux_keycode, state);
+                }
+            }
+
+            /* Send updated modifier state. */
+            send_keymap_modifiers(serial);
+            break;
+        }
+
+        /* ---- Pointer button events ---- */
+        case ButtonPress:
+        case ButtonRelease: {
+            uint32_t button = 0;
+            switch (ev.xbutton.button) {
+            case 1: button = BTN_LEFT;   break;
+            case 2: button = BTN_MIDDLE; break;
+            case 3: button = BTN_RIGHT;  break;
+            /* Buttons 4/5 = wheel — handled below via axis. */
+            default: break;
+            }
+
+            uint32_t serial;
+            if (button) {
+                uint32_t button_state = (ev.type == ButtonPress) ?
+                    WL_POINTER_BUTTON_STATE_PRESSED :
+                    WL_POINTER_BUTTON_STATE_RELEASED;
+
+                if (button_state == WL_POINTER_BUTTON_STATE_PRESSED)
+                    g_seat->grab_surface_resource = g_seat->pointer_surface_resource;
+                else
+                    g_seat->grab_surface_resource = nullptr;
+
+                serial = ++g_seat->serial;
+                send_pointer_button(serial, ev.xbutton.time,
+                                    button, button_state);
+            } else {
+                /* Wheel: buttons 4 (up) and 5 (down). */
+                uint32_t axis  = (ev.xbutton.button == 4) ?
+                    static_cast<uint32_t>(WL_POINTER_AXIS_VERTICAL_SCROLL) :
+                    static_cast<uint32_t>(WL_POINTER_AXIS_VERTICAL_SCROLL);
+                wl_fixed_t value = (ev.xbutton.button == 4) ?
+                    wl_fixed_from_int(10) : wl_fixed_from_int(-10);
+                serial = ++g_seat->serial;
+                send_pointer_axis(ev.xbutton.time,
+                    static_cast<enum wl_pointer_axis>(axis), value);
+            }
+            break;
+        }
+
+        /* ---- Pointer motion events ---- */
+        case MotionNotify: {
+            pointer_x = wl_fixed_from_int(ev.xmotion.x);
+            pointer_y = wl_fixed_from_int(ev.xmotion.y);
+
+            uint32_t serial = ++g_seat->serial;
+            pointer_check_focus(serial);
+            send_pointer_motion(ev.xmotion.time);
+            send_pointer_axis_done(ev.xmotion.time);
+            break;
+        }
+
+        /* ---- Window resize ---- */
+        case ConfigureNotify: {
+            int new_w = ev.xconfigure.width;
+            int new_h = ev.xconfigure.height;
+            if (new_w > 0 && new_h > 0 &&
+                (new_w != m_display->window_width ||
+                 new_h != m_display->window_height)) {
+                m_display->window_width  = new_w;
+                m_display->window_height = new_h;
+                display_resize(m_display);
+            }
+            break;
+        }
+
+        /* ---- WM_DELETE_WINDOW (window close) ---- */
+        case ClientMessage: {
+            if (ev.xclient.message_type == wm_delete_window_atom) {
+                return -1;
+            }
+            break;
+        }
+
+        /* ---- Focus changes (informational) ---- */
+        case FocusOut:
+        case FocusIn:
+            break;
+
+        default:
+            break;
         }
     }
-    input_device_count = 0;
+
+    return 0;
 }
 
 /* ---------- Input script execution (P1-T06-E) ---------- */

@@ -2,6 +2,8 @@
 
 #include <EGL/egl.h>
 #include <wayland-server.h>
+#include <X11/Xlib.h>
+#include <X11/Xatom.h>
 
 struct MansionCompositor;
 struct MansionRenderer;
@@ -17,6 +19,8 @@ struct MansionDisplay {
     int window_width;
     int window_height;
     struct MansionRenderer* renderer;
+    Display* x_display;      /* X11 display (windowed mode only) */
+    Window x_window;         /* X11 window (windowed mode only) */
 };
 
 struct MansionDisplay* create_display(struct MansionCompositor* compositor, struct wl_display* wl_display);
@@ -24,6 +28,7 @@ struct MansionDisplay* create_display(struct MansionCompositor* compositor, stru
  * renderer if EGL is unavailable. Frame callbacks always fire. */
 struct MansionDisplay* create_display_headless(struct MansionCompositor* compositor, struct wl_display* wl_display);
 void destroy_display(struct MansionDisplay* display);
+void display_resize(struct MansionDisplay* display);
 void swap_buffers(struct MansionDisplay* display);
 void render(struct MansionDisplay* display);
 struct MansionRenderer* get_renderer(struct MansionDisplay* display);

@@ -44,7 +44,11 @@ int input_script_step(struct InputScript* s,
 /* Destroy the script handle. */
 void input_script_destroy(struct InputScript* s);
 
-/* Evdev input device handling */
+/* Evdev input device handling (now a no-op; replaced by X11 in windowed mode). */
 int input_init(void);
 void input_process(void);
 void input_destroy(void);
+
+/* Process X11 events from the display and dispatch them to the Wayland seat.
+   Returns 0 on success, -1 if the window was closed (WM_DELETE_WINDOW). */
+int input_process_x11(struct MansionDisplay* m_display);
