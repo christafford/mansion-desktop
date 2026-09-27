@@ -294,10 +294,10 @@ Depends on Project 1 automated tasks (P1-T10 may still be unobserved).
   **Acceptance:** `meson test -C build mode-exit` passes (held key released,
   leave events observed). (2026-09-27)
 
-- [ ] **P3-T03 Host focus loss.** `focus lost` (X `FocusOut`) behaves like
+- [x] **P3-T03 Host focus loss.** `focus lost` (X `FocusOut`) behaves like
   leaving application mode without changing the stored mode; `focus gained`
   re-enters the client only if the mode is still Application.
-  **Acceptance:** `meson test -C build focus-loss` passes.
+  **Acceptance:** `meson test -C build focus-loss` passes. (2026-09-27)
 
 - [ ] **P3-T04 Full-size presentation.** In application mode the focused
   surface is drawn 2D, scaled to fit the host window, and configured to the

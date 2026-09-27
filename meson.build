@@ -98,6 +98,9 @@ test('mode-routing', find_program('tests/mode_routing.sh'),
 test('mode-exit', find_program('tests/mode_exit.sh'),
     args: [mansion_exe, test_client], env: test_env, suite: 'p3', timeout: 30)
 
+test('focus-loss', find_program('tests/focus_loss.sh'),
+    args: [mansion_exe, test_client], env: test_env, suite: 'p3', timeout: 30)
+
 # P2-T01: header-only math module unit test
 math_test = executable('test_math',
     'tests/test_math.cpp',

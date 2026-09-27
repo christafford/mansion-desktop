@@ -7,12 +7,12 @@ running the check that proves it.
 
 ## Next task
 
-**P3-T03 Host focus loss.** When the host window loses input focus (X11
-FocusIn/FocusOut or headless no-op), save pressed key state and optionally
-pause input processing so the camera doesn't drift while the user switches
-away.
-**Acceptance:** `meson test -C build host-focus` passes (pressed keys saved
-on focus loss, restored on gain).
+**P3-T04 Input script mode switching.** `--input-script` gains `mode world|app`
+already implemented in P3-T01. Add `mode switch` to toggle between World and
+Application modes. Add `--default-mode world|app` to set the initial mode at
+startup (default: Application).
+**Acceptance:** `meson test -C build input-script-mode` passes (script toggle
+and default mode CLI verified).
 
 ## Verified by automated test
 
@@ -136,6 +136,10 @@ Run `meson test -C build --print-errorlogs`.
   `key` release for all pressed keys, empty modifiers, keyboard `leave`, and
   pointer `leave`. `MansionSeat::pressed_keys` tracks currently-pressed keycodes.
   `meson test -C build mode-exit` passes (key 42 released, kbd_leave observed).
+- **P3-T03 Host focus loss.** `MansionSeat::stored_mode_when_focus_lost` saves
+  current mode on `focus lost`/X11 `FocusOut` (also calls exit_application_mode).
+  `focus gained`/X11 `FocusIn` re-enters Application mode if stored mode matches.
+  `meson test -C build focus-loss` passes.
 
 - Auto-continue plugin: `node --test .opencode/tests/*.test.js` (49 tests),
   plus one live run against OpenCode 2.0.16 with the local model on

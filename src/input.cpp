@@ -87,6 +87,9 @@ struct MansionSeat {
 
     /* P3-T02: track pressed keycodes for clean exit from Application mode. */
     std::vector<uint32_t> pressed_keys;
+
+    /* P3-T03: saved mode when host focus is lost (re-apply on focus gained). */
+    InputMode stored_mode_when_focus_lost = InputMode::World;
 };
 
 int input_init(void) {
@@ -422,7 +425,24 @@ int input_process_x11(struct MansionDisplay* m_display) {
 
         /* ---- Focus changes (informational) ---- */
         case FocusOut:
+            /* P3-T03: save current mode, then exit application mode. */
+            if (g_seat) {
+                g_seat->stored_mode_when_focus_lost = input_mode_get();
+                exit_application_mode();
+            }
+            break;
         case FocusIn:
+            /* P3-T03: re-enter application mode if stored mode was Application. */
+            if (g_seat && g_seat->stored_mode_when_focus_lost == InputMode::Application
+                && g_compositor && g_compositor->focused_surface_resource) {
+                input_mode_set(InputMode::Application);
+                seat_set_keyboard_focus(g_seat,
+                    g_compositor->focused_surface_resource, g_compositor);
+            } else if (g_seat && g_compositor &&
+                       g_compositor->focused_surface_resource) {
+                seat_set_keyboard_focus(g_seat,
+                    g_compositor->focused_surface_resource, g_compositor);
+            }
             break;
 
         default:
@@ -642,10 +662,26 @@ int input_script_step(struct InputScript* s,
             send_pointer_button(serial, 0, button, button_state);
         }
     } else if (strcmp(line, "focus gained") == 0) {
-        if (comp && comp->focused_surface_resource)
-            seat_set_keyboard_focus(seat, comp->focused_surface_resource, comp);
+        /* P3-T03: re-enter application mode only if stored mode was Application. */
+        if (g_seat && g_seat->stored_mode_when_focus_lost == InputMode::Application
+            && g_compositor && g_compositor->focused_surface_resource) {
+            input_mode_set(InputMode::Application);
+            seat_set_keyboard_focus(seat, g_compositor->focused_surface_resource,
+                                    g_compositor);
+        } else if (g_seat && g_compositor && g_compositor->focused_surface_resource) {
+            /* Default: restore keyboard focus regardless of mode. */
+            seat_set_keyboard_focus(seat, g_compositor->focused_surface_resource,
+                                    g_compositor);
+        }
     } else if (strcmp(line, "focus lost") == 0) {
-        seat_set_keyboard_focus(seat, nullptr, comp);
+        /* P3-T03: save current mode, then exit application mode (key releases, leave). */
+        if (g_seat) {
+            g_seat->stored_mode_when_focus_lost = input_mode_get();
+            exit_application_mode();
+        } else if (seat) {
+            /* Fallback: just clear keyboard focus. */
+            seat_set_keyboard_focus(seat, nullptr, comp);
+        }
     } else if (strcmp(line, "quit") == 0) {
         return 1;
     }
