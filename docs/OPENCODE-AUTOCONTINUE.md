@@ -51,6 +51,18 @@ no longer loads in 2.x.
   are resumed, and a turn that ended while the plugin was unloaded gets its
   follow-up right away. Runs whose session is gone are dropped.
 
+## Tools the model must not see
+
+OpenCode 2.x exposes a Code Mode `execute` tool whose catalog includes the
+desktop app's browser tools (`browser.tabs.list`, `browser.preview`, ...).
+Without the desktop app connected, every call fails with
+`[browser.disconnected]`, and a small local model will keep retrying. The
+project `opencode.jsonc` therefore sets `"permission": {"browser": "deny"}`:
+a fully denied permission action removes the tool from the catalog instead of
+producing errors (verified 2026-09-27 with `opencode run` in this directory;
+the model reported the `opencode` namespace as the only one available). Run
+`opencode reload` after editing the file while the background service is up.
+
 ## Stop conditions
 
 | Condition | Default |

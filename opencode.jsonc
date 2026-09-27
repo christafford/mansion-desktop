@@ -5,6 +5,10 @@
   // so everything an unattended run legitimately needs is allowed here and the
   // few destructive or outward-facing commands are denied outright.
   "permission": {
+    // Desktop-app browser tools (browser.tabs.*, browser.preview, ...) need the
+    // OpenCode desktop app connected. In the distrobox TUI there is none, so the
+    // model only burns turns on "[browser.disconnected]" errors. Deny hides them.
+    "browser": "deny",
     "read": "allow",
     "edit": "allow",
     "task": "allow",
