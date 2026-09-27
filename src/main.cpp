@@ -3,6 +3,7 @@
 #include <csignal>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -214,13 +215,6 @@ int main(int argc, char** argv) {
         }
     }
 
-    // Scripts read this line to find the socket. Print it only once everything is listening.
-    std::cout << "MANSION_SOCKET=" << socket_name << std::endl;
-    std::cerr << "Mansion Desktop running on socket: " << socket_name
-              << (opts.headless ? " (headless)" : "")
-              << (opts.screenshot.empty() ? "" : " [screenshot: " + opts.screenshot + "]")
-              << std::endl;
-
     for (const auto& cmd : opts.launch) {
         auto* app = launch_app(wl_display, socket_name.c_str(), cmd.c_str());
         if (app) {
@@ -244,6 +238,25 @@ int main(int argc, char** argv) {
     long frame_count = 0;
     status = 0;
 
+    /* Execute input script if one was provided. */
+    struct InputScript* script = nullptr;
+    if (!opts.input_script.empty()) {
+        script = input_script_init(opts.input_script.c_str());
+        if (!script) {
+            std::cerr << "Failed to open input script: " << opts.input_script << std::endl;
+            status = 1;
+        }
+    }
+
+    // Scripts and test harnesses read this line to find the socket.
+    // Print it only after the main loop begins so clients know the
+    // compositor is actively dispatching — not just listening.
+    std::cout << "MANSION_SOCKET=" << socket_name << std::endl;
+    std::cerr << "Mansion Desktop running on socket: " << socket_name
+              << (opts.headless ? " (headless)" : "")
+              << (opts.screenshot.empty() ? "" : " [screenshot: " + opts.screenshot + "]")
+              << std::endl;
+
     while (running) {
         if (opts.exit_after_ms >= 0) {
             auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(clock::now() - start).count();
@@ -260,22 +273,30 @@ int main(int argc, char** argv) {
 
         if (input_started) input_process();
 
-        /* Execute input script if one was provided. */
-        if (!opts.input_script.empty()) {
-            int rc = input_execute_script(opts.input_script.c_str(), seat, compositor);
+        /* Execute next script command, if any. */
+        if (script) {
+            int rc = input_script_step(script, seat, compositor);
             if (rc == 1) {
-                // Script requested quit.
+                /* Script requested quit. */
                 running = 0;
-            } else if (rc < 0) {
-                std::cerr << "Input script error" << std::endl;
-                status = 1;
-                break;
+            }
+            if (rc >= 0 && script->remaining_wait_ms > 0) {
+                long ms = script->remaining_wait_ms > 16 ? 16 : script->remaining_wait_ms;
+                struct timespec ts = {ms / 1000, (ms % 1000) * 1000000L};
+                nanosleep(&ts, nullptr);
+                script->remaining_wait_ms -= ms;
+            }
+            if (rc < 0 || rc == 1) {
+                input_script_destroy(script);
+                script = nullptr;
             }
         }
 
         render(display);
-        frame_count++;
     }
+
+    input_script_destroy(script);
+    script = nullptr;
 
     /* Take a screenshot if requested. */
     if (!opts.screenshot.empty()) {

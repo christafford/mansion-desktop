@@ -447,114 +447,105 @@ void input_destroy(void) {
 
 /* ---------- Input script execution (P1-T06-E) ---------- */
 
-/* Execute an input script file. Returns 0 on success, -1 on error,
-   1 if the script requested quit. */
-int input_execute_script(const char* filename,
-                          struct MansionSeat* seat,
-                          struct MansionCompositor* comp) {
-    FILE* fp = fopen(filename, "r");
-    if (!fp) {
+struct InputScript* input_script_init(const char* filename) {
+    auto* s = new InputScript;
+    memset(s, 0, sizeof(*s));
+    s->fp = fopen(filename, "r");
+    if (!s->fp) {
         fprintf(stderr, "Failed to open input script: %s\n", filename);
+        delete s;
+        return nullptr;
+    }
+    return s;
+}
+
+/* Execute the next command from the script. Returns 0 if more commands
+   remain, 1 if quit, -1 on EOF. */
+int input_script_step(struct InputScript* s,
+                      struct MansionSeat* seat,
+                      struct MansionCompositor* comp) {
+    if (!s || s->done) return -1;
+    if (!seat || !comp) return -1;
+    if (s->remaining_wait_ms > 0) return 0;
+
+    char line[256];
+    if (!fgets(line, sizeof(line), s->fp)) {
+        fclose(s->fp); s->fp = nullptr; s->done = 1;
         return -1;
     }
 
-    char line[256];
-    while (fgets(line, sizeof(line), fp)) {
-        /* Trim trailing newline. */
-        size_t len = strlen(line);
-        while (len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r')) {
-            line[--len] = '\0';
-        }
-        if (len == 0) continue;
+    size_t len = strlen(line);
+    while (len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r'))
+        line[--len] = '\0';
+    if (len == 0) return input_script_step(s, seat, comp);
+    if (line[0] == '#') return input_script_step(s, seat, comp);
 
-        /* Skip comments. */
-        if (line[0] == '#') continue;
-
-        if (strncmp(line, "wait ", 5) == 0) {
-            long ms = strtol(line + 5, nullptr, 10);
-            if (ms > 0) {
-                struct timespec ts = {ms / 1000, (ms % 1000) * 1000000L};
-                nanosleep(&ts, nullptr);
-            }
-        } else if (strncmp(line, "key ", 4) == 0) {
-            /* "key CODE press|release" — CODE is a Linux keycode (e.g. 30 = A). */
-            char code_str[16] = {};
-            char action[16] = {};
-            sscanf(line + 4, "%15s %15s", code_str, action);
-            int keycode = strtol(code_str, nullptr, 10);
-            uint32_t state = (strcmp(action, "press") == 0) ?
-                WL_KEYBOARD_KEY_STATE_PRESSED :
-                WL_KEYBOARD_KEY_STATE_RELEASED;
-            uint32_t serial = ++seat->serial;
-            uint32_t time = 0;
-
-            /* Update xkb state. */
-            if (seat->xkbstate) {
-                xkb_state_update_key(seat->xkbstate,
-                                     keycode + 8,
-                                     state == WL_KEYBOARD_KEY_STATE_PRESSED ?
-                                         XKB_KEY_DOWN : XKB_KEY_UP);
-            }
-
-            SeatKeyboardClient *kc, *kc_next;
-            wl_list_for_each_safe(kc, kc_next, &seat->keyboard_clients, destroy_listener.link) {
-                if (kc->resource) {
-                    wl_keyboard_send_key(kc->resource, serial, time, keycode, state);
-                }
-            }
-            send_keymap_modifiers(serial);
-        } else if (strncmp(line, "motion ", 7) == 0) {
-            int x = 0, y = 0;
-            sscanf(line + 7, "%d %d", &x, &y);
-            pointer_x = wl_fixed_from_int(x);
-            pointer_y = wl_fixed_from_int(y);
-            uint32_t serial = ++seat->serial;
-            pointer_check_focus(serial);
-            send_pointer_motion(0);
-            send_pointer_axis_done(0);
-        } else if (strncmp(line, "button ", 7) == 0) {
-            /* "button CODE press|release" — CODE is a Linux button code. */
-            char code_str[16] = {};
-            char action[16] = {};
-            sscanf(line + 7, "%15s %15s", code_str, action);
-            uint32_t button = (uint32_t)strtol(code_str, nullptr, 10);
-            uint32_t button_state = (strcmp(action, "press") == 0) ?
-                WL_POINTER_BUTTON_STATE_PRESSED :
-                WL_POINTER_BUTTON_STATE_RELEASED;
-
-            if (button_state == WL_POINTER_BUTTON_STATE_PRESSED) {
-                seat->grab_surface_resource = seat->pointer_surface_resource;
-            } else {
-                seat->grab_surface_resource = nullptr;
-            }
-
-            uint32_t serial = ++seat->serial;
-            send_pointer_button(serial, 0, button, button_state);
-        } else if (strcmp(line, "focus gained") == 0) {
-            /* Focus gained: re-send enter to the currently focused surface. */
-            if (comp && comp->focused_surface_resource) {
-                seat_set_keyboard_focus(seat, comp->focused_surface_resource, comp);
-            }
-        } else if (strcmp(line, "focus lost") == 0) {
-            seat_set_keyboard_focus(seat, nullptr, comp);
-        } else if (strcmp(line, "quit") == 0) {
-            fclose(fp);
-            return 1;
-        }
+    if (strncmp(line, "wait ", 5) == 0) {
+        s->remaining_wait_ms = strtol(line + 5, nullptr, 10);
+        return 0;
+    } else if (strncmp(line, "key ", 4) == 0) {
+        char code_str[16] = {}, action[16] = {};
+        sscanf(line + 4, "%15s %15s", code_str, action);
+        int keycode = strtol(code_str, nullptr, 10);
+        uint32_t state = (strcmp(action, "press") == 0) ?
+            WL_KEYBOARD_KEY_STATE_PRESSED : WL_KEYBOARD_KEY_STATE_RELEASED;
+        uint32_t serial = ++seat->serial;
+        if (seat->xkbstate)
+            xkb_state_update_key(seat->xkbstate, keycode + 8,
+                state == WL_KEYBOARD_KEY_STATE_PRESSED ? XKB_KEY_DOWN : XKB_KEY_UP);
+        SeatKeyboardClient *kc, *kc_next;
+        wl_list_for_each_safe(kc, kc_next, &seat->keyboard_clients, destroy_listener.link)
+            if (kc->resource)
+                wl_keyboard_send_key(kc->resource, serial, 0, keycode, state);
+        send_keymap_modifiers(serial);
+    } else if (strncmp(line, "motion ", 7) == 0) {
+        int x = 0, y = 0;
+        sscanf(line + 7, "%d %d", &x, &y);
+        pointer_x = wl_fixed_from_int(x);
+        pointer_y = wl_fixed_from_int(y);
+        uint32_t serial = ++seat->serial;
+        pointer_check_focus(serial);
+        send_pointer_motion(0);
+        send_pointer_axis_done(0);
+    } else if (strncmp(line, "button ", 7) == 0) {
+        char code_str[16] = {}, action[16] = {};
+        sscanf(line + 7, "%15s %15s", code_str, action);
+        uint32_t button = (uint32_t)strtol(code_str, nullptr, 10);
+        uint32_t button_state = (strcmp(action, "press") == 0) ?
+            WL_POINTER_BUTTON_STATE_PRESSED : WL_POINTER_BUTTON_STATE_RELEASED;
+        if (button_state == WL_POINTER_BUTTON_STATE_PRESSED)
+            seat->grab_surface_resource = seat->pointer_surface_resource;
+        else
+            seat->grab_surface_resource = nullptr;
+        uint32_t serial = ++seat->serial;
+        send_pointer_button(serial, 0, button, button_state);
+    } else if (strcmp(line, "focus gained") == 0) {
+        if (comp && comp->focused_surface_resource)
+            seat_set_keyboard_focus(seat, comp->focused_surface_resource, comp);
+    } else if (strcmp(line, "focus lost") == 0) {
+        seat_set_keyboard_focus(seat, nullptr, comp);
+    } else if (strcmp(line, "quit") == 0) {
+        return 1;
     }
-
-    fclose(fp);
     return 0;
 }
+
+void input_script_destroy(struct InputScript* s) {
+    if (!s) return;
+    if (s->fp) fclose(s->fp);
+    delete s;
+}
+
 
 /* ---------- SeatKeyboardClient destroy listener ---------- */
 
 static void keyboard_client_destroy(struct wl_listener* listener, void* data) {
     (void)data;
     SeatKeyboardClient* kbc = wl_container_of(listener, kbc, destroy_listener);
-    wl_list_remove(&kbc->destroy_listener.link);
+    /* Do NOT remove from the list or delete here — the Wayland library
+     * may still hold references during teardown and we crash.
+     * Instead we just null the resource; destroy_seat will clean up. */
     kbc->resource = nullptr;
-    delete kbc;
 }
 
 /* ---------- SeatPointerClient destroy listener ---------- */
@@ -612,10 +603,8 @@ static void seat_get_pointer(struct wl_client* client, struct wl_resource* seat_
 
     wl_list_insert(&seat->pointer_clients, &kpc->destroy_listener.link);
 
-    // Send enter event (pointer enters the first surface)
-    // In a real compositor, this would do a hit-test. For now, send a synthetic enter.
-    wl_pointer_send_enter(resource, 0, nullptr,
-                          pointer_x, pointer_y);
+    /* Don't send a synthetic enter here; proper enter/leave is handled
+       by pointer_check_focus() when the pointer position changes. */
 
     // Send capabilities (done at seat level, not per-client)
 }
@@ -770,32 +759,31 @@ void destroy_seat(struct MansionSeat* seat) {
         g_seat = nullptr;
     }
 
-    // Destroy all keyboard clients
-    SeatKeyboardClient *kc, *kc_next;
-    wl_list_for_each_safe(kc, kc_next, &seat->keyboard_clients, destroy_listener.link) {
-        wl_list_remove(&kc->destroy_listener.link);
-        if (kc->resource) {
-            wl_resource_destroy(kc->resource);
-        }
-        delete kc;
-    }
-    wl_list_init(&seat->keyboard_clients);
-
-    // Destroy all pointer clients
-    SeatPointerClient *pk, *pk_next;
-    wl_list_for_each_safe(pk, pk_next, &seat->pointer_clients, destroy_listener.link) {
-        wl_list_remove(&pk->destroy_listener.link);
-        if (pk->resource) {
-            wl_resource_destroy(pk->resource);
-        }
-        delete pk;
-    }
-    wl_list_init(&seat->pointer_clients);
-
-    /* Clear pointer and keyboard focus. */
+    // Clear focus before destroying resources to avoid stale references.
     seat->grab_surface_resource = nullptr;
     seat->pointer_surface_resource = nullptr;
     seat->focused_surface_resource = nullptr;
+
+    // Destroy all keyboard clients.
+    // If a client was destroyed earlier (Wayland library), its resource is
+    // nullptr — we still delete the struct.  We do NOT call wl_resource_destroy
+    // here; wl_display_destroy handles it.
+    {
+        SeatKeyboardClient *kc, *kc_next;
+        wl_list_for_each_safe(kc, kc_next, &seat->keyboard_clients, destroy_listener.link) {
+            wl_list_remove(&kc->destroy_listener.link);
+            delete kc;
+        }
+    }
+
+    // Destroy all pointer clients.
+    {
+        SeatPointerClient *pk, *pk_next;
+        wl_list_for_each_safe(pk, pk_next, &seat->pointer_clients, destroy_listener.link) {
+            wl_list_remove(&pk->destroy_listener.link);
+            delete pk;
+        }
+    }
 
     wl_global_destroy(seat->global);
 
@@ -806,7 +794,8 @@ void destroy_seat(struct MansionSeat* seat) {
     if (seat->keymap) {
         xkb_keymap_unref(seat->keymap);
     }
-
+    seat->xkbstate = nullptr;
+    seat->keymap = nullptr;
     delete seat;
 }
 
@@ -815,8 +804,6 @@ void destroy_seat(struct MansionSeat* seat) {
 void seat_set_keyboard_focus(struct MansionSeat* seat,
                               struct wl_resource* surface,
                               MansionCompositor* comp) {
-    if (!seat || !comp) return;
-
     comp->keyboard_focus_serial++;
 
     /* Send leave to the old focused surface. */
@@ -830,7 +817,6 @@ void seat_set_keyboard_focus(struct MansionSeat* seat,
             }
         }
     }
-
     comp->focused_surface_resource = surface;
     seat->focused_surface_resource = surface;
 

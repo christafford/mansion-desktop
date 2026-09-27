@@ -30,6 +30,12 @@ struct client {
     struct wl_shm* shm;
     struct wl_seat* seat;
 
+    /* keyboard */
+    struct wl_keyboard* keyboard;
+
+    /* pointer */
+    struct wl_pointer* pointer;
+
     /* xdg-shell */
     struct xdg_wm_base* xdg_wm_base;
     struct xdg_surface* xdg_surface;
@@ -45,6 +51,11 @@ struct client {
     int buffer_width, buffer_height;
     int color_r, color_g, color_b;
     long frame_time;
+
+    /* --report-input */
+    int report_input;
+    /* deferred seat binding for input reporting */
+    int seat_name, seat_version;
 };
 
 static void registry_global(void* data, struct wl_registry* registry, uint32_t name,
@@ -56,7 +67,12 @@ static void registry_global(void* data, struct wl_registry* registry, uint32_t n
     } else if (strcmp(interface, wl_shm_interface.name) == 0 && !c->shm) {
         c->shm = wl_registry_bind(registry, name, &wl_shm_interface, 1);
     } else if (strcmp(interface, wl_seat_interface.name) == 0 && !c->seat) {
-        c->seat = wl_registry_bind(registry, name, &wl_seat_interface, version < 4 ? version : 4);
+        if (c->report_input) {
+            c->seat_name = name;
+            c->seat_version = version < 4 ? version : 4;
+        } else {
+            c->seat = wl_registry_bind(registry, name, &wl_seat_interface, version < 4 ? version : 4);
+        }
     } else if (strcmp(interface, "xdg_wm_base") == 0 && !c->xdg_wm_base) {
         c->xdg_wm_base = wl_registry_bind(registry, name, &xdg_wm_base_interface, version < 3 ? version : 3);
     }
@@ -140,15 +156,107 @@ static const struct wl_buffer_listener buffer_listener = {
     .release = buffer_release,
 };
 
+/* ---------- keyboard (P1-T06-F) ---------- */
+
+static void keyboard_keymap(void* data, struct wl_keyboard* k, uint32_t format,
+                            int32_t fd, uint32_t size) {
+    (void)data; (void)k; (void)format; (void)fd; (void)size;
+    /* keymap: no output needed (server sends it on bind). */
+}
+
+static void keyboard_enter(void* data, struct wl_keyboard* k, uint32_t serial,
+                           struct wl_surface* surface, struct wl_array* keys) {
+    (void)data; (void)k; (void)serial; (void)keys; (void)surface;
+    printf("kbd_enter\n");
+    fflush(stdout);
+}
+
+static void keyboard_leave(void* data, struct wl_keyboard* k, uint32_t serial,
+                           struct wl_surface* surface) {
+    (void)data; (void)k; (void)serial; (void)surface;
+    printf("kbd_leave\n");
+    fflush(stdout);
+}
+
+static void keyboard_key(void* data, struct wl_keyboard* k, uint32_t serial,
+                         uint32_t time, uint32_t key, uint32_t state) {
+    (void)data; (void)k; (void)serial; (void)time;
+    printf("key %u %u\n", key, state);
+    fflush(stdout);
+}
+
+static void keyboard_modifiers(void* data, struct wl_keyboard* k, uint32_t serial,
+                               uint32_t mods_depressed, uint32_t mods_latched,
+                               uint32_t mods_locked, uint32_t group) {
+    (void)data; (void)k; (void)serial;
+    (void)mods_depressed; (void)mods_latched; (void)mods_locked; (void)group;
+}
+
+static void keyboard_repeat_info(void* data, struct wl_keyboard* k,
+                                 int32_t rate, int32_t delay) {
+    (void)data; (void)k; (void)rate; (void)delay;
+}
+
+static const struct wl_keyboard_listener keyboard_listener = {
+    .keymap = keyboard_keymap,
+    .enter = keyboard_enter,
+    .leave = keyboard_leave,
+    .key = keyboard_key,
+    .modifiers = keyboard_modifiers,
+    .repeat_info = keyboard_repeat_info,
+};
+
+/* ---------- pointer (P1-T06-F) ---------- */
+
+static void pointer_enter(void* data, struct wl_pointer* p, uint32_t serial,
+                          struct wl_surface* surface, wl_fixed_t sx, wl_fixed_t sy) {
+    (void)data; (void)p; (void)serial; (void)surface;
+    printf("ptr_enter %d %d\n", wl_fixed_to_int(sx), wl_fixed_to_int(sy));
+    fflush(stdout);
+}
+
+static void pointer_leave(void* data, struct wl_pointer* p, uint32_t serial,
+                          struct wl_surface* surface) {
+    (void)data; (void)p; (void)serial; (void)surface;
+    printf("ptr_leave\n");
+    fflush(stdout);
+}
+
+static void pointer_motion(void* data, struct wl_pointer* p, uint32_t time,
+                           wl_fixed_t sx, wl_fixed_t sy) {
+    (void)data; (void)p; (void)time;
+    printf("motion %d %d\n", wl_fixed_to_int(sx), wl_fixed_to_int(sy));
+    fflush(stdout);
+}
+
+static void pointer_button(void* data, struct wl_pointer* p, uint32_t serial,
+                           uint32_t time, uint32_t button, uint32_t state) {
+    (void)data; (void)p; (void)serial; (void)time; (void)button; (void)state;
+}
+
+static void pointer_axis(void* data, struct wl_pointer* p, uint32_t time,
+                         uint32_t axis, wl_fixed_t value) {
+    (void)data; (void)p; (void)time; (void)axis; (void)value;
+}
+
+static const struct wl_pointer_listener pointer_listener = {
+    .enter = pointer_enter,
+    .leave = pointer_leave,
+    .motion = pointer_motion,
+    .button = pointer_button,
+    .axis = pointer_axis,
+};
+
 static void usage(void) {
     fprintf(stderr,
             "Usage: mansion-test-client [--socket NAME] [--exit-after-ms N] "
-            "[--toplevel] [--buffer WxH --color RRGGBB]\n"
+            "[--toplevel] [--buffer WxH --color RRGGBB] [--report-input]\n"
             "  --socket NAME       Wayland socket name (default: $WAYLAND_DISPLAY)\n"
             "  --exit-after-ms N   keep dispatching events for N ms before exiting (default 0)\n"
             "  --toplevel          create a toplevel surface and wait for configure\n"
             "  --buffer WxH        create a WxH ARGB8888 shm buffer (implies --toplevel)\n"
-            "  --color RRGGBB      fill buffer with color (default ff0000 = red)\n");
+            "  --color RRGGBB      fill buffer with color (default ff0000 = red)\n"
+            "  --report-input      bind keyboard+pointer and print input events to stdout\n");
 }
 
 /* Create a shm pool, map it, fill with color, create buffer, attach to surface. */
@@ -232,6 +340,7 @@ int main(int argc, char** argv) {
     int buffer_mode = 0;
     int bw = 200, bh = 100;
     int cr = 0xff, cg = 0x00, cb = 0x00; /* default red */
+    int report_input = 0;
 
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--socket") == 0 && i + 1 < argc) {
@@ -255,6 +364,8 @@ int main(int argc, char** argv) {
             cr = (color >> 16) & 0xff;
             cg = (color >> 8) & 0xff;
             cb = color & 0xff;
+        } else if (strcmp(argv[i], "--report-input") == 0) {
+            report_input = 1;
         } else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
             usage();
             return 0;
@@ -266,6 +377,7 @@ int main(int argc, char** argv) {
     }
 
     struct client c = {0};
+    c.report_input = report_input;
     c.display = wl_display_connect(socket);
     if (!c.display) {
         fprintf(stderr, "connect failed (socket %s): %s\n", socket ? socket : "$WAYLAND_DISPLAY", strerror(errno));
@@ -280,6 +392,16 @@ int main(int argc, char** argv) {
     }
     printf("connected\n");
     fflush(stdout);
+
+    /* Bind keyboard + pointer when --report-input is requested. */
+    if (c.report_input && c.seat_name > 0) {
+        c.seat = wl_registry_bind(c.registry, c.seat_name,
+                                   &wl_seat_interface, c.seat_version);
+        c.keyboard = wl_seat_get_keyboard(c.seat);
+        wl_keyboard_add_listener(c.keyboard, &keyboard_listener, &c);
+        c.pointer = wl_seat_get_pointer(c.seat);
+        wl_pointer_add_listener(c.pointer, &pointer_listener, &c);
+    }
 
     int toplevel_mode = 0;
     /* Check if --toplevel was requested or implied by --buffer */
@@ -385,6 +507,14 @@ int main(int argc, char** argv) {
     return 0;
 
 error:
+    printf("done\n");
+    fflush(stdout);
+    /* Compositor shutting down is expected in input-routing tests;
+     * treat Broken pipe as a clean disconnect, not an error. */
+    if (errno == EPIPE || errno == ECONNRESET) {
+        wl_display_disconnect(c.display);
+        return 0;
+    }
     fprintf(stderr, "protocol error or disconnect: %s\n", strerror(errno));
     wl_display_disconnect(c.display);
     return 1;

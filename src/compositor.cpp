@@ -266,9 +266,11 @@ static void compositor_bind(struct wl_client* client, void* data, uint32_t versi
 }
 
 struct MansionCompositor* create_compositor(struct wl_display* display) {
-    auto* compositor = new MansionCompositor;
+    auto* compositor = new MansionCompositor{};
     wl_list_init(&compositor->surface_list);
     wl_list_init(&compositor->orphaned_surfaces);
+    compositor->focused_surface_resource = nullptr;
+    compositor->keyboard_focus_serial = 0;
 
     compositor->global = wl_global_create(display, &wl_compositor_interface, 4,
                                            compositor, compositor_bind);

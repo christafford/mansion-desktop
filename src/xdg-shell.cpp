@@ -6,6 +6,7 @@
 // Cross-links between xdg_surface and xdg_toplevel, and between xdg_surface and
 // the wl_surface, are cleared by whichever side goes away first.
 
+#include <cstdio>
 #include <wayland-server.h>
 #include "xdg-shell-server-protocol.h"
 
@@ -244,7 +245,6 @@ void wm_base_bind(struct wl_client* client, void* data, uint32_t version, uint32
 /* ── Public API ──────────────────────────────────────────────────── */
 
 void xdg_shell_on_surface_commit(struct MansionXdgSurface* xdg_surface) {
-    if (!xdg_surface || xdg_surface->configured || !xdg_surface->toplevel) return;
 
     // Protocol order: role-specific configure first, then xdg_surface.configure
     // carrying the serial that closes the configure sequence.

@@ -65,3 +65,5 @@ test('client-frame', find_program('tests/client_frame.sh'),
     args: [mansion_exe, test_client], env: test_env, suite: 'p1', timeout: 30)
 test('render-shm', find_program('tests/render_shm.sh'),
     args: [mansion_exe, test_client], env: test_env, suite: 'p1', timeout: 30)
+test('input-routing', find_program('tests/input_routing.sh'),
+    args: [mansion_exe, test_client], env: test_env, suite: 'p1', timeout: 30)
