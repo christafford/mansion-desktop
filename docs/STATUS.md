@@ -7,8 +7,11 @@ running the check that proves it.
 
 ## Next task
 
-**P2-T08 Project 2 wrap-up and gate A record.** Handoff, status, decision
-on whether to continue with the current renderer/compositor integration.
+**P3-T01 Explicit modes.** `enum class InputMode { World, Application }`
+with one owner. World mode: input drives the camera, clients get nothing.
+Application mode: input goes to the focused surface. `--input-script` gains
+`mode world|app`.
+**Acceptance:** `meson test -C build mode-routing` passes.
 
 ## Verified by automated test
 
@@ -118,6 +121,9 @@ Run `meson test -C build --print-errorlogs`.
   `w × h × 4`). Every 60 frames the accumulated averages are printed to stderr
   as `fps` and `KiB uploaded`, then counters reset. `meson test -C build`
   passes unchanged. Measured numbers in `docs/handoffs/02.md`.
+- **P2-T08 Project 2 wrap-up.** All P2 tasks (T01–T07) ticked. Handoff updated
+  with gate A decision: continue with current renderer/compositor integration.
+  `meson test -C build` passes (14/14).
 - Auto-continue plugin: `node --test .opencode/tests/*.test.js` (49 tests),
   plus one live run against OpenCode 2.0.16 with the local model on
   2026-09-26 (see [OPENCODE-AUTOCONTINUE.md](OPENCODE-AUTOCONTINUE.md)). The

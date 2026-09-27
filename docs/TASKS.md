@@ -272,10 +272,10 @@ Depends on Project 1 automated tasks (P1-T10 may still be unobserved).
   **Acceptance:** `meson test -C build` passes; `docs/handoffs/02.md` contains
   measured numbers with the machine description. (2026-09-27)
 
-- [ ] **P2-T08 Project 2 wrap-up and gate A record.** Handoff, status, decision
+- [x] **P2-T08 Project 2 wrap-up and gate A record.** Handoff, status, decision
   on whether to continue with the current renderer/compositor integration.
   **Acceptance:** docs updated; every Project 2 task ticked or recorded as
-  blocked with evidence.
+  blocked with evidence. (2026-09-27)
 
 ---
 
