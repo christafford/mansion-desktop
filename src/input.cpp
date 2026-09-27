@@ -17,6 +17,7 @@
 #include "compositor-private.h"
 #include "display.h"
 #include "input.h"
+#include "xdg-shell.h"
 
 /* Evdev button codes (from linux/input-event-codes.h). */
 static constexpr uint32_t BTN_LEFT   = 0x110;
@@ -31,7 +32,7 @@ static wl_fixed_t pointer_x = wl_fixed_from_int(300);
 static wl_fixed_t pointer_y = wl_fixed_from_int(200);
 
 /* ---------- Input mode (P3-T01) ---------- */
-static InputMode g_input_mode = InputMode::Application;
+static InputMode g_input_mode = InputMode::World;
 
 /* P3-T02: evdev keycode for switching to world mode (default: F12 = 88). */
 static int g_world_key = 88;
@@ -170,9 +171,10 @@ static void send_keymap_modifiers(uint32_t serial) {
     }
 }
 
-/* P3-T02: Cleanly exit Application mode — switch to World mode.
- * Sends key releases for all pressed keys, empty modifiers,
- * keyboard leave, and pointer leave. */
+/* P3-T02: Cleanly exit Application mode — send key releases, empty modifiers,
+ * keyboard leave, and pointer leave.  Does NOT change the input mode itself
+ * (P3-T03 saves the mode for restore on focus regain; P3-T02 world-key
+ * handler changes the mode explicitly). */
 static void exit_application_mode(void) {
     if (!g_seat) return;
 
@@ -214,7 +216,7 @@ static void exit_application_mode(void) {
         g_seat->pointer_surface_resource = nullptr;
     }
 
-    input_mode_set(InputMode::World);
+    /* NOTE: Does NOT change input_mode — caller sets the mode explicitly. */
 }
 
 /* ---------- Pointer hit test (P1-T06-D) ---------- */
@@ -425,10 +427,11 @@ int input_process_x11(struct MansionDisplay* m_display) {
 
         /* ---- Focus changes (informational) ---- */
         case FocusOut:
-            /* P3-T03: save current mode, then exit application mode. */
+            /* P3-T03: save current mode, then exit application mode and switch to World. */
             if (g_seat) {
                 g_seat->stored_mode_when_focus_lost = input_mode_get();
                 exit_application_mode();
+                input_mode_set(InputMode::World);
             }
             break;
         case FocusIn:
@@ -562,6 +565,21 @@ int input_script_step(struct InputScript* s,
             input_mode_set(InputMode::World);
         } else if (strcmp(line + 5, "app") == 0) {
             input_mode_set(InputMode::Application);
+            /* P3-T04: send configure resize to focused surface for fullscreen. */
+            if (comp && comp->focused_surface_resource) {
+                auto* surface_data =
+                    compositor_surface_from_resource(comp->focused_surface_resource);
+                if (surface_data && surface_data->xdg_surface
+                    && display) {
+                    int32_t w, h;
+                    xdg_surface_get_toplevel_size(surface_data->xdg_surface, &w, &h);
+                    if (w > 0 && h > 0) {
+                        xdg_shell_send_configure_resize(
+                            surface_data->xdg_surface,
+                            display->window_width, display->window_height);
+                    }
+                }
+            }
         }
         return 0;
     } else if (strncmp(line, "key ", 4) == 0) {
@@ -593,9 +611,10 @@ int input_script_step(struct InputScript* s,
                     seat->pressed_keys.erase(it);
             }
 
-            /* P3-T02: world-key shortcut — exit Application mode on key press. */
+            /* P3-T02: world-key shortcut — exit Application mode and switch to World. */
             if (state == WL_KEYBOARD_KEY_STATE_PRESSED && keycode == g_world_key) {
                 exit_application_mode();
+                input_mode_set(InputMode::World);
                 return 0;
             }
         }
@@ -674,10 +693,11 @@ int input_script_step(struct InputScript* s,
                                     g_compositor);
         }
     } else if (strcmp(line, "focus lost") == 0) {
-        /* P3-T03: save current mode, then exit application mode (key releases, leave). */
+        /* P3-T03: save current mode, then exit application mode and switch to World. */
         if (g_seat) {
             g_seat->stored_mode_when_focus_lost = input_mode_get();
             exit_application_mode();
+            input_mode_set(InputMode::World);
         } else if (seat) {
             /* Fallback: just clear keyboard focus. */
             seat_set_keyboard_focus(seat, nullptr, comp);

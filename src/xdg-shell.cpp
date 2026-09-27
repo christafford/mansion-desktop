@@ -280,6 +280,17 @@ bool xdg_surface_has_toplevel(struct MansionXdgSurface* xdg_surface) {
     return xdg_surface && xdg_surface->toplevel != nullptr;
 }
 
+void xdg_surface_get_toplevel_size(struct MansionXdgSurface* xdg_surface,
+                                   int32_t* out_width, int32_t* out_height) {
+    if (!xdg_surface || !xdg_surface->toplevel) {
+        if (out_width) *out_width = 0;
+        if (out_height) *out_height = 0;
+        return;
+    }
+    if (out_width) *out_width = xdg_surface->toplevel->width;
+    if (out_height) *out_height = xdg_surface->toplevel->height;
+}
+
 struct MansionXdgShell* create_xdg_shell(struct MansionCompositor*, struct wl_display* display) {
     auto* shell = new MansionXdgShell{};
     shell->global = wl_global_create(display, &xdg_wm_base_interface, kWmBaseVersion,

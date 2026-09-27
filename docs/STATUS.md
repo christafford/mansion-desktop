@@ -7,12 +7,11 @@ running the check that proves it.
 
 ## Next task
 
-**P3-T04 Input script mode switching.** `--input-script` gains `mode world|app`
-already implemented in P3-T01. Add `mode switch` to toggle between World and
-Application modes. Add `--default-mode world|app` to set the initial mode at
-startup (default: Application).
-**Acceptance:** `meson test -C build input-script-mode` passes (script toggle
-and default mode CLI verified).
+**P3-T04 Full-size presentation.** In application mode the focused
+  surface is drawn 2D, scaled to fit the host window, and configured to the
+  host size; returning to world mode restores the panel and the previous size.
+  **Acceptance:** `meson test -C build present-fullsize` passes (client
+  receives the new configure; screenshot is filled with the client colour).
 
 ## Verified by automated test
 

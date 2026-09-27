@@ -19,6 +19,7 @@
 #include "compositor-private.h"
 #include "math.h"
 #include "xdg-shell.h"
+#include "input.h"
 
 struct MansionRenderer {
     GLuint program;
@@ -43,6 +44,7 @@ struct MansionRenderer {
 // Forward declarations
 static GLuint create_shader(GLenum type, const char* source);
 static GLuint create_program(const char* vertex_shader_source, const char* fragment_shader_source);
+static void render_application_fullscreen(struct MansionDisplay* display);
 
 static const EGLint context_attr[] = {
     EGL_CONTEXT_CLIENT_VERSION, 2,
@@ -882,6 +884,48 @@ void render_surface(struct MansionDisplay* display, struct wl_resource* surface,
         wl_buffer_send_release(surface_data->buffer_resource);
         surface_data->buffer_resource = nullptr;
     }
+}
+
+/* Render the focused surface fullscreen (P3-T04). */
+static void render_application_fullscreen(struct MansionDisplay* display) {
+    auto* renderer = display->renderer;
+    if (!renderer) return;
+
+    auto* comp = display->compositor;
+    if (!comp || !comp->focused_surface_resource) return;
+
+    auto* surface_data = compositor_surface_from_resource(comp->focused_surface_resource);
+    if (!surface_data || !surface_data->gl_texture) return;
+
+    glUseProgram(renderer->program);
+    glUniform2f(renderer->viewport_uniform,
+                static_cast<GLfloat>(display->window_width),
+                static_cast<GLfloat>(display->window_height));
+
+    /* Full-screen quad covering the viewport. */
+    GLfloat attrib_data[] = {
+        0.0f, static_cast<GLfloat>(display->window_height),  0.0f, 1.0f,
+        static_cast<GLfloat>(display->window_width), static_cast<GLfloat>(display->window_height), 1.0f, 1.0f,
+        0.0f, 0.0f,                                      0.0f, 0.0f,
+        static_cast<GLfloat>(display->window_width), 0.0f,  1.0f, 0.0f,
+    };
+
+    glEnableVertexAttribArray(renderer->pos_attrib);
+    glVertexAttribPointer(renderer->pos_attrib, 2, GL_FLOAT, GL_FALSE,
+                          4 * sizeof(float), &attrib_data[0]);
+
+    glEnableVertexAttribArray(renderer->tex_attrib);
+    glVertexAttribPointer(renderer->tex_attrib, 2, GL_FLOAT, GL_FALSE,
+                          4 * sizeof(float), &attrib_data[2]);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, surface_data->gl_texture);
+    glUniform1i(renderer->tex_uniform, 0);
+    glUniform4f(renderer->color_uniform, 1.0f, 1.0f, 1.0f, 1.0f);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+    glDisableVertexAttribArray(renderer->pos_attrib);
+    glDisableVertexAttribArray(renderer->tex_attrib);
 }
 
 void render_surface_from_data(struct MansionDisplay* display, struct MansionSurface* surface_data,

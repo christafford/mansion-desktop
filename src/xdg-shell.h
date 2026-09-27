@@ -20,3 +20,7 @@ void xdg_shell_send_configure_resize(struct MansionXdgSurface* xdg_surface,
 
 /* Check whether an xdg_surface has an active toplevel. */
 bool xdg_surface_has_toplevel(struct MansionXdgSurface* xdg_surface);
+
+/* Get the configured width/height from the surface's xdg toplevel (P3-T04). */
+void xdg_surface_get_toplevel_size(struct MansionXdgSurface* xdg_surface,
+                                   int32_t* out_width, int32_t* out_height);
