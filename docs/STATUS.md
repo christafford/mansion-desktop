@@ -7,14 +7,19 @@ running the check that proves it.
 
 ## Next task
 
-**P3-T06 Client exit during application mode.** When the application client
-exits while in Application mode, the compositor returns to World mode, clears
-the focused surface, restores panel geometry, and re-enables 3D rendering.
-**Acceptance:** `meson test -C build client-exit-app` passes (client closes
-window, compositor returns to World mode, key events no longer reach a new
-client).
+**P3-T07 Project 3 wrap-up.** Handoff 03, status, documented host
+shortcuts that cannot be captured.
 
 ## Verified by automated test
+
+- **P3-T06 Client exit during application mode.** When the application client
+  exits while in Application mode, the compositor returns to World mode, clears
+  focus, and avoids dangling pointers. Acceptance: `meson test -C build app-exit`
+  passes. Fixed root cause: `destroy_listener.link` was shared between the
+  Wayland resource's `destroy_signal` list and the seat's tracking list;
+  `wl_list_insert` overwrote the link's prev/next, corrupting the destroy_signal
+  iteration. Separated into `destroy_listener.link` (for destroy_signal) and
+  `seat_link` (for seat tracking). Also added `seat_clear_focus_state()` helper.
 
 Run `meson test -C build --print-errorlogs`.
 

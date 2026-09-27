@@ -310,9 +310,15 @@ Depends on Project 1 automated tasks (P1-T10 may still be unobserved).
   application mode.
   **Acceptance:** `meson test -C build select-panel` passes. (2026-09-27)
 
-- [ ] **P3-T06 Client exit during application mode.** Return to world mode,
+- [x] **P3-T06 Client exit during application mode.** Return to world mode,
   clear focus, no dangling pointers.
   **Acceptance:** `meson test -C build app-exit` passes under the ASan build.
+  (2026-09-27) Fixed root cause: `destroy_listener.link` was shared between
+  the Wayland resource's `destroy_signal` list and the seat's tracking list.
+  `wl_list_insert` overwrote the link's prev/next, corrupting the destroy_signal
+  iteration. Separated into `destroy_listener.link` (for destroy_signal) and
+  `seat_link` (for seat tracking). Also added `seat_clear_focus_state()` helper
+  and SIGSEGV handler for diagnostics.
 
 - [ ] **P3-T07 Project 3 wrap-up.** Handoff 03, status, documented host
   shortcuts that cannot be captured.
