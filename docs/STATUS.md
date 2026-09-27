@@ -7,11 +7,8 @@ running the check that proves it.
 
 ## Next task
 
-**P4-T03 Milestone 1 scripted demonstration.** `tests/milestone1.sh`
-runs the nine concept steps headless: start, walk, launched client mapped
-on the monitor, approach, select, application mode, type (client reports the
-keys), return to world with the reserved key, client still connected and
-drawing.
+**P4-T05 Project 4 wrap-up and Decision gate A.** Handoff 04, status,
+and an explicit gate decision in `docs/decisions/`.
 
 ## Verified by automated test
 
@@ -43,9 +40,15 @@ drawing.
 
 - **P4-T02 Monitor slot and teleport.** Panel is positioned on the monitor frame
   at (0, 3, -5) when `--room-camera` is used. Key `T` (evdev 20) teleports the
-  camera to a stored viewpoint at (0, 3, 0) facing the monitor (yaw=0, pitch=0).
-  Teleport is intercepted in both World and Application input modes.
+  camera to a stored viewpoint at (0, 3, 0) with yaw=0, pitch=0, facing the
+  monitor. Teleport is intercepted in both World and Application input modes.
   `meson test -C build teleport` passes. All 23 tests pass.
+
+- **P4-T03 Milestone 1 scripted demonstration.** `tests/milestone1.sh` runs the
+  full user journey: start in room mode, walk toward the monitor, select the
+  panel with Enter (entering Application mode), type keys (client reports them),
+  return to world mode with F12, and verify the client is still connected.
+  `meson test -C build milestone1` passes. All 24 tests pass.
 
 - `smoke-headless` (P1-T01): `mansion-desktop --headless --socket NAME
   --exit-after-ms N` starts without a display, prints `MANSION_SOCKET=NAME`,

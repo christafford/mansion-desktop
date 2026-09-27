@@ -119,6 +119,9 @@ test('room-collision', find_program('tests/room_collision.sh'),
 test('teleport', find_program('tests/teleport.sh'),
     args: [mansion_exe, test_client], env: test_env, suite: 'p4', timeout: 45)
 
+test('milestone1', find_program('tests/milestone1.sh'),
+    args: [mansion_exe, test_client], env: test_env, suite: 'p4', timeout: 60)
+
 # P2-T01: header-only math module unit test
 math_test = executable('test_math',
     'tests/test_math.cpp',

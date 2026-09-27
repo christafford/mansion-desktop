@@ -336,18 +336,19 @@ Depends on Project 1 automated tasks (P1-T10 may still be unobserved).
   `room-collision` passes (scripted walk into a wall stops at the bound).
   (2026-09-27)
 
-- [ ] **P4-T02 Monitor slot and teleport.** The launched client's panel sits in
+- [x] **P4-T02 Monitor slot and teleport.** The launched client's panel sits in
   the monitor frame. Key `T` (evdev 20) teleports to a stored viewpoint facing
   the monitor (reduced-motion access).
   **Acceptance:** `meson test -C build teleport` passes.
   (2026-09-27)
 
-- [ ] **P4-T03 Milestone 1 scripted demonstration.** `tests/milestone1.sh`
+- [x] **P4-T03 Milestone 1 scripted demonstration.** `tests/milestone1.sh`
   runs the nine concept steps headless: start, walk, launched client mapped
   on the monitor, approach, select, application mode, type (client reports the
   keys), return to world with the reserved key, client still connected and
   drawing.
   **Acceptance:** `meson test -C build milestone1` passes.
+  (2026-09-27)
 
 - [ ] **P4-T04 (human) Milestone 1 with a real terminal.** Same nine steps
   with `weston-terminal` in a host session. Record observations in
