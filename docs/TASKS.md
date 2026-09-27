@@ -233,7 +233,7 @@ Depends on Project 1 automated tasks (P1-T10 may still be unobserved).
   camera, the client colour is present at the projected panel centre and the
   clear colour at a pixel outside the projected quad.
 
-- [ ] **P2-T03 Live updates.** Re-upload textures only for surfaces committed
+- [x] **P2-T03 Live updates.** Re-upload textures only for surfaces committed
   since the last frame (track damage per surface). Frame callbacks keep
   flowing while the panel is shown.
   **Acceptance:** `meson test -C build render-update` passes: client commits

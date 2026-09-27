@@ -524,7 +524,8 @@ static void render_panel(struct MansionDisplay* display) {
 
     /* Pick the surface to project onto the panel.
      * Prefer the focused surface; fall back to any surface with a
-     * buffer or texture so that headless tests still render. */
+     * buffer or texture in surface_list, then orphaned_surfaces
+     * (client may have disconnected but surface still valid). */
     struct MansionSurface* target = nullptr;
     if (compositor->focused_surface_resource) {
         target = compositor_surface_from_resource(
@@ -533,6 +534,15 @@ static void render_panel(struct MansionDisplay* display) {
     if (!target) {
         struct MansionSurface *s;
         wl_list_for_each(s, &compositor->surface_list, link) {
+            if (s->gl_texture || s->buffer_resource) {
+                target = s;
+                break;
+            }
+        }
+    }
+    if (!target) {
+        struct MansionSurface *s;
+        wl_list_for_each(s, &compositor->orphaned_surfaces, link) {
             if (s->gl_texture || s->buffer_resource) {
                 target = s;
                 break;
@@ -550,8 +560,8 @@ static void render_panel(struct MansionDisplay* display) {
         released = true;
     };
 
-    /* Ensure the surface has a texture (re-upload if buffer changed). */
-    if (target->buffer_resource) {
+    /* Ensure the surface has a texture (re-upload only when buffer changed). */
+    if (target->buffer_resource && target->needs_upload) {
         struct wl_shm_buffer* shm_buf = wl_shm_buffer_get(
             target->buffer_resource);
         if (shm_buf) {
@@ -591,6 +601,7 @@ static void render_panel(struct MansionDisplay* display) {
                 target->gl_texture = tex;
             }
             wl_shm_buffer_end_access(shm_buf);
+            target->needs_upload = false;
         }
     }
 

@@ -29,6 +29,13 @@ static void surface_destroy_callback(struct wl_resource* resource) {
 
     /* Keep MansionSurface alive for screenshot; move to orphaned list.
      * The GL texture and buffer_resource are kept until compositor destruction. */
+
+    /* Clear keyboard focus if this surface was the focused one —
+     * otherwise focused_surface_resource becomes a dangling pointer. */
+    if (surface->compositor->focused_surface_resource == surface->resource) {
+        surface->compositor->focused_surface_resource = nullptr;
+    }
+
     wl_list_insert(surface->compositor->orphaned_surfaces.prev, &surface->link);
 }
 
@@ -107,6 +114,9 @@ static void surface_commit(struct wl_client* client, struct wl_resource* resourc
             surface->width = wl_shm_buffer_get_width(shm_buf);
             surface->height = wl_shm_buffer_get_height(shm_buf);
         }
+
+        /* Mark texture for re-upload on next render. */
+        surface->needs_upload = true;
 
         /* Give keyboard focus to the most recently mapped toplevel. */
         seat_set_keyboard_focus(surface->compositor->seat,
@@ -228,6 +238,7 @@ static void compositor_create_surface(struct wl_client* client, struct wl_resour
     surface->has_current_position = false;
     surface->width = 0;
     surface->height = 0;
+    surface->needs_upload = false;
     wl_list_init(&surface->frame_callback_list);
 }
 

@@ -40,6 +40,9 @@ struct MansionSurface {
     int32_t width;
     int32_t height;
 
+    /* True when a new buffer was committed since last upload. */
+    bool needs_upload;
+
     /* Frame callbacks pending fire-on-render */
     struct wl_list frame_callback_list;
 };

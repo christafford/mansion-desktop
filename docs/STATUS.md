@@ -7,9 +7,9 @@ running the check that proves it.
 
 ## Next task
 
-**P2-T03 Live updates.** Re-upload textures only for surfaces committed since
-the last frame (track damage per surface). Frame callbacks keep flowing while
-the panel is shown.
+**P2-T04 Texture lifetime.** Textures are created on first commit,
+resized on buffer size change, deleted on surface destruction. Check
+`glGetError()` after each frame in debug builds and log once per error.
 
 ## Verified by automated test
 
@@ -82,6 +82,17 @@ Run `meson test -C build --print-errorlogs`.
   (R←G, G←B, B←R, A←A) to compensate for `[B,R,G,A]` internal storage.
   `meson test -C build render-panel` passes; all 10 tests pass on
   both `build` and `build-asan`.
+- **P2-T03 Live updates.** `MansionSurface` gains a `needs_upload` flag set on
+  buffer commit and cleared after texture upload in `render_panel()`. Only
+  surfaces with pending uploads re-upload (damage tracking). Frame callbacks
+  continue flowing on every render tick. Added `--commit-color RRGGBB` to the
+  test client so it commits a second colour after the first frame callback.
+  Fixed an orphaned-surface crash: `surface_destroy_callback` now clears
+  `focused_surface_resource` when the destroyed surface was the focused one,
+  and `render_panel()` falls back to `orphaned_surfaces` so disconnected
+  surfaces still render. `meson test -C build render-update` passes (two
+  compositor/client pairs: red then red→blue, verified by pixel check).
+  All 11 tests pass on both `build` and `build-asan`.
 - Auto-continue plugin: `node --test .opencode/tests/*.test.js` (49 tests),
   plus one live run against OpenCode 2.0.16 with the local model on
   2026-09-26 (see [OPENCODE-AUTOCONTINUE.md](OPENCODE-AUTOCONTINUE.md)). The

@@ -81,6 +81,8 @@ test('lifecycle', find_program('tests/lifecycle.sh'),
 
 test('render-panel', find_program('tests/render_panel.sh'),
     args: [mansion_exe, test_client], env: test_env, suite: 'p2', timeout: 30)
+test('render-update', find_program('tests/render-update.sh'),
+    args: [mansion_exe, test_client], env: test_env, suite: 'p2', timeout: 45)
 
 # P2-T01: header-only math module unit test
 math_test = executable('test_math',

@@ -52,6 +52,11 @@ struct client {
     int color_r, color_g, color_b;
     long frame_time;
 
+    /* --commit-color: second buffer to commit after first frame callback */
+    int have_commit_color;
+    int commit_color_r, commit_color_g, commit_color_b;
+    int second_frame_done;
+
     /* --report-input */
     int report_input;
     /* deferred seat binding for input reporting */
@@ -129,6 +134,9 @@ static const struct xdg_toplevel_listener toplevel_listener = {
     .configure = xdg_toplevel_configure,
 };
 
+/* Forward declarations. */
+static void setup_buffer(struct client* c, int w, int h, int r, int g, int b);
+
 /* ---------- frame callback ---------- */
 
 static void frame_done(void* data, struct wl_callback* cb, uint32_t time_ms) {
@@ -137,6 +145,13 @@ static void frame_done(void* data, struct wl_callback* cb, uint32_t time_ms) {
     c->frame_time = time_ms;
     printf("frame %u\n", time_ms);
     fflush(stdout);
+
+    /* If --commit-color was specified, commit the second buffer now. */
+    if (c->have_commit_color && !c->second_frame_done) {
+        c->second_frame_done = 1;
+        setup_buffer(c, c->buffer_width, c->buffer_height,
+                     c->commit_color_r, c->commit_color_g, c->commit_color_b);
+    }
 }
 
 static const struct wl_callback_listener callback_listener = {
@@ -256,6 +271,7 @@ static void usage(void) {
             "  --toplevel          create a toplevel surface and wait for configure\n"
             "  --buffer WxH        create a WxH ARGB8888 shm buffer (implies --toplevel)\n"
             "  --color RRGGBB      fill buffer with color (default ff0000 = red)\n"
+            "  --commit-color RRGGBB  after first frame, commit another buffer with this colour\n"
             "  --report-input      bind keyboard+pointer and print input events to stdout\n");
 }
 
@@ -340,6 +356,8 @@ int main(int argc, char** argv) {
     int buffer_mode = 0;
     int bw = 200, bh = 100;
     int cr = 0xff, cg = 0x00, cb = 0x00; /* default red */
+    int have_commit_color = 0;
+    int commit_cr = 0, commit_cg = 0, commit_cb = 0;
     int report_input = 0;
 
     for (int i = 1; i < argc; i++) {
@@ -364,6 +382,16 @@ int main(int argc, char** argv) {
             cr = (color >> 16) & 0xff;
             cg = (color >> 8) & 0xff;
             cb = color & 0xff;
+        } else if (strcmp(argv[i], "--commit-color") == 0 && i + 1 < argc) {
+            unsigned int color;
+            if (sscanf(argv[++i], "%x", &color) != 1) {
+                fprintf(stderr, "invalid --commit-color: %s\n", argv[i]);
+                return 2;
+            }
+            commit_cr = (color >> 16) & 0xff;
+            commit_cg = (color >> 8) & 0xff;
+            commit_cb = color & 0xff;
+            have_commit_color = 1;
         } else if (strcmp(argv[i], "--report-input") == 0) {
             report_input = 1;
         } else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
@@ -378,6 +406,10 @@ int main(int argc, char** argv) {
 
     struct client c = {0};
     c.report_input = report_input;
+    c.have_commit_color = have_commit_color;
+    c.commit_color_r = commit_cr;
+    c.commit_color_g = commit_cg;
+    c.commit_color_b = commit_cb;
     c.display = wl_display_connect(socket);
     if (!c.display) {
         fprintf(stderr, "connect failed (socket %s): %s\n", socket ? socket : "$WAYLAND_DISPLAY", strerror(errno));
