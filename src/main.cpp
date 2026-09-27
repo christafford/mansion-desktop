@@ -28,6 +28,9 @@ struct Options {
     long exit_after_ms = -1; // <0: run until a signal arrives
     std::string screenshot;  // if set, write a PPM screenshot after the loop
     std::string input_script; // if set, execute scripted input events
+    bool flat = false;       // P2-T02: 2D rendering instead of 3D panel
+    float camera[5] = {0, 0, 10, 0, 0}; // X,Y,Z,yaw,pitch for P2-T02
+    bool camera_specified = false; // true if --camera was explicitly passed
 };
 
 void print_help() {
@@ -37,6 +40,8 @@ void print_help() {
         "  --launch=CMD         same as above\n"
         "  --socket NAME        Wayland socket name (default: mansion-<pid>)\n"
         "  --headless           no host window or input; for automated tests\n"
+        "  --flat               2D rendering (disable 3D perspective panel, P2-T02)\n"
+        "  --camera X,Y,Z,YAW,PITCH  camera position + orientation for 3D panel (P2-T02)\n"
         "  --exit-after-ms N    exit with status 0 after N milliseconds\n"
         "  --screenshot FILE    write a binary PPM screenshot after the loop\n"
         "  --input-script FILE  execute scripted input events during the loop\n"
@@ -86,6 +91,38 @@ bool parse_args(int argc, char** argv, Options& opts) {
             opts.socket = value;
         } else if (name == "--headless") {
             opts.headless = true;
+        } else if (name == "--flat") {
+            opts.flat = true;
+        } else if (name == "--camera") {
+            if (!take_value()) return false;
+            if (value.empty()) {
+                std::cerr << "Error: --camera needs X,Y,Z,YAW,PITCH\n";
+                return false;
+            }
+            /* Parse "X,Y,Z,YAW,PITCH" — all float values. */
+            std::vector<float> vals;
+            std::string token;
+            for (char c : value) {
+                if (c == ',') {
+                    if (!token.empty()) {
+                        vals.push_back(std::stof(token));
+                        token.clear();
+                    }
+                } else {
+                    token += c;
+                }
+            }
+            if (!token.empty()) vals.push_back(std::stof(token));
+            if (vals.size() < 3) {
+                std::cerr << "Error: --camera needs at least X,Y,Z\n";
+                return false;
+            }
+            opts.camera[0] = vals[0]; // X
+            opts.camera[1] = vals[1]; // Y
+            opts.camera[2] = vals[2]; // Z
+            opts.camera[3] = vals.size() > 3 ? vals[3] : 0;   // yaw
+            opts.camera[4] = vals.size() > 4 ? vals[4] : 0;   // pitch
+            opts.camera_specified = true;
         } else if (name == "--exit-after-ms") {
             if (!take_value()) return false;
             char* end = nullptr;
@@ -255,6 +292,19 @@ int main(int argc, char** argv) {
         std::cerr << "Failed to create " << (opts.headless ? "headless" : "EGL") << " display" << std::endl;
         cleanup();
         return 1;
+    }
+
+    /* P2-T02: configure 3D panel rendering.
+     * Default to 2D mode for backward compatibility; 3D only when --camera given. */
+    display->flat_mode = opts.flat || !opts.camera_specified;
+    if (opts.camera_specified) {
+        display->camera.x = opts.camera[0];
+        display->camera.y = opts.camera[1];
+        display->camera.z = opts.camera[2];
+        display->camera.yaw = opts.camera[3];
+        display->camera.pitch = opts.camera[4];
+        display->panel.width = 2.0f;
+        display->panel.height = 1.5f;
     }
 
     xdg_shell = create_xdg_shell(compositor, wl_display);

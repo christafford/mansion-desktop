@@ -7,9 +7,9 @@ running the check that proves it.
 
 ## Next task
 
-**P2-T02 Perspective panel.** Add an MVP uniform to the shader. Introduce a
-`Camera` (position, yaw, pitch) and a `Panel` (position, size, normal). Draw
-the focused surface's texture on the panel; keep the 2D path behind `--flat`.
+**P2-T03 Live updates.** Re-upload textures only for surfaces committed since
+the last frame (track damage per surface). Frame callbacks keep flowing while
+the panel is shown.
 
 ## Verified by automated test
 
@@ -71,6 +71,17 @@ Run `meson test -C build --print-errorlogs`.
   matrix multiply associativity, rotation of known vectors, perspective projection,
   look_at camera, and a full VP pipeline. `meson test -C build math` passes
   (9 test groups, within 1e-3 tolerance).
+- **P2-T02 Perspective panel.** `Camera` (position, yaw, pitch) and `Panel`
+  (position, size, normal) drawn via MVP matrix in a 3D shader (`program_3d`,
+  `pos_3d`, `tex_3d`, `mvp_uniform`). 2D path kept behind `--flat`. New
+  `--camera X,Y,Z,YAW,PITCH` flag drives camera parameters. `tests/project_point.py`
+  computes screen projection with matching `look_at` + `perspective` math.
+  `tests/render_panel.sh` verifies the client's red buffer appears at the
+  projected panel centre (255,0,0) and the clear colour outside the quad.
+  Mesa EGL surfaceless renderer required a cyclic RGB swizzle
+  (R←G, G←B, B←R, A←A) to compensate for `[B,R,G,A]` internal storage.
+  `meson test -C build render-panel` passes; all 10 tests pass on
+  both `build` and `build-asan`.
 - Auto-continue plugin: `node --test .opencode/tests/*.test.js` (49 tests),
   plus one live run against OpenCode 2.0.16 with the local model on
   2026-09-26 (see [OPENCODE-AUTOCONTINUE.md](OPENCODE-AUTOCONTINUE.md)). The

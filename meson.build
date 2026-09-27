@@ -79,6 +79,9 @@ test('launch-client', find_program('tests/launch_client.sh'),
 test('lifecycle', find_program('tests/lifecycle.sh'),
     args: [mansion_exe, test_client], env: test_env, suite: 'p1', timeout: 30)
 
+test('render-panel', find_program('tests/render_panel.sh'),
+    args: [mansion_exe, test_client], env: test_env, suite: 'p2', timeout: 30)
+
 # P2-T01: header-only math module unit test
 math_test = executable('test_math',
     'tests/test_math.cpp',

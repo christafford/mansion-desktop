@@ -224,7 +224,7 @@ Depends on Project 1 automated tasks (P1-T10 may still be unobserved).
   **Acceptance:** `meson test -C build math` passes (projection of known points
   matches expected values within 1e-4).
 
-- [ ] **P2-T02 Perspective panel.** Add an MVP uniform to the shader. Introduce a
+- [x] **P2-T02 Perspective panel.** Add an MVP uniform to the shader. Introduce a
   `Camera` (position, yaw, pitch) and a `Panel` (position, size, normal).
   Draw the focused surface's texture on the panel; keep the 2D path behind
   `--flat`. Add `--camera X,Y,Z,YAW,PITCH` for tests. `tests/project_point.py`

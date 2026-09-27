@@ -1,4 +1,5 @@
 #include <cstring>
+#include <cmath>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -15,6 +16,7 @@
 #include "display.h"
 #include "compositor.h"
 #include "compositor-private.h"
+#include "math.h"
 #include "xdg-shell.h"
 
 struct MansionRenderer {
@@ -24,6 +26,14 @@ struct MansionRenderer {
     GLint color_uniform;
     GLint tex_uniform;
     GLint viewport_uniform;
+
+    /* P2-T02: 3D panel rendering */
+    GLuint program_3d;
+    GLint pos_3d;
+    GLint tex_3d;          /* attribute for texcoord */
+    GLint mvp_uniform;
+    GLint color_3d_uniform; /* color uniform */
+    GLint tex_3d_uniform;   /* sampler2D uniform */
 };
 
 // Forward declarations
@@ -441,6 +451,35 @@ bool init_renderer(struct MansionDisplay* display) {
                 static_cast<GLfloat>(display->window_width),
                 static_cast<GLfloat>(display->window_height));
 
+    /* P2-T02: 3D panel shader with MVP uniform. */
+    static const char* vs_3d =
+        "precision mediump float;\n"
+        "uniform mat4 mvp;\n"
+        "attribute vec3 pos;\n"
+        "attribute vec2 texcoord;\n"
+        "varying vec2 v_texcoord;\n"
+        "void main() {\n"
+        "    gl_Position = mvp * vec4(pos, 1.0);\n"
+        "    v_texcoord = texcoord;\n"
+        "}\n";
+
+    renderer->program_3d = create_program(vs_3d, fragment_shader_source);
+    if (!renderer->program_3d) {
+        /* Fall back to 2D-only if 3D shader fails. */
+        glUseProgram(0);
+        display->renderer = renderer;
+        return true;
+    }
+    glUseProgram(renderer->program_3d);
+    renderer->pos_3d = glGetAttribLocation(renderer->program_3d, "pos");
+    renderer->tex_3d = glGetAttribLocation(renderer->program_3d, "texcoord");
+    renderer->mvp_uniform = glGetUniformLocation(renderer->program_3d, "mvp");
+    renderer->color_3d_uniform =
+        glGetUniformLocation(renderer->program_3d, "color");
+    renderer->tex_3d_uniform =
+        glGetUniformLocation(renderer->program_3d, "tex");
+    glUseProgram(0);
+
     glClearColor(0.15f, 0.15f, 0.2f, 1.0f);
 
     display->renderer = renderer;
@@ -452,6 +491,8 @@ void destroy_renderer(struct MansionDisplay* display) {
 
     glUseProgram(0);
     glDeleteProgram(display->renderer->program);
+    if (display->renderer->program_3d)
+        glDeleteProgram(display->renderer->program_3d);
     delete display->renderer;
     display->renderer = nullptr;
 }
@@ -474,6 +515,148 @@ static void fire_frame_callbacks(struct MansionCompositor* compositor) {
     }
 }
 
+// ── P2-T02: 3D panel rendering ─────────────────────────────────────────────
+
+static void render_panel(struct MansionDisplay* display) {
+    auto* renderer = display->renderer;
+    auto* compositor = display->compositor;
+    if (!renderer || !compositor || !renderer->program_3d) return;
+
+    /* Pick the surface to project onto the panel.
+     * Prefer the focused surface; fall back to any surface with a
+     * buffer or texture so that headless tests still render. */
+    struct MansionSurface* target = nullptr;
+    if (compositor->focused_surface_resource) {
+        target = compositor_surface_from_resource(
+            compositor->focused_surface_resource);
+    }
+    if (!target) {
+        struct MansionSurface *s;
+        wl_list_for_each(s, &compositor->surface_list, link) {
+            if (s->gl_texture || s->buffer_resource) {
+                target = s;
+                break;
+            }
+        }
+    }
+    if (!target) return;   /* Nothing to draw */
+
+    /* Release the buffer after rendering (simple headless semantics). */
+    bool released = false;
+    auto release_buffer = [&]() {
+        if (released || !target->buffer_resource) return;
+        wl_buffer_send_release(target->buffer_resource);
+        target->buffer_resource = nullptr;
+        released = true;
+    };
+
+    /* Ensure the surface has a texture (re-upload if buffer changed). */
+    if (target->buffer_resource) {
+        struct wl_shm_buffer* shm_buf = wl_shm_buffer_get(
+            target->buffer_resource);
+        if (shm_buf) {
+            wl_shm_buffer_begin_access(shm_buf);
+            void* data = wl_shm_buffer_get_data(shm_buf);
+            if (data) {
+                int w = wl_shm_buffer_get_width(shm_buf);
+                int h = wl_shm_buffer_get_height(shm_buf);
+                GLuint tex = 0;
+                glGenTextures(1, &tex);
+                glBindTexture(GL_TEXTURE_2D, tex);
+                /* Swizzle ABGR→RGBA. Mesa EGL surfaceless renderer
+                 * interprets GL_RGBA data as cyclically shifted
+                 * [B,R,G,A] internally, so we compensate. */
+                std::vector<uint8_t> rgba(w * h * 4);
+                for (int y = 0; y < h; ++y) {
+                    for (int x = 0; x < w; ++x) {
+                        int idx = (y * w + x) * 4;
+                        rgba[idx + 0] =
+                            ((const uint8_t*)data)[idx + 1];
+                        rgba[idx + 1] =
+                            ((const uint8_t*)data)[idx + 2];
+                        rgba[idx + 2] =
+                            ((const uint8_t*)data)[idx + 0];
+                        rgba[idx + 3] =
+                            ((const uint8_t*)data)[idx + 3];
+                    }
+                }
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
+                             GL_RGBA, GL_UNSIGNED_BYTE, rgba.data());
+                glTexParameteri(GL_TEXTURE_2D,
+                                GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                glTexParameteri(GL_TEXTURE_2D,
+                                GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                if (target->gl_texture)
+                    glDeleteTextures(1, &target->gl_texture);
+                target->gl_texture = tex;
+            }
+            wl_shm_buffer_end_access(shm_buf);
+        }
+    }
+
+    if (!target->gl_texture) {
+        release_buffer();
+        return;
+    }
+
+    /* ── Build MVP matrix ─────────────────────────────────────────── */
+    math::vec3 cam_pos(display->camera.x, display->camera.y,
+                       display->camera.z);
+    math::vec3 panel_c(display->panel.x, display->panel.y,
+                       display->panel.z);
+
+    math::mat4 view   = math::look_at(cam_pos, panel_c,
+                                      math::vec3{0, 1, 0});
+    math::mat4 model  = math::translate(display->panel.x,
+                                        display->panel.y,
+                                        display->panel.z);
+    float aspect =
+        static_cast<float>(display->window_width) /
+        static_cast<float>(display->window_height);
+    math::mat4 proj =
+        math::perspective(display->camera.fov, aspect, 0.1f, 100.0f);
+
+    math::mat4 mvp = math::mat4::multiply(proj,
+                                          math::mat4::multiply(view, model));
+
+    /* ── Panel quad (triangle strip) ──────────────────────────────── */
+    float pw = display->panel.width;
+    float ph = display->panel.height;
+    GLfloat verts[] = {
+        /*   x       y       z      u  v */
+        -pw * 0.5f, -ph * 0.5f, 0.0f,  0.0f, 0.0f,
+         pw * 0.5f, -ph * 0.5f, 0.0f,  1.0f, 0.0f,
+        -pw * 0.5f,  ph * 0.5f, 0.0f,  0.0f, 1.0f,
+         pw * 0.5f,  ph * 0.5f, 0.0f,  1.0f, 1.0f,
+    };
+
+    glUseProgram(renderer->program_3d);
+
+    glUniformMatrix4fv(renderer->mvp_uniform, 1, GL_FALSE, mvp.m);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, target->gl_texture);
+    glUniform1i(renderer->tex_3d_uniform, 0);
+    glUniform4f(renderer->color_3d_uniform, 1.0f, 1.0f, 1.0f, 0.0f);
+
+    glEnableVertexAttribArray(renderer->pos_3d);
+    glVertexAttribPointer(renderer->pos_3d, 3, GL_FLOAT, GL_FALSE,
+                          5 * sizeof(float), &verts[0]);
+    glEnableVertexAttribArray(renderer->tex_3d);
+    glVertexAttribPointer(renderer->tex_3d, 2, GL_FLOAT, GL_FALSE,
+                          5 * sizeof(float), &verts[3]);
+
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+    glDisableVertexAttribArray(renderer->pos_3d);
+    glDisableVertexAttribArray(renderer->tex_3d);
+
+    glUseProgram(0);
+
+    /* Release the buffer after rendering. */
+    release_buffer();
+}
+
 void render(struct MansionDisplay* display) {
     if (!display) return;
 
@@ -485,22 +668,21 @@ void render(struct MansionDisplay* display) {
 
     glClear(GL_COLOR_BUFFER_BIT);
 
-    // Render all surfaces from the compositor.
-    // Iterate in reverse order (oldest first) so newer surfaces render on top.
-    {
+    if (display->flat_mode) {
+        // P2-T02: 2D rendering path (backwards compatible).
         struct MansionSurface *surface;
         wl_list_for_each_reverse(surface, &display->compositor->surface_list, link) {
             render_surface(display, surface->resource, 0, 0);
         }
-    }
-
-    // Render orphaned surfaces (surfaces that survived client disconnect).
-    // Iterate in reverse order so newer orphaned surfaces render on top.
-    {
-        struct MansionSurface *surface;
-        wl_list_for_each_reverse(surface, &display->compositor->orphaned_surfaces, link) {
-            render_surface_from_data(display, surface, 0, 0);
+        {
+            struct MansionSurface *surface;
+            wl_list_for_each_reverse(surface, &display->compositor->orphaned_surfaces, link) {
+                render_surface_from_data(display, surface, 0, 0);
+            }
         }
+    } else {
+        // P2-T02: 3D panel rendering — draw focused surface on a perspective panel.
+        render_panel(display);
     }
 
     swap_buffers(display);

@@ -8,6 +8,22 @@
 struct MansionCompositor;
 struct MansionRenderer;
 
+// Camera configuration (P2-T02)
+struct Camera {
+    float x = 0, y = 0, z = 10;
+    float yaw = 0;     // rotation around Y axis (horizontal)
+    float pitch = 0;   // rotation around X axis (vertical)
+    float fov = 1.5708f;  // PI/2 = 90 degrees
+};
+
+// Panel geometry for 3D rendering (P2-T02)
+struct Panel {
+    float x = 0, y = 0, z = 0;    // center position
+    float width = 3.0f;             // size in world units
+    float height = 2.0f;
+    float nx = 0, ny = 0, nz = -1; // normal (facing camera by default)
+};
+
 struct MansionDisplay {
     struct MansionCompositor* compositor;
     struct wl_display* wl_display;
@@ -21,6 +37,11 @@ struct MansionDisplay {
     struct MansionRenderer* renderer;
     Display* x_display;      /* X11 display (windowed mode only) */
     Window x_window;         /* X11 window (windowed mode only) */
+
+    /* P2-T02: 3D panel rendering state */
+    Camera camera;
+    Panel panel;
+    bool flat_mode = false;  /* true = 2D rendering, false = 3D panel */
 };
 
 struct MansionDisplay* create_display(struct MansionCompositor* compositor, struct wl_display* wl_display);
