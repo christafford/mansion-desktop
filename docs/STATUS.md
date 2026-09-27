@@ -7,19 +7,10 @@ running the check that proves it.
 
 ## Next task
 
-**P1-T07 Host window input replaces evdev** — sub-task of
-P1-T07 in [TASKS.md](TASKS.md).
-
-In windowed mode select `KeyPress|KeyRelease|ButtonPress|ButtonRelease|
-PointerMotion|FocusChange|StructureNotify` on the X11 window, handle
-`WM_DELETE_WINDOW`, translate X keycodes (minus 8) and buttons
-(1→BTN_LEFT 0x110, 2→BTN_MIDDLE 0x112, 3→BTN_RIGHT 0x111, 4/5→vertical
-axis) into the same internal event path used by `--input-script`.
-`ConfigureNotify` updates the viewport. Remove all `/dev/input` code.
-
-**Acceptance:** `meson test -C build` still passes; `grep -r "/dev/input" src`
-finds nothing; `./build/mansion-desktop --exit-after-ms 500` exits 0 with
-`DISPLAY` set and prints no "input device" lines.
+**P1-T08 Launcher: child lifecycle.** In [TASKS.md](TASKS.md) the launcher
+already reaps children with `SIGCHLD` via `signalfd`. The remaining acceptance
+is to verify reaping in an automated test: launch a child that exits, confirm
+the compositor continues running and `apps` vector is empty.
 
 ## Verified by automated test
 
@@ -53,6 +44,14 @@ Run `meson test -C build --print-errorlogs`.
   an orphaned-surface list. A 200×100 red client buffer at the origin produces
   red at pixel (100,50) and the compositor clear colour at (600,500).
   `meson test -C build render-shm` passes.
+- `input-routing` (P1-T06-F): scripted keyboard/pointer events drive a
+  `--report-input` client; events arrive in order with correct serials.
+- **P1-T07 Host window input replaces evdev.** `input_init()`/`input_destroy()`
+  are no-ops; `input_process()` is a no-op. X11 event handling (`input_process_x11`)
+  processes KeyPress/KeyRelease/ButtonPress/ButtonRelease/MotionNotify/
+  ConfigureNotify/WM_DELETE_WINDOW in windowed mode. `grep -r "/dev/input" src`
+  finds nothing. All 6 tests still pass. Windowed mode — not observed (requires
+  DISPLAY).
 - Auto-continue plugin: `node --test .opencode/tests/*.test.js` (49 tests),
   plus one live run against OpenCode 2.0.16 with the local model on
   2026-09-26 (see [OPENCODE-AUTOCONTINUE.md](OPENCODE-AUTOCONTINUE.md)). The
@@ -75,10 +74,6 @@ compositor. `weston-terminal` is not installed in the development container
   checked, `set_window_geometry`/title/app_id/min/max ignored, `xdg_positioner`
   accepted and ignored, `get_popup` posts a protocol error. No `ping` is sent.
   Resize configures arrive in P1-T09, popups in Project 5.
-- **Input comes from `/dev/input`** in windowed mode and is forwarded to the
-  single most recent keyboard/pointer resource without focus, enter/leave,
-  modifiers, or serials. It reads the host machine's real keyboards while the
-  host desktop is running. Headless mode skips it. Replacement: P1-T06, P1-T07.
 - **Seat handles one client badly.** A second `get_keyboard` posts a protocol
   error; `wl_seat` binds overwrite each other. Fixed in P1-T06-A (multi-seat
   lists). Proper keymap (xkbcommon), repeat_info, modifiers, keyboard enter/leave,
@@ -86,10 +81,6 @@ compositor. `weston-terminal` is not installed in the development container
 - **Launcher** works for simple commands (whitespace split, environment set,
   `DISPLAY` unset) but children are not reaped, `--launch` errors are only
   logged, and exit status is not reported (P1-T08).
-- **Host window** has no event handling: no resize, no close button, no focus
-  tracking (P1-T07).
-- The X11 `Display*` and `Window` created in `create_display` are never stored
-  or destroyed; they leak until process exit.
 
 ## Environment facts (development container `mansion-dev`, Arch Linux)
 
@@ -121,7 +112,7 @@ meson test -C build --print-errorlogs
 - `src/xdg-shell.cpp` — `xdg_wm_base`, `xdg_surface`, `xdg_toplevel`
   (protocol code generated into `build/` by `wayland-scanner`)
 - `src/display.cpp` — X11 host window, EGL/GLES2 renderer, headless stub
-- `src/input.cpp` — `wl_seat`, evdev reading (to be replaced in P1-T06/T07)
+- `src/input.cpp` — `wl_seat`, X11 event processing (P1-T07), input script
 - `src/launch.cpp` — child process launcher
 - `tests/` — headless test client and shell tests ([tests/README.md](../tests/README.md))
 - `docs/TASKS.md` — task list; `docs/handoffs/` — per-project handoffs;

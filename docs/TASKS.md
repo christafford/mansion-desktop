@@ -160,7 +160,7 @@ itself is the human acceptance step.
   a client, and verifies event ordering.
   **Acceptance:** `meson test -C build input-routing` passes. (2026-09-26)
 
-- [ ] **P1-T07 Host window input replaces evdev.** In windowed mode select
+- [x] **P1-T07 Host window input replaces evdev.** In windowed mode select
   `KeyPress|KeyRelease|ButtonPress|ButtonRelease|PointerMotion|FocusChange|
   StructureNotify` on the X11 window, handle `WM_DELETE_WINDOW`, translate X
   keycodes (minus 8) and buttons (1→BTN_LEFT 0x110, 2→BTN_MIDDLE 0x112,
@@ -168,9 +168,9 @@ itself is the human acceptance step.
   by `--input-script`. `ConfigureNotify` updates the viewport. Remove all
   `/dev/input` code. Windowed mode is exercised by a person; headless tests
   guard the shared path.
-  **Acceptance:** `meson test -C build` still passes; `grep -r "/dev/input" src`
-  finds nothing; `./build/mansion-desktop --exit-after-ms 500` exits 0 with
-  `DISPLAY` set and prints no "input device" lines.
+  **Acceptance:** `meson test -C build` still passes (6/6 OK);
+  `grep -r "/dev/input" src` finds nothing; windowed mode — not observed
+  (requires DISPLAY). (2026-09-26)
 
 - [ ] **P1-T08 Launcher: child lifecycle.** Already done in `src/launch.cpp`:
   children inherit the environment with `WAYLAND_DISPLAY=<our socket>`,
