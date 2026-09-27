@@ -46,6 +46,10 @@ struct MansionDisplay {
     /* P2-T05: EGL mode — buffers are RGBA (no swizzle needed) */
     bool egl_mode = false;
 
+    /* P4-T01: Room/world mode — when true the room geometry is drawn
+     * as background before the 3D panel. */
+    bool room_mode = false;
+
     /* P2-T07: frame timing / stats (accumulated, printed every 60 frames) */
     bool stats_enabled = false;
     long long stats_frame_count = 0;       /* frames since last print */
@@ -78,3 +82,5 @@ void render_surface(struct MansionDisplay* display, struct wl_resource* surface,
 /* Render one final frame and write the framebuffer as a binary PPM (P6) file.
  * Returns false if EGL/renderer is unavailable. */
 bool take_screenshot(struct MansionDisplay* display, const char* path);
+/* P4-T01: log camera position to stderr (for test verification). */
+void log_camera_position(struct MansionDisplay* display);

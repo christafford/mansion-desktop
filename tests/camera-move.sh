@@ -63,11 +63,11 @@ wait_compositor
 RED_COUNT_A=$(python3 -c "
 import sys
 with open('$SCRA','rb') as f:
-    f.readline()  # P6
+    f.readline()  # magic P6
     line = f.readline().strip()
     while line.startswith(b'#'): line = f.readline().strip()
     w, h = map(int, line.split())
-    mx = int(f.readline().strip()) if not line.split()[0].isdigit() else 255
+    f.readline()  # skip maxval
     data = f.read()
 count = 0
 for y in range(h):
@@ -81,11 +81,11 @@ print(count)
 RED_COUNT_B=$(python3 -c "
 import sys
 with open('$SCRB','rb') as f:
-    f.readline()  # P6
+    f.readline()  # magic P6
     line = f.readline().strip()
     while line.startswith(b'#'): line = f.readline().strip()
     w, h = map(int, line.split())
-    mx = int(f.readline().strip()) if not line.split()[0].isdigit() else 255
+    f.readline()  # skip maxval
     data = f.read()
 count = 0
 for y in range(h):

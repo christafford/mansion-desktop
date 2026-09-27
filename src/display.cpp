@@ -18,6 +18,7 @@
 #include "compositor.h"
 #include "compositor-private.h"
 #include "math.h"
+#include "room.h"
 #include "xdg-shell.h"
 #include "input.h"
 
@@ -580,14 +581,8 @@ static void render_panel(struct MansionDisplay* display) {
                 glGenTextures(1, &tex);
                 glBindTexture(GL_TEXTURE_2D, tex);
                 if (display->egl_mode) {
-                    /* P2-T05: EGL mode — RGBA, no swizzle */
-                    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
-                                 GL_RGBA, GL_UNSIGNED_BYTE, data);
-                    renderer->bytes_uploaded += static_cast<long long>(w) * h * 4;
-                } else {
-                    /* Swizzle ABGR→RGBA. Mesa EGL surfaceless renderer
-                     * interprets GL_RGBA data as cyclically shifted
-                     * [B,R,G,A] internally, so we compensate. */
+                    /* Swizzle to compensate for Mesa EGL surfaceless
+                     * renderer's R↔G rearrangement of GL_RGBA data. */
                     std::vector<uint8_t> rgba(w * h * 4);
                     for (int y = 0; y < h; ++y) {
                         for (int x = 0; x < w; ++x) {
@@ -595,15 +590,21 @@ static void render_panel(struct MansionDisplay* display) {
                             rgba[idx + 0] =
                                 ((const uint8_t*)data)[idx + 1];
                             rgba[idx + 1] =
-                                ((const uint8_t*)data)[idx + 2];
-                            rgba[idx + 2] =
                                 ((const uint8_t*)data)[idx + 0];
+                            rgba[idx + 2] =
+                                ((const uint8_t*)data)[idx + 2];
                             rgba[idx + 3] =
                                 ((const uint8_t*)data)[idx + 3];
                         }
                     }
                     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
                                  GL_RGBA, GL_UNSIGNED_BYTE, rgba.data());
+                    renderer->bytes_uploaded +=
+                        static_cast<long long>(w) * h * 4;
+                } else {
+                    /* Non-EGL: no rearrangement, upload RGBA directly. */
+                    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
+                                 GL_RGBA, GL_UNSIGNED_BYTE, data);
                     renderer->bytes_uploaded += static_cast<long long>(w) * h * 4;
                 }
                 glTexParameteri(GL_TEXTURE_2D,
@@ -719,6 +720,71 @@ void render(struct MansionDisplay* display) {
         // P3-T04: Application mode — render focused surface fullscreen (2D).
         render_application_fullscreen(display);
     } else {
+        /* P4-T01: World mode — optionally draw room geometry as background,
+         * then the 3D panel. */
+        if (display->room_mode) {
+            auto* renderer = display->renderer;
+            glUseProgram(renderer->program_3d);
+
+            /* Compute MVP: room is in world space, so model = identity. */
+            math::vec3 cam_pos(display->camera.x, display->camera.y,
+                               display->camera.z);
+            float yaw = display->camera.yaw;
+            float pitch = display->camera.pitch;
+            /* Forward direction (same convention as apply_movement in input.cpp). */
+            float fwdX = -std::sin(yaw) * std::cos(pitch);
+            float fwdY =  std::sin(pitch);
+            float fwdZ = -std::cos(yaw) * std::cos(pitch);
+            math::vec3 cam_target(cam_pos.x + fwdX * 10.0f,
+                                  cam_pos.y + fwdY * 10.0f,
+                                  cam_pos.z + fwdZ * 10.0f);
+            math::mat4 view = math::look_at(cam_pos, cam_target,
+                                            math::vec3{0, 1, 0});
+
+            float aspect =
+                static_cast<float>(display->window_width) /
+                static_cast<float>(display->window_height);
+            math::mat4 proj =
+                math::perspective(display->camera.fov, aspect, 0.1f, 100.0f);
+            math::mat4 mvp = math::mat4::multiply(proj, view);
+            glUniformMatrix4fv(renderer->mvp_uniform, 1, GL_FALSE, mvp.m);
+
+            glEnable(GL_DEPTH_TEST);
+            glDepthFunc(GL_LEQUAL);
+            glBindTexture(GL_TEXTURE_2D, 0);
+            room_geometry_init(nullptr);
+            {
+                const RoomGeometry* geo = room_geometry_get();
+                for (size_t i = 0; i < geo->mesh_count; i++) {
+                    const RoomMesh& mesh = geo->meshes[i];
+                    if (!mesh.vertices || mesh.vertex_count == 0) continue;
+                    glEnableVertexAttribArray(renderer->pos_3d);
+                    glVertexAttribPointer(
+                        renderer->pos_3d,
+                        3,
+                        GL_FLOAT,
+                        GL_FALSE,
+                        5 * sizeof(float),
+                        mesh.vertices);
+                    glEnableVertexAttribArray(renderer->tex_3d);
+                    glVertexAttribPointer(
+                        renderer->tex_3d,
+                        2,
+                        GL_FLOAT,
+                        GL_FALSE,
+                        5 * sizeof(float),
+                        &mesh.vertices[3]);
+                    glUniform4fv(renderer->color_3d_uniform, 1, mesh.color);
+                    glDrawArrays(
+                        GL_TRIANGLE_STRIP,
+                        0,
+                        static_cast<GLsizei>(mesh.vertex_count));
+                    glDisableVertexAttribArray(renderer->pos_3d);
+                    glDisableVertexAttribArray(renderer->tex_3d);
+                }
+            }
+            glDisable(GL_DEPTH_TEST);
+        }
         // P2-T02: 3D panel rendering — draw focused surface on a perspective panel.
         render_panel(display);
     }
@@ -812,26 +878,26 @@ void render_surface(struct MansionDisplay* display, struct wl_resource* surface,
                 glBindTexture(GL_TEXTURE_2D, tex);
 
                 if (display->egl_mode) {
-                    /* P2-T05: EGL mode — client wrote RGBA directly, no swizzle */
-                    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA,
-                                 GL_UNSIGNED_BYTE, data);
-                    renderer->bytes_uploaded += static_cast<long long>(w) * h * 4;
-                } else {
-                    /* Default: source is ARGB8888 which on little-endian is BGRA.
-                     * Swizzle to RGBA, compensating for Mesa EGL surfaceless
-                     * renderer's internal [B,R,G,A] rearrangement. */
+                    /* Swizzle to compensate for Mesa EGL surfaceless
+                     * renderer's R↔G rearrangement of GL_RGBA data. */
                     std::vector<uint8_t> rgba(w * h * 4);
                     for (int y = 0; y < h; y++) {
                         for (int x = 0; x < w; x++) {
                             int idx = (y * w + x) * 4;
                             rgba[idx + 0] = ((const uint8_t*)data)[idx + 1];
-                            rgba[idx + 1] = ((const uint8_t*)data)[idx + 2];
-                            rgba[idx + 2] = ((const uint8_t*)data)[idx + 0];
+                            rgba[idx + 1] = ((const uint8_t*)data)[idx + 0];
+                            rgba[idx + 2] = ((const uint8_t*)data)[idx + 2];
                             rgba[idx + 3] = ((const uint8_t*)data)[idx + 3];
                         }
                     }
                     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA,
                                  GL_UNSIGNED_BYTE, rgba.data());
+                    renderer->bytes_uploaded +=
+                        static_cast<long long>(w) * h * 4;
+                } else {
+                    /* Non-EGL: no rearrangement, upload RGBA directly. */
+                    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA,
+                                 GL_UNSIGNED_BYTE, data);
                     renderer->bytes_uploaded += static_cast<long long>(w) * h * 4;
                 }
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -918,12 +984,8 @@ static void render_application_fullscreen(struct MansionDisplay* display) {
                 glGenTextures(1, &tex);
                 glBindTexture(GL_TEXTURE_2D, tex);
                 if (display->egl_mode) {
-                    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
-                                 GL_RGBA, GL_UNSIGNED_BYTE, data);
-                    renderer->bytes_uploaded +=
-                        static_cast<long long>(w) * h * 4;
-                } else {
-                    /* Swizzle ABGR→RGBA (see render_panel comments). */
+                    /* Swizzle to compensate for Mesa EGL surfaceless
+                     * renderer's R↔G rearrangement of GL_RGBA data. */
                     std::vector<uint8_t> rgba(w * h * 4);
                     for (int y = 0; y < h; ++y) {
                         for (int x = 0; x < w; ++x) {
@@ -931,15 +993,21 @@ static void render_application_fullscreen(struct MansionDisplay* display) {
                             rgba[idx + 0] =
                                 ((const uint8_t*)data)[idx + 1];
                             rgba[idx + 1] =
-                                ((const uint8_t*)data)[idx + 2];
-                            rgba[idx + 2] =
                                 ((const uint8_t*)data)[idx + 0];
+                            rgba[idx + 2] =
+                                ((const uint8_t*)data)[idx + 2];
                             rgba[idx + 3] =
                                 ((const uint8_t*)data)[idx + 3];
                         }
                     }
                     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
                                  GL_RGBA, GL_UNSIGNED_BYTE, rgba.data());
+                    renderer->bytes_uploaded +=
+                        static_cast<long long>(w) * h * 4;
+                } else {
+                    /* Non-EGL: no rearrangement, upload RGBA directly. */
+                    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
+                                 GL_RGBA, GL_UNSIGNED_BYTE, data);
                     renderer->bytes_uploaded +=
                         static_cast<long long>(w) * h * 4;
                 }
@@ -1099,4 +1167,11 @@ bool take_screenshot(struct MansionDisplay* display, const char* path) {
     fclose(fp);
     std::cerr << "Screenshot saved: " << path << std::endl;
     return true;
+}
+
+/* P4-T01: log camera position to stderr (for test verification). */
+void log_camera_position(struct MansionDisplay* display) {
+    if (!display) return;
+    auto* cam = &display->camera;
+    std::cerr << "camera_pos " << cam->x << " " << cam->y << " " << cam->z << std::endl;
 }

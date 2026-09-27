@@ -34,6 +34,7 @@ struct Options {
     int world_key = 88;      // P3-T02: evdev keycode for world-key (default F12=88)
     float camera[5] = {0, 0, 10, 0, 0}; // X,Y,Z,yaw,pitch for P2-T02
     bool camera_specified = false; // true if --camera was explicitly passed
+    bool room_camera = false;    // P4-T01: default room camera position
 };
 
 void print_help() {
@@ -51,6 +52,7 @@ void print_help() {
         "  --input-script FILE  execute scripted input events during the loop\n"
         "  --stats              print per-frame render time and bytes uploaded every 60 frames (P2-T07)\n"
         "  --world-key N        evdev keycode for world-mode shortcut (default: 88=F12, P3-T02)\n"
+        "  --room-camera        use room-mode camera (inside a 3D room, P4-T01)\n"
         "  -h, --help           show this help\n"
         "The socket name is printed to stdout as MANSION_SOCKET=<name>.\n";
 }
@@ -159,6 +161,9 @@ bool parse_args(int argc, char** argv, Options& opts) {
         } else if (name == "--world-key") {
             if (!take_value()) return false;
             opts.world_key = (int)strtol(value.c_str(), nullptr, 10);
+        } else if (name == "--room-camera") {
+            /* P4-T01: room mode camera (inside the room, looking at front wall). */
+            opts.room_camera = true;
         } else {
             std::cerr << "Error: unknown argument " << arg << "\n";
             return false;
@@ -375,7 +380,22 @@ int main(int argc, char** argv) {
     display->egl_mode = opts.egl_mode;
     /* P2-T07: frame timing stats */
     display->stats_enabled = opts.stats;
-    if (opts.camera_specified) {
+    if (opts.room_camera) {
+        /* P4-T01: room mode — camera inside the room looking at front wall. */
+        display->room_mode = true;
+        display->camera.x = 0;
+        display->camera.y = 2.5f;
+        display->camera.z = 3;
+        display->camera.yaw = 0;
+        display->camera.pitch = -10.0f * 3.14159265f / 180.0f;
+        display->camera.fov = 1.5708f;
+        display->panel.x = 0;
+        display->panel.y = 3.0f;
+        display->panel.z = -5;
+        display->panel.width = 2.0f;
+        display->panel.height = 1.5f;
+        display->flat_mode = false;
+    } else if (opts.camera_specified) {
         display->camera.x = opts.camera[0];
         display->camera.y = opts.camera[1];
         display->camera.z = opts.camera[2];
@@ -514,6 +534,8 @@ int main(int argc, char** argv) {
             auto now = clock::now();
             double delta = std::chrono::duration<double, std::milli>(now - frame_start).count();
             input_script_apply_movement(script, display, delta);
+            /* P4-T01: log camera position for collision test verification. */
+            log_camera_position(display);
         }
 
         render(display);

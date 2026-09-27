@@ -35,6 +35,7 @@ sources = files(
     'src/display.cpp',
     'src/input.cpp',
     'src/launch.cpp',
+    'src/room.cpp',
 )
 
 mansion_exe = executable('mansion-desktop',
@@ -109,6 +110,11 @@ test('select-panel', find_program('tests/select_panel.sh'),
 
 test('app-exit', find_program('tests/app_exit.sh'),
     args: [mansion_exe, test_client], env: test_env, suite: 'p3', timeout: 45)
+
+test('room-render', find_program('tests/room_render.sh'),
+    args: [mansion_exe, test_client], env: test_env, suite: 'p4', timeout: 30)
+test('room-collision', find_program('tests/room_collision.sh'),
+    args: [mansion_exe, test_client], env: test_env, suite: 'p4', timeout: 45)
 
 # P2-T01: header-only math module unit test
 math_test = executable('test_math',

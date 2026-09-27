@@ -44,11 +44,10 @@ def main():
         assert 0 <= x < w, f"X={x} out of range [0, {w})"
         assert 0 <= y < h, f"Y={y} out of range [0, {h})"
 
-        # Skip the maxval line if present
-        if len(parts) > 2:
-            pixel_data = f.read()
-        else:
-            pixel_data = f.read()
+        # Skip the maxval line if present on its own line
+        if len(parts) <= 2:
+            f.readline()
+        pixel_data = f.read()
 
         offset = (y * w + x) * 3
         actual_r = pixel_data[offset]

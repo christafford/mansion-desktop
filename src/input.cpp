@@ -18,6 +18,7 @@
 #include "compositor-private.h"
 #include "display.h"
 #include "input.h"
+#include "room.h"
 #include "xdg-shell.h"
 
 /* Evdev button codes (from linux/input-event-codes.h). */
@@ -536,6 +537,10 @@ static void apply_movement(MansionDisplay* display, double delta_ms,
     cam->x += dx;
     cam->y += dy;
     cam->z += dz;
+
+    /* P4-T01: AABB collision — clamp camera inside room bounds (room mode only). */
+    if (display->room_mode)
+        room_apply_collision(&cam->x, &cam->y, &cam->z);
 }
 
 static void apply_mouse_look(MansionDisplay* display,
