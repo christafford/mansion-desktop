@@ -7,9 +7,9 @@ running the check that proves it.
 
 ## Next task
 
-**P4-T01 Room geometry and collision.** Floor, four walls, a desk box, and a
-monitor frame as coloured, flat-shaded meshes; AABB collision keeps the camera
-inside the room and above the floor.
+**P4-T02 Monitor slot and teleport.** The launched client's panel sits in the
+monitor frame. Key `T` (evdev 20) teleports to a stored viewpoint facing the
+monitor (reduced-motion access).
 
 ## Verified by automated test
 
@@ -27,7 +27,17 @@ inside the room and above the floor.
   compositor before reaching any Wayland client, ensuring users can always exit
   Application mode.
 
-Run `meson test -C build --print-errorlogs`.
+- **P4-T01 Room geometry and collision.** Room mode (`--room-camera`) draws a
+  10×7×10 box (brown floor, grey walls/ceiling, dark desk, monitor frame) as
+  flat-shaded meshes with its own MVP path (`program_3d`). AABB collision
+  clamps the camera to x∈[-4.5,4.5], y∈[0.5,6.5], z∈[-4.5,4.5] but only when
+  `room_mode` is true (gated by `--room-camera`). Fixed a pre-existing texture
+  swizzle bug: the test client writes RGBA byte data, and Mesa EGL surfaceless
+  rearranges texture storage to [G,R,B,A]. EGL mode now swizzles (data[1],
+  data[0], data[2], data[3]) to compensate; non-EGL uploads RGBA directly.
+  `tests/camera-move.sh` PPM maxval parsing also fixed.
+  `meson test -C build room-render` (floor 61472c±40, wall 7f7f8c±40) and
+  `room-collision` (walk into wall stops at bound) both pass. All 22 tests pass.
 
 - `smoke-headless` (P1-T01): `mansion-desktop --headless --socket NAME
   --exit-after-ms N` starts without a display, prints `MANSION_SOCKET=NAME`,

@@ -328,12 +328,13 @@ Depends on Project 1 automated tasks (P1-T10 may still be unobserved).
 
 ## Project 4: one-room end-to-end prototype
 
-- [ ] **P4-T01 Room geometry and collision.** Floor, four walls, a desk box,
+- [x] **P4-T01 Room geometry and collision.** Floor, four walls, a desk box,
   and a monitor frame as coloured, flat-shaded meshes; AABB collision keeps the
   camera inside the room and above the floor.
   **Acceptance:** `meson test -C build room-render` passes (floor colour at
   the bottom centre pixel, wall colour at the top centre pixel);
   `room-collision` passes (scripted walk into a wall stops at the bound).
+  (2026-09-27)
 
 - [ ] **P4-T02 Monitor slot and teleport.** The launched client's panel sits in
   the monitor frame. Key `T` (evdev 20) teleports to a stored viewpoint facing
