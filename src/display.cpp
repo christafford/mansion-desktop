@@ -1175,3 +1175,13 @@ void log_camera_position(struct MansionDisplay* display) {
     auto* cam = &display->camera;
     std::cerr << "camera_pos " << cam->x << " " << cam->y << " " << cam->z << std::endl;
 }
+
+/* P4-T02: teleport camera to stored viewpoint facing the monitor. */
+void input_teleport(struct MansionDisplay* display) {
+    if (!display) return;
+    display->camera.x    = display->teleport_x;
+    display->camera.y    = display->teleport_y;
+    display->camera.z    = display->teleport_z;
+    display->camera.yaw  = display->teleport_yaw;
+    display->camera.pitch = display->teleport_pitch;
+}

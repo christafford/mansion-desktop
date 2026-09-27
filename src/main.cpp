@@ -395,6 +395,16 @@ int main(int argc, char** argv) {
         display->panel.width = 2.0f;
         display->panel.height = 1.5f;
         display->flat_mode = false;
+
+        /* P4-T02: teleport target — closer to monitor, facing it. */
+        display->teleport_x = 0;
+        display->teleport_y = 3.0f;
+        display->teleport_z = 0;
+        display->teleport_yaw = 0;
+        display->teleport_pitch = 0;
+
+        /* P4-T02: set teleport key (T = evdev 20). */
+        input_teleport_key_set(20);
     } else if (opts.camera_specified) {
         display->camera.x = opts.camera[0];
         display->camera.y = opts.camera[1];

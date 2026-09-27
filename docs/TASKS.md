@@ -340,6 +340,7 @@ Depends on Project 1 automated tasks (P1-T10 may still be unobserved).
   the monitor frame. Key `T` (evdev 20) teleports to a stored viewpoint facing
   the monitor (reduced-motion access).
   **Acceptance:** `meson test -C build teleport` passes.
+  (2026-09-27)
 
 - [ ] **P4-T03 Milestone 1 scripted demonstration.** `tests/milestone1.sh`
   runs the nine concept steps headless: start, walk, launched client mapped

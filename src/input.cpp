@@ -39,6 +39,9 @@ static InputMode g_input_mode = InputMode::World;
 /* P3-T02: evdev keycode for switching to world mode (default: F12 = 88). */
 static int g_world_key = 88;
 
+/* P4-T02: evdev keycode for teleport (default: T = 20). */
+static int g_teleport_key = 0;
+
 void input_mode_set(InputMode mode) {
     g_input_mode = mode;
 }
@@ -53,6 +56,14 @@ void input_world_key_set(int code) {
 
 int input_world_key_get(void) {
     return g_world_key;
+}
+
+void input_teleport_key_set(int code) {
+    g_teleport_key = code;
+}
+
+int input_teleport_key_get(void) {
+    return g_teleport_key;
 }
 
 /* Global pointer to seat for input forwarding */
@@ -658,6 +669,13 @@ int input_script_step(struct InputScript* s,
                 input_mode_set(InputMode::World);
                 return 0;
             }
+
+            /* P4-T02: teleport key — move camera to stored viewpoint. */
+            if (state == WL_KEYBOARD_KEY_STATE_PRESSED &&
+                keycode == g_teleport_key && display) {
+                input_teleport(display);
+                return 0;
+            }
         }
 
         /* P3-T05: In World mode, Enter (key 28) on a targeted panel
@@ -668,6 +686,15 @@ int input_script_step(struct InputScript* s,
                 input_mode_set(InputMode::Application);
                 return 0;
             }
+        }
+
+        /* P4-T02: teleport key — move camera to stored viewpoint (works in
+         * both World and Application mode; in App mode it already returned
+         * above, this handles the World mode path). */
+        if (state == WL_KEYBOARD_KEY_STATE_PRESSED &&
+            keycode == g_teleport_key && display) {
+            input_teleport(display);
+            return 0;
         }
 
         /* P2-T06 / P3-T01: WASD + arrow keys always drive camera movement

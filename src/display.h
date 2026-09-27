@@ -64,6 +64,10 @@ struct MansionDisplay {
 
     /* P3-T05: panel targeting state. */
     bool panel_targeted = true;  /* ray from screen centre always hits panel */
+
+    /* P4-T02: teleport target position and orientation. */
+    float teleport_x = 0, teleport_y = 0, teleport_z = 0;
+    float teleport_yaw = 0, teleport_pitch = 0;
 };
 
 struct MansionDisplay* create_display(struct MansionCompositor* compositor, struct wl_display* wl_display);
@@ -84,3 +88,6 @@ void render_surface(struct MansionDisplay* display, struct wl_resource* surface,
 bool take_screenshot(struct MansionDisplay* display, const char* path);
 /* P4-T01: log camera position to stderr (for test verification). */
 void log_camera_position(struct MansionDisplay* display);
+
+/* P4-T02: teleport camera to stored viewpoint facing the monitor. */
+void input_teleport(struct MansionDisplay* display);

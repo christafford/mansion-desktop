@@ -7,9 +7,11 @@ running the check that proves it.
 
 ## Next task
 
-**P4-T02 Monitor slot and teleport.** The launched client's panel sits in the
-monitor frame. Key `T` (evdev 20) teleports to a stored viewpoint facing the
-monitor (reduced-motion access).
+**P4-T03 Milestone 1 scripted demonstration.** `tests/milestone1.sh`
+runs the nine concept steps headless: start, walk, launched client mapped
+on the monitor, approach, select, application mode, type (client reports the
+keys), return to world with the reserved key, client still connected and
+drawing.
 
 ## Verified by automated test
 
@@ -38,6 +40,12 @@ monitor (reduced-motion access).
   `tests/camera-move.sh` PPM maxval parsing also fixed.
   `meson test -C build room-render` (floor 61472c±40, wall 7f7f8c±40) and
   `room-collision` (walk into wall stops at bound) both pass. All 22 tests pass.
+
+- **P4-T02 Monitor slot and teleport.** Panel is positioned on the monitor frame
+  at (0, 3, -5) when `--room-camera` is used. Key `T` (evdev 20) teleports the
+  camera to a stored viewpoint at (0, 3, 0) facing the monitor (yaw=0, pitch=0).
+  Teleport is intercepted in both World and Application input modes.
+  `meson test -C build teleport` passes. All 23 tests pass.
 
 - `smoke-headless` (P1-T01): `mansion-desktop --headless --socket NAME
   --exit-after-ms N` starts without a display, prints `MANSION_SOCKET=NAME`,
