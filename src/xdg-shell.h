@@ -24,3 +24,9 @@ bool xdg_surface_has_toplevel(struct MansionXdgSurface* xdg_surface);
 /* Get the configured width/height from the surface's xdg toplevel (P3-T04). */
 void xdg_surface_get_toplevel_size(struct MansionXdgSurface* xdg_surface,
                                    int32_t* out_width, int32_t* out_height);
+
+/* Save the current size and restore a previously-saved size (P3-T04).
+ * Called when entering/exiting Application mode so the surface can
+ * be resized to fullscreen and back. */
+void xdg_surface_save_toplevel_size(struct MansionXdgSurface* xdg_surface);
+void xdg_surface_restore_toplevel_size(struct MansionXdgSurface* xdg_surface);

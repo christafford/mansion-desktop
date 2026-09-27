@@ -563,21 +563,33 @@ int input_script_step(struct InputScript* s,
     } else if (strncmp(line, "mode ", 5) == 0) {
         if (strcmp(line + 5, "world") == 0) {
             input_mode_set(InputMode::World);
-        } else if (strcmp(line + 5, "app") == 0) {
-            input_mode_set(InputMode::Application);
-            /* P3-T04: send configure resize to focused surface for fullscreen. */
+            /* P3-T04: restore flat mode and toplevel size when returning to world. */
+            if (display) {
+                display->flat_mode = display->flat_mode_prev;
+            }
             if (comp && comp->focused_surface_resource) {
                 auto* surface_data =
                     compositor_surface_from_resource(comp->focused_surface_resource);
-                if (surface_data && surface_data->xdg_surface
-                    && display) {
-                    int32_t w, h;
-                    xdg_surface_get_toplevel_size(surface_data->xdg_surface, &w, &h);
-                    if (w > 0 && h > 0) {
-                        xdg_shell_send_configure_resize(
-                            surface_data->xdg_surface,
-                            display->window_width, display->window_height);
-                    }
+                if (surface_data && surface_data->xdg_surface) {
+                    xdg_surface_restore_toplevel_size(surface_data->xdg_surface);
+                }
+            }
+        } else if (strcmp(line + 5, "app") == 0) {
+            input_mode_set(InputMode::Application);
+            /* P3-T04: switch to flat/fullscreen rendering. */
+            if (display) {
+                display->flat_mode_prev = display->flat_mode;
+                display->flat_mode = true;
+            }
+            /* Save the toplevel's current size and resize to window dimensions. */
+            if (comp && comp->focused_surface_resource && display) {
+                auto* surface_data =
+                    compositor_surface_from_resource(comp->focused_surface_resource);
+                if (surface_data && surface_data->xdg_surface) {
+                    xdg_surface_save_toplevel_size(surface_data->xdg_surface);
+                    xdg_shell_send_configure_resize(
+                        surface_data->xdg_surface,
+                        display->window_width, display->window_height);
                 }
             }
         }

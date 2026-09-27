@@ -299,11 +299,11 @@ Depends on Project 1 automated tasks (P1-T10 may still be unobserved).
   re-enters the client only if the mode is still Application.
   **Acceptance:** `meson test -C build focus-loss` passes. (2026-09-27)
 
-- [ ] **P3-T04 Full-size presentation.** In application mode the focused
+- [x] **P3-T04 Full-size presentation.** In application mode the focused
   surface is drawn 2D, scaled to fit the host window, and configured to the
   host size; returning to world mode restores the panel and the previous size.
   **Acceptance:** `meson test -C build present-fullsize` passes (client
-  receives the new configure; screenshot is filled with the client colour).
+  receives the new configure; screenshot is filled with the client colour). (2026-09-27)
 
 - [ ] **P3-T05 Targeting and selection.** Ray from the screen centre against
   the panel; `--input-script` `key 28 press` (Enter) on a targeted panel enters

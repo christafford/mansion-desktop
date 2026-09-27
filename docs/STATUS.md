@@ -7,11 +7,11 @@ running the check that proves it.
 
 ## Next task
 
-**P3-T04 Full-size presentation.** In application mode the focused
-  surface is drawn 2D, scaled to fit the host window, and configured to the
-  host size; returning to world mode restores the panel and the previous size.
-  **Acceptance:** `meson test -C build present-fullsize` passes (client
-  receives the new configure; screenshot is filled with the client colour).
+**P3-T05 Targeting and selection.** Ray from the screen centre against the panel;
+`--input-script` `key 28 press` (Enter) on a targeted panel enters application
+mode.
+**Acceptance:** `meson test -C build targeting` passes (target highlight shown,
+Enter key enters app mode).
 
 ## Verified by automated test
 
@@ -139,6 +139,11 @@ Run `meson test -C build --print-errorlogs`.
   current mode on `focus lost`/X11 `FocusOut` (also calls exit_application_mode).
   `focus gained`/X11 `FocusIn` re-enters Application mode if stored mode matches.
   `meson test -C build focus-loss` passes.
+- **P3-T04 Full-size presentation.** `render()` now checks `input_mode_get()`.
+  In Application mode: `render_application_fullscreen()` renders the focused
+  surface as a full-screen 2D quad. In World mode: 3D panel rendering.
+  `xdg_shell_send_configure_resize()` called when `mode app` is executed.
+  `meson test -C build present-fullsize` passes.
 
 - Auto-continue plugin: `node --test .opencode/tests/*.test.js` (49 tests),
   plus one live run against OpenCode 2.0.16 with the local model on

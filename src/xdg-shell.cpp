@@ -44,6 +44,9 @@ struct MansionXdgToplevel {
     struct wl_resource* resource;
     MansionXdgSurface* xdg_surface;         // nullptr once the xdg_surface is gone
     int32_t width, height;                  // size sent in the initial configure
+    /* P3-T04: saved size for restoring when exiting Application mode. */
+    int32_t saved_width, saved_height;
+    bool has_saved_size = false;
 };
 
 template <typename T>
@@ -289,6 +292,36 @@ void xdg_surface_get_toplevel_size(struct MansionXdgSurface* xdg_surface,
     }
     if (out_width) *out_width = xdg_surface->toplevel->width;
     if (out_height) *out_height = xdg_surface->toplevel->height;
+}
+
+/* P3-T04: Save the current toplevel size so it can be restored later. */
+void xdg_surface_save_toplevel_size(struct MansionXdgSurface* xdg_surface) {
+    if (!xdg_surface || !xdg_surface->toplevel) return;
+    xdg_surface->toplevel->saved_width  = xdg_surface->toplevel->width;
+    xdg_surface->toplevel->saved_height = xdg_surface->toplevel->height;
+    xdg_surface->toplevel->has_saved_size = true;
+}
+
+/* P3-T04: Restore the previously-saved toplevel size and re-send the
+ * configure so the client knows about the new size. */
+void xdg_surface_restore_toplevel_size(struct MansionXdgSurface* xdg_surface) {
+    if (!xdg_surface || !xdg_surface->toplevel) return;
+    if (!xdg_surface->toplevel->has_saved_size) return;
+    xdg_surface->toplevel->width  = xdg_surface->toplevel->saved_width;
+    xdg_surface->toplevel->height = xdg_surface->toplevel->saved_height;
+    xdg_surface->toplevel->has_saved_size = false;
+
+    /* Re-send the configure so the client is notified. */
+    struct wl_array states;
+    wl_array_init(&states);
+    xdg_toplevel_send_configure(xdg_surface->toplevel->resource,
+                                xdg_surface->toplevel->width,
+                                xdg_surface->toplevel->height, &states);
+    wl_array_release(&states);
+
+    auto* display = wl_client_get_display(wl_resource_get_client(xdg_surface->resource));
+    uint32_t serial = wl_display_next_serial(display);
+    xdg_surface_send_configure(xdg_surface->resource, serial);
 }
 
 struct MansionXdgShell* create_xdg_shell(struct MansionCompositor*, struct wl_display* display) {

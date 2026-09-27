@@ -13,6 +13,7 @@ SCRIPT="$WORK/input-script.txt"
 #   4. Quit.
 cat > "$SCRIPT" <<EOF
 wait 1000
+mode app
 focus gained
 key 10 press
 key 10 release

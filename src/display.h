@@ -51,6 +51,12 @@ struct MansionDisplay {
     long long stats_frame_count = 0;       /* frames since last print */
     long long stats_total_render_us = 0;   /* total render time (us) */
     long long stats_total_bytes_up = 0;    /* total bytes uploaded */
+
+    /* P3-T04: flat-mode state for full-size application presentation.
+     * When entering Application mode, flat_mode is set to true and
+     * the focused surface is drawn fullscreen.  flat_mode_prev
+     * remembers the previous value so it can be restored. */
+    bool flat_mode_prev = false;
 };
 
 struct MansionDisplay* create_display(struct MansionCompositor* compositor, struct wl_display* wl_display);

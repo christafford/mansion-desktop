@@ -710,6 +710,9 @@ void render(struct MansionDisplay* display) {
                 render_surface_from_data(display, surface, 0, 0);
             }
         }
+    } else if (input_mode_get() == InputMode::Application) {
+        // P3-T04: Application mode — render focused surface fullscreen (2D).
+        render_application_fullscreen(display);
     } else {
         // P2-T02: 3D panel rendering — draw focused surface on a perspective panel.
         render_panel(display);
