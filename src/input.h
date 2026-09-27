@@ -19,6 +19,10 @@ enum class InputMode { World, Application };
 void input_mode_set(InputMode mode);
 InputMode input_mode_get(void);
 
+/* P3-T02: set/get the world-key evdev code. */
+void input_world_key_set(int code);
+int input_world_key_get(void);
+
 /* External globals for main.cpp to set. */
 extern struct MansionSeat* g_seat;
 extern struct MansionCompositor* g_compositor;

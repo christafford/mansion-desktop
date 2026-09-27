@@ -2,6 +2,8 @@
 #include <cstdlib>
 #include <cstdio>
 #include <cmath>
+#include <vector>
+#include <algorithm>
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -31,12 +33,23 @@ static wl_fixed_t pointer_y = wl_fixed_from_int(200);
 /* ---------- Input mode (P3-T01) ---------- */
 static InputMode g_input_mode = InputMode::Application;
 
+/* P3-T02: evdev keycode for switching to world mode (default: F12 = 88). */
+static int g_world_key = 88;
+
 void input_mode_set(InputMode mode) {
     g_input_mode = mode;
 }
 
 InputMode input_mode_get(void) {
     return g_input_mode;
+}
+
+void input_world_key_set(int code) {
+    g_world_key = code;
+}
+
+int input_world_key_get(void) {
+    return g_world_key;
 }
 
 /* Global pointer to seat for input forwarding */
@@ -71,6 +84,9 @@ struct MansionSeat {
     struct wl_resource* pointer_surface_resource; /* surface pointer is over */
     struct wl_resource* grab_surface_resource;    /* surface with pointer grab */
     uint32_t serial;                              /* shared serial for all events */
+
+    /* P3-T02: track pressed keycodes for clean exit from Application mode. */
+    std::vector<uint32_t> pressed_keys;
 };
 
 int input_init(void) {
@@ -149,6 +165,53 @@ static void send_keymap_modifiers(uint32_t serial) {
                                        depressed, latched, locked, group);
         }
     }
+}
+
+/* P3-T02: Cleanly exit Application mode — switch to World mode.
+ * Sends key releases for all pressed keys, empty modifiers,
+ * keyboard leave, and pointer leave. */
+static void exit_application_mode(void) {
+    if (!g_seat) return;
+
+    uint32_t serial = ++g_seat->serial;
+
+    /* Send key release for every pressed key. */
+    for (uint32_t key : g_seat->pressed_keys) {
+        SeatKeyboardClient *kc, *kc_next;
+        wl_list_for_each_safe(kc, kc_next, &g_seat->keyboard_clients, destroy_listener.link) {
+            if (kc->resource)
+                wl_keyboard_send_key(kc->resource, serial, 0, key,
+                    WL_KEYBOARD_KEY_STATE_RELEASED);
+        }
+    }
+    g_seat->pressed_keys.clear();
+
+    /* Send empty modifiers. */
+    send_keymap_modifiers(serial);
+
+    /* Send keyboard leave. */
+    if (g_seat->focused_surface_resource) {
+        SeatKeyboardClient *kc, *kc_next;
+        wl_list_for_each_safe(kc, kc_next, &g_seat->keyboard_clients, destroy_listener.link) {
+            if (kc->resource)
+                wl_keyboard_send_leave(kc->resource, serial,
+                    g_seat->focused_surface_resource);
+        }
+        g_seat->focused_surface_resource = nullptr;
+    }
+
+    /* Send pointer leave. */
+    if (g_seat->pointer_surface_resource) {
+        SeatPointerClient *pk, *pk_next;
+        wl_list_for_each_safe(pk, pk_next, &g_seat->pointer_clients, destroy_listener.link) {
+            if (pk->resource)
+                wl_pointer_send_leave(pk->resource, serial,
+                    g_seat->pointer_surface_resource);
+        }
+        g_seat->pointer_surface_resource = nullptr;
+    }
+
+    input_mode_set(InputMode::World);
 }
 
 /* ---------- Pointer hit test (P1-T06-D) ---------- */
@@ -500,6 +563,21 @@ int input_script_step(struct InputScript* s,
                 if (kc->resource)
                     wl_keyboard_send_key(kc->resource, serial, 0, keycode, state);
             send_keymap_modifiers(serial);
+
+            /* P3-T02: track pressed keys for clean exit. */
+            if (state == WL_KEYBOARD_KEY_STATE_PRESSED) {
+                seat->pressed_keys.push_back(keycode);
+            } else {
+                auto it = std::find(seat->pressed_keys.begin(), seat->pressed_keys.end(), keycode);
+                if (it != seat->pressed_keys.end())
+                    seat->pressed_keys.erase(it);
+            }
+
+            /* P3-T02: world-key shortcut — exit Application mode on key press. */
+            if (state == WL_KEYBOARD_KEY_STATE_PRESSED && keycode == g_world_key) {
+                exit_application_mode();
+                return 0;
+            }
         }
 
         /* P2-T06 / P3-T01: WASD + arrow keys always drive camera movement
@@ -746,9 +824,7 @@ static void seat_bind(struct wl_client* client, void* data, uint32_t version, ui
 }
 
 struct MansionSeat* create_seat(struct wl_display* display) {
-    auto* seat = new MansionSeat;
-    memset(seat, 0, sizeof(*seat));
-
+    auto* seat = new MansionSeat();
     wl_list_init(&seat->keyboard_clients);
     wl_list_init(&seat->pointer_clients);
     seat->serial = 1;

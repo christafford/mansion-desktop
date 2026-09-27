@@ -7,12 +7,12 @@ running the check that proves it.
 
 ## Next task
 
-**P3-T02 Reserved shortcut and clean exit from application mode.** Configurable
-`--world-key` (default `F12`, evdev code 88) returns to world mode. Leaving
-application mode releases held keys (send `key` release for every pressed key),
-sends `modifiers`, keyboard `leave`, pointer `leave`.
-**Acceptance:** `meson test -C build mode-exit` passes (held key released,
-leave events observed).
+**P3-T03 Host focus loss.** When the host window loses input focus (X11
+FocusIn/FocusOut or headless no-op), save pressed key state and optionally
+pause input processing so the camera doesn't drift while the user switches
+away.
+**Acceptance:** `meson test -C build host-focus` passes (pressed keys saved
+on focus loss, restored on gain).
 
 ## Verified by automated test
 
@@ -131,6 +131,11 @@ Run `meson test -C build --print-errorlogs`.
   `mode world|app`. Key/motion/button events only reach clients in Application
   mode; in World mode they are consumed by the world input system.
   `meson test -C build mode-routing` passes.
+- **P3-T02 Reserved shortcut.** Configurable `--world-key` (default `F12`=88)
+  returns to world mode from Application mode. `exit_application_mode()` sends
+  `key` release for all pressed keys, empty modifiers, keyboard `leave`, and
+  pointer `leave`. `MansionSeat::pressed_keys` tracks currently-pressed keycodes.
+  `meson test -C build mode-exit` passes (key 42 released, kbd_leave observed).
 
 - Auto-continue plugin: `node --test .opencode/tests/*.test.js` (49 tests),
   plus one live run against OpenCode 2.0.16 with the local model on

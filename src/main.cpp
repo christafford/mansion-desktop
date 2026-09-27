@@ -31,6 +31,7 @@ struct Options {
     bool flat = false;       // P2-T02: 2D rendering instead of 3D panel
     bool egl_mode = false;   // P2-T05: client buffers are RGBA (no swizzle)
     bool stats = false;      // P2-T07: print frame timing / bytes uploaded
+    int world_key = 88;      // P3-T02: evdev keycode for world-key (default F12=88)
     float camera[5] = {0, 0, 10, 0, 0}; // X,Y,Z,yaw,pitch for P2-T02
     bool camera_specified = false; // true if --camera was explicitly passed
 };
@@ -49,6 +50,7 @@ void print_help() {
         "  --screenshot FILE    write a binary PPM screenshot after the loop\n"
         "  --input-script FILE  execute scripted input events during the loop\n"
         "  --stats              print per-frame render time and bytes uploaded every 60 frames (P2-T07)\n"
+        "  --world-key N        evdev keycode for world-mode shortcut (default: 88=F12, P3-T02)\n"
         "  -h, --help           show this help\n"
         "The socket name is printed to stdout as MANSION_SOCKET=<name>.\n";
 }
@@ -154,6 +156,9 @@ bool parse_args(int argc, char** argv, Options& opts) {
             opts.input_script = value;
         } else if (name == "--stats") {
             opts.stats = true;
+        } else if (name == "--world-key") {
+            if (!take_value()) return false;
+            opts.world_key = (int)strtol(value.c_str(), nullptr, 10);
         } else {
             std::cerr << "Error: unknown argument " << arg << "\n";
             return false;
@@ -335,6 +340,8 @@ int main(int argc, char** argv) {
 
     /* Connect seat to compositor so focus tracking can send enter/leave. */
     compositor_set_seat(compositor, seat);
+    /* P3-T02: configure world-key shortcut. */
+    input_world_key_set(opts.world_key);
 
     if (wl_display_add_socket(wl_display, socket_name.c_str()) < 0) {
         std::cerr << "Failed to add socket '" << socket_name << "': " << strerror(errno) << std::endl;

@@ -287,12 +287,12 @@ Depends on Project 1 automated tasks (P1-T10 may still be unobserved).
   `mode world|app`.
   **Acceptance:** `meson test -C build mode-routing` passes. (2026-09-27)
 
-- [ ] **P3-T02 Reserved shortcut and clean exit from application mode.**
+- [x] **P3-T02 Reserved shortcut and clean exit from application mode.**
   Configurable `--world-key` (default `F12`, evdev code 88) returns to world
   mode. Leaving application mode releases held keys (send `key` release for
   every pressed key), sends `modifiers`, keyboard `leave`, pointer `leave`.
   **Acceptance:** `meson test -C build mode-exit` passes (held key released,
-  leave events observed).
+  leave events observed). (2026-09-27)
 
 - [ ] **P3-T03 Host focus loss.** `focus lost` (X `FocusOut`) behaves like
   leaving application mode without changing the stored mode; `focus gained`
