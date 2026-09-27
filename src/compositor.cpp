@@ -43,16 +43,20 @@ static void surface_destroy(struct wl_client* client, struct wl_resource* resour
     (void)client; (void)resource;
 }
 
-/* Buffer destroy listener — fires when the client destroys the wl_buffer proxy. */
+/* Buffer destroy listener — fires when the client destroys the wl_buffer proxy.
+ * Clean up the GL texture since the backing storage is gone. */
 static void buffer_destroy_notify(struct wl_listener* listener, void* data) {
     (void)data;
     MansionSurface* surface = (MansionSurface*)
         wl_container_of(listener, (MansionSurface*)NULL, buffer_destroy_listener);
+
+    if (!surface) return;
     surface->buffer_destroyed = true;
     surface->buffer_resource = nullptr;
 
     /* The GL texture is a pixel copy (glTexImage2D) and remains valid
-       even after the buffer is destroyed. */
+     * for orphaned-surface rendering. We delete it on re-upload in
+     * render_panel() where we also create the new texture. */
 }
 
 static void surface_attach(struct wl_client* client, struct wl_resource* resource,

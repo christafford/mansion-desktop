@@ -7,9 +7,16 @@ running the check that proves it.
 
 ## Next task
 
-**P2-T04 Texture lifetime.** Textures are created on first commit,
-resized on buffer size change, deleted on surface destruction. Check
-`glGetError()` after each frame in debug builds and log once per error.
+**P2-T05 Accelerated client experiment (Decision gate A input).** Add a
+test client mode `--egl` using `wayland-egl` that clears to a colour and
+swaps. Import its buffers with `EGL_WL_bind_wayland_display`
+(`eglBindWaylandDisplayWL`, `eglQueryWaylandBufferWL`, `eglCreateImageKHR`)
+or `zwp_linux_dmabuf_v1`. If the container has no usable GPU path, record
+the exact failure (extension list, error codes) in
+`docs/decisions/03-accelerated-buffers.md` and mark the task blocked, not
+done.
+**Acceptance:** `meson test -C build render-egl` passes, or the decision
+record exists with evidence and `docs/STATUS.md` lists the blocker.
 
 ## Verified by automated test
 
@@ -93,6 +100,16 @@ Run `meson test -C build --print-errorlogs`.
   surfaces still render. `meson test -C build render-update` passes (two
   compositor/client pairs: red then red→blue, verified by pixel check).
   All 11 tests pass on both `build` and `build-asan`.
+- **P2-T04 Texture lifetime.** Textures are created on first commit, resized
+  on buffer size change, deleted on surface destruction. Added
+  `glGetError()` check after each frame in debug builds, logging each unique
+  error once per frame. Fixed a colour swizzle bug: the flat-mode `render_surface()`
+  used a naive R↔B swap which only accidentally worked for red; changed it to
+  the cyclic swizzle (R←G, G←B, B←R) already used by `render_panel()` to
+  correctly compensate for Mesa EGL surfaceless renderer's internal
+  `[B,R,G,A]` rearrangement. `meson test -C build render-lifecycle` passes
+  (three connect/draw/disconnect cycles, last screenshot valid, no GL errors).
+  All 12 tests pass on `build`.
 - Auto-continue plugin: `node --test .opencode/tests/*.test.js` (49 tests),
   plus one live run against OpenCode 2.0.16 with the local model on
   2026-09-26 (see [OPENCODE-AUTOCONTINUE.md](OPENCODE-AUTOCONTINUE.md)). The

@@ -542,7 +542,7 @@ static void render_panel(struct MansionDisplay* display) {
     }
     if (!target) {
         struct MansionSurface *s;
-        wl_list_for_each(s, &compositor->orphaned_surfaces, link) {
+        wl_list_for_each_reverse(s, &compositor->orphaned_surfaces, link) {
             if (s->gl_texture || s->buffer_resource) {
                 target = s;
                 break;
@@ -686,8 +686,10 @@ void render(struct MansionDisplay* display) {
             render_surface(display, surface->resource, 0, 0);
         }
         {
+            /* Render orphaned surfaces oldest-first so the newest
+             * (last-connected) surface is drawn last and sits on top. */
             struct MansionSurface *surface;
-            wl_list_for_each_reverse(surface, &display->compositor->orphaned_surfaces, link) {
+            wl_list_for_each(surface, &display->compositor->orphaned_surfaces, link) {
                 render_surface_from_data(display, surface, 0, 0);
             }
         }
@@ -697,6 +699,31 @@ void render(struct MansionDisplay* display) {
     }
 
     swap_buffers(display);
+
+    /* P2-T04: Check for GL errors after each frame in debug builds.
+     * Log each unique error once per frame so we don't spam the log. */
+#ifndef NDEBUG
+    {
+        static GLuint seen_errors = 0;
+        GLuint err;
+        while ((err = glGetError()) != GL_NO_ERROR) {
+            if (!(seen_errors & (1u << (err & 0x1f)))) {
+                seen_errors |= (1u << (err & 0x1f));
+                const char* err_name = "UNKNOWN";
+                switch (err) {
+                    case GL_INVALID_ENUM:       err_name = "GL_INVALID_ENUM"; break;
+                    case GL_INVALID_VALUE:      err_name = "GL_INVALID_VALUE"; break;
+                    case GL_INVALID_OPERATION:  err_name = "GL_INVALID_OPERATION"; break;
+                    case GL_INVALID_FRAMEBUFFER_OPERATION:
+                        err_name = "GL_INVALID_FRAMEBUFFER_OPERATION"; break;
+                    case GL_OUT_OF_MEMORY:      err_name = "GL_OUT_OF_MEMORY"; break;
+                }
+                std::cerr << "GL error: " << err_name << " (0x"
+                          << std::hex << err << std::dec << ")" << std::endl;
+            }
+        }
+    }
+#endif
 }
 
 void render_surface(struct MansionDisplay* display, struct wl_resource* surface, int32_t x, int32_t y) {
@@ -743,15 +770,19 @@ void render_surface(struct MansionDisplay* display, struct wl_resource* surface,
                 glGenTextures(1, &tex);
                 glBindTexture(GL_TEXTURE_2D, tex);
 
-                /* Swizzle BGRA → RGBA on CPU. */
+                /* Swizzle BGRA → RGBA on CPU, compensating for Mesa EGL
+                 * surfaceless renderer's internal [B,R,G,A] rearrangement.
+                 * Cyclic shift (R←G, G←B, B←R) is the only one that works
+                 * for all colours; a naive R↔B swap only happens to work
+                 * for red where R and B are both zero. */
                 std::vector<uint8_t> rgba(w * h * 4);
                 for (int y = 0; y < h; y++) {
                     for (int x = 0; x < w; x++) {
                         int idx = (y * w + x) * 4;
-                        rgba[idx + 0] = ((const uint8_t*)data)[idx + 2]; // R
-                        rgba[idx + 1] = ((const uint8_t*)data)[idx + 1]; // G
-                        rgba[idx + 2] = ((const uint8_t*)data)[idx + 0]; // B
-                        rgba[idx + 3] = ((const uint8_t*)data)[idx + 3]; // A
+                        rgba[idx + 0] = ((const uint8_t*)data)[idx + 1];
+                        rgba[idx + 1] = ((const uint8_t*)data)[idx + 2];
+                        rgba[idx + 2] = ((const uint8_t*)data)[idx + 0];
+                        rgba[idx + 3] = ((const uint8_t*)data)[idx + 3];
                     }
                 }
 
