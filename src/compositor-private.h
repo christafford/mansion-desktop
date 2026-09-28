@@ -6,6 +6,9 @@
 struct MansionXdgSurface;
 struct MansionSeat;
 
+/* Forward declaration for the toplevel list link. */
+struct wl_list;
+
 /* Per-surface frame callback */
 struct MansionFrameCallback {
     struct wl_resource* resource;
@@ -52,6 +55,12 @@ struct MansionCompositor {
     struct wl_global* global;
     struct wl_list surface_list;
     struct wl_list orphaned_surfaces; /* surfaces that survived client disconnect */
+
+    /* P5-T01: registry of all toplevel surfaces (across all clients).
+     * Each entry is the `link` field inside a MansionXdgSurface that has
+     * a non-null toplevel. Iterated left-to-right: oldest toplevel first. */
+    struct wl_list toplevel_list;
+    int toplevel_count;
 
     /* Keyboard focus (P1-T06-C). */
     struct MansionSeat* seat;

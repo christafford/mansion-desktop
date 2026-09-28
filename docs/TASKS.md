@@ -366,10 +366,75 @@ Depends on Project 1 automated tasks (P1-T10 may still be unobserved).
 Each project starts with an expansion task. Autonomous sessions perform the
 expansion task, then work the resulting list.
 
-- [ ] **P5-T00 Expand Project 5** (multiple windows and application lifecycle)
-  into tasks of the same shape as above: window registry, several toplevels,
-  `xdg_popup` and positioner, transient/dialog association by client, manual
-  artifact assignment, focus switching by keyboard, tests for each.
+- [x] **P5-T00 Expand Project 5.** Sub-tasks below. (2026-09-28)
+
+  - [ ] **P5-T01 Window registry.** Maintain a doubly-linked list of
+    all toplevel surfaces across all clients in `MansionCompositor`.
+    Register a surface when its xdg_toplevel is created; unregister on
+    surface or toplevel destroy. Expose `compositor_toplevel_list` and
+    `compositor_toplevel_count`. No focus change yet — just the data
+    structure and registration.
+    **Acceptance:** `meson test -C build` still passes (regression
+    guard). New test `toplevel-registry`: two clients connect, each
+    creates a toplevel; the compositor logs the count as 2. (P1-T10
+    remains human.)
+
+  - [ ] **P5-T02 Alt+Tab focus cycling.** Add `--tab-key` option
+    (default `Tab`, evdev 23). In World mode, pressing the tab key
+    (possibly with Shift) cycles keyboard focus through the window
+    registry, sending leave/enter events. Shift+Tab cycles backwards.
+    In Application mode, tab passes through to the client.
+    **Acceptance:** `meson test -C build mode-routing` still passes
+    (regression guard). New test `focus-cycle`: two clients connect
+    and map; after mapping, a second client becomes focused (not the
+    first); pressing tab switches back to the first client.
+
+  - [ ] **P5-T03 xdg_popup support.** Implement `get_popup` for
+    xdg_surface. The popup is owned by a parent xdg_surface (passed
+    as the `parent` argument). The compositor must handle
+    `xdg_popup` requests by sending an immediate synchronous
+    configure, then tracking the popup for rendering. Popups are
+    always rendered above their parent. Implement `grab` request
+    (pointer grab on the parent's surface).
+    **Acceptance:** `meson test -C build client-globals` passes.
+    New test `popup-basic`: client creates a popup on an existing
+    toplevel; the compositor accepts the configure without error.
+
+  - [ ] **P5-T04 Transient and parent-child tracking.** Add
+    `parent_toplevel` and `is_transient` fields to `MansionXdgToplevel`.
+    Handle `xdg_toplevel.set_parent` (store the parent pointer).
+    When a surface is destroyed, clear parent references. In focus
+    cycling, skip transients unless they are the focused surface.
+    **Acceptance:** `meson test -C build lifecycle` passes. New
+    test `transient-parent`: two toplevels where one is set as the
+    parent of the other; when the parent is destroyed, the child
+    loses its parent reference.
+
+  - [ ] **P5-T05 Alt+F4 close focused surface.** Intercept the
+    configured close key (default `F4`, evdev 55, with Alt) in
+    World mode. Find the focused surface and destroy its xdg_surface
+    (and thereby its wl_surface and buffer). The compositor should
+    handle the client's subsequent disconnect cleanly.
+    **Acceptance:** `meson test -C build app-exit` still passes.
+    New test `close-focused`: client maps a toplevel, another client
+    triggers Alt+F4, the first client disconnects, the compositor
+    returns to a clean state.
+
+  - [ ] **P5-T06 Window list in world mode.** In world mode, render
+    a simple text window list on the 3D panel showing the focused
+    surface's title/app-id and a count of all toplevels. Use a
+    simple bitmap font or existing 2D rendering. This provides a
+    visible indication of multi-window state without complex 3D
+    layout.
+    **Acceptance:** `meson test -C build render-panel` still passes
+    (regression guard). The panel still shows the focused surface
+    content; the window list is visible as an overlay or title bar.
+
+  - [ ] **P5-T07 Project 5 wrap-up.** Handoff, status update.
+    Verify all tests pass. Document the multi-window architecture.
+    **Acceptance:** `meson test -C build` passes all tests (including
+    new ones). All P5 sub-tasks ticked or marked as not observed.
+
 - [ ] **P6-T00 Expand Project 6** (durable artifact model, SQLite schema,
   slot-based movement, restart persistence, migration and interrupted-write
   tests). Adding SQLite requires a decision record.

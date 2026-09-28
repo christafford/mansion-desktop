@@ -295,6 +295,8 @@ struct MansionCompositor* create_compositor(struct wl_display* display) {
     auto* compositor = new MansionCompositor{};
     wl_list_init(&compositor->surface_list);
     wl_list_init(&compositor->orphaned_surfaces);
+    wl_list_init(&compositor->toplevel_list);
+    compositor->toplevel_count = 0;
     compositor->focused_surface_resource = nullptr;
     compositor->keyboard_focus_serial = 0;
 
