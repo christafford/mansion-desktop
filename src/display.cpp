@@ -126,7 +126,15 @@ struct MansionDisplay* create_display(struct MansionCompositor* compositor, stru
     mansion_display->renderer = nullptr;
     mansion_display->egl_display = EGL_NO_DISPLAY;
     mansion_display->egl_context = EGL_NO_CONTEXT;
-    mansion_display->egl_surface = EGL_NO_SURFACE;
+    mansion_display->egl_surface = EGLSurface(nullptr);
+
+    // Set an X11 IO error handler so the compositor exits gracefully
+    // when the X server disappears (e.g. Xwayland crash).
+    XSetIOErrorHandler([](Display*) -> int {
+        std::cerr << "X11 IO error — exiting gracefully" << std::endl;
+        _Exit(0);
+        return 0;
+    });
 
     // Create X11 window for the host window
     Display* x_display = XOpenDisplay(nullptr);
@@ -140,10 +148,12 @@ struct MansionDisplay* create_display(struct MansionCompositor* compositor, stru
     Window x_window = XCreateSimpleWindow(x_display, DefaultRootWindow(x_display),
                                           0, 0, mansion_display->window_width,
                                           mansion_display->window_height, 0,
-                                          BlackPixel(x_display, screen),
-                                          WhitePixel(x_display, screen));
+                                          WhitePixel(x_display, screen),  /* background = white (X11 default) */
+                                          BlackPixel(x_display, screen));
 
-    XMapWindow(x_display, x_window);
+    /* Raise the window so it sits on top of other windows. */
+    XRaiseWindow(x_display, x_window);
+    XMapRaised(x_display, x_window);
     XFlush(x_display);
 
     // Store X11 display and window directly in MansionDisplay.

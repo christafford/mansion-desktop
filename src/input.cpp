@@ -42,6 +42,14 @@ static int g_world_key = 88;
 /* P4-T02: evdev keycode for teleport (default: T = 20). */
 static int g_teleport_key = 0;
 
+/* Movement key codes (evdev / linux/input-event-codes.h). */
+static constexpr unsigned KEY_W       = 17;
+static constexpr unsigned KEY_A       = 30;
+static constexpr unsigned KEY_S       = 31;
+static constexpr unsigned KEY_D       = 32;
+static constexpr double MOVEMENT_SPEED = 0.01;
+static constexpr double MOUSE_SENSITIVITY = 0.002;
+
 void input_mode_set(InputMode mode) {
     g_input_mode = mode;
 }
@@ -333,6 +341,30 @@ void input_process(void) {
 
 static Atom wm_delete_window_atom = None;
 
+/* ---------- Live X11 camera movement ---------- */
+
+/* Whether the X11 window currently has input focus. */
+static bool g_seat_x11_focused = false;
+
+static bool live_w = false, live_a = false, live_s = false, live_d = false;
+static int32_t live_mouse_x = 0, live_mouse_y = 0;
+
+/* Forward declaration — apply_movement is defined below in this file. */
+static void apply_movement(struct MansionDisplay* display, double delta_ms,
+                           MovementState* ms);
+
+static void apply_live_movement(MansionDisplay* display, double delta_ms) {
+    if (!display || delta_ms <= 0 || display->flat_mode) return;
+    MovementState ms;
+    ms.w = live_w;  ms.a = live_a;  ms.s = live_s;  ms.d = live_d;
+    ms.up    = false; ms.down = false;  ms.left  = false; ms.right = false;
+    ms.mouseX = live_mouse_x;
+    ms.mouseY = live_mouse_y;
+    live_mouse_x = 0;
+    live_mouse_y = 0;
+    apply_movement(display, delta_ms, &ms);
+}
+
 int input_process_x11(struct MansionDisplay* m_display) {
     if (!m_display || !m_display->x_display) return 0;
 
@@ -358,6 +390,14 @@ int input_process_x11(struct MansionDisplay* m_display) {
             uint32_t state       = (ev.type == KeyPress) ?
                 WL_KEYBOARD_KEY_STATE_PRESSED :
                 WL_KEYBOARD_KEY_STATE_RELEASED;
+
+            /* P5: live camera movement (only when window has focus). */
+            if (g_seat_x11_focused) {
+                if (linux_keycode == KEY_W)  live_w  = (state == WL_KEYBOARD_KEY_STATE_PRESSED);
+                if (linux_keycode == KEY_A)  live_a  = (state == WL_KEYBOARD_KEY_STATE_PRESSED);
+                if (linux_keycode == KEY_S)  live_s  = (state == WL_KEYBOARD_KEY_STATE_PRESSED);
+                if (linux_keycode == KEY_D)  live_d  = (state == WL_KEYBOARD_KEY_STATE_PRESSED);
+            }
 
             /* Update xkb state (xkbcommon uses X11 keycode range). */
             if (g_seat && g_seat->xkbstate) {
@@ -429,6 +469,10 @@ int input_process_x11(struct MansionDisplay* m_display) {
             pointer_x = wl_fixed_from_int(ev.xmotion.x);
             pointer_y = wl_fixed_from_int(ev.xmotion.y);
 
+            /* P5: track mouse delta for camera look. */
+            live_mouse_x += ev.xmotion.x;
+            live_mouse_y += ev.xmotion.y;
+
             uint32_t serial = ++g_seat->serial;
             pointer_check_focus(serial);
             send_pointer_motion(ev.xmotion.time);
@@ -459,7 +503,11 @@ int input_process_x11(struct MansionDisplay* m_display) {
         }
 
         /* ---- Focus changes (informational) ---- */
-        case FocusOut:
+        case FocusOut: {
+            /* P5: stop live camera movement when focus is lost. */
+            g_seat_x11_focused = false;
+            live_w = live_a = live_s = live_d = false;
+            live_mouse_x = live_mouse_y = 0;
             /* P3-T03: save current mode, then exit application mode and switch to World. */
             if (g_seat) {
                 g_seat->stored_mode_when_focus_lost = input_mode_get();
@@ -467,7 +515,10 @@ int input_process_x11(struct MansionDisplay* m_display) {
                 input_mode_set(InputMode::World);
             }
             break;
-        case FocusIn:
+        }
+        case FocusIn: {
+            /* P5: allow live camera movement when window has focus. */
+            g_seat_x11_focused = true;
             /* P3-T03: re-enter application mode if stored mode was Application. */
             if (g_seat && g_seat->stored_mode_when_focus_lost == InputMode::Application
                 && g_compositor && g_compositor->focused_surface_resource) {
@@ -480,11 +531,15 @@ int input_process_x11(struct MansionDisplay* m_display) {
                     g_compositor->focused_surface_resource, g_compositor);
             }
             break;
+        }
 
         default:
             break;
         }
     }
+
+    /* P5: apply live X11 keyboard + mouse to the camera. */
+    apply_live_movement(m_display, 16.67);
 
     return 0;
 }
@@ -492,21 +547,10 @@ int input_process_x11(struct MansionDisplay* m_display) {
 /* ---------- Input script execution (P1-T06-E) ---------- */
 
 /* Movement key codes (evdev / linux/input-event-codes.h). */
-static constexpr unsigned KEY_W       = 17;
-static constexpr unsigned KEY_A       = 30;
-static constexpr unsigned KEY_S       = 31;
-static constexpr unsigned KEY_D       = 32;
 static constexpr unsigned KEY_UP      = 103;
 static constexpr unsigned KEY_DOWN    = 108;
 static constexpr unsigned KEY_LEFT    = 105;
 static constexpr unsigned KEY_RIGHT   = 106;
-
-/* Movement speed: 0.01 units per millisecond.
- * Moving from Z=10 to Z=5 takes 500 ms. */
-static constexpr double MOVEMENT_SPEED = 0.01;
-
-/* Mouse-look sensitivity in radians per pixel. */
-static constexpr double MOUSE_SENSITIVITY = 0.002;
 
 struct InputScript* input_script_init(const char* filename) {
     auto* s = new InputScript();

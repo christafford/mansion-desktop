@@ -549,6 +549,11 @@ int main(int argc, char** argv) {
         }
 
         render(display);
+
+        /* Present the frame to the X11 window. */
+        if (!opts.headless) {
+            swap_buffers(display);
+        }
     }
 
     input_script_destroy(script);
