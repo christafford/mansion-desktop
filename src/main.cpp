@@ -553,6 +553,7 @@ int main(int argc, char** argv) {
         /* Present the frame to the X11 window. */
         if (!opts.headless) {
             swap_buffers(display);
+            frame_count++;
         }
 
         /* P2-T07: frame-rate cap at ~60 Hz to avoid burning CPU and
