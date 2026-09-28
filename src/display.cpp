@@ -116,6 +116,125 @@ static GLuint create_program(const char* vertex_shader_source, const char* fragm
     return program;
 }
 
+/* Recreate the X11 window + EGL context (used for reconnect).
+ * Must be called after x_display has been reopened but before
+ * any other X11/EGL calls. */
+bool create_egl_and_window(struct MansionDisplay* mansion_display) {
+    Display* x_display = mansion_display->x_display;
+    if (!x_display) return false;
+
+    int screen = DefaultScreen(x_display);
+
+    /* Recreate the X11 window. */
+    Window x_window = XCreateSimpleWindow(x_display, DefaultRootWindow(x_display),
+                                          0, 0, mansion_display->window_width,
+                                          mansion_display->window_height, 0,
+                                          BlackPixel(x_display, screen),
+                                          BlackPixel(x_display, screen));
+    XRaiseWindow(x_display, x_window);
+    XMapRaised(x_display, x_window);
+
+    /* Select input events. */
+    XSelectInput(x_display, x_window,
+        KeyPressMask | KeyReleaseMask |
+        ButtonPressMask | ButtonReleaseMask |
+        PointerMotionMask |
+        FocusChangeMask | StructureNotifyMask |
+        ExposureMask);
+    XFlush(x_display);
+
+    mansion_display->x_window = x_window;
+
+    /* Create EGL display for X11. */
+    EGLint config_attr[] = {
+        EGL_BUFFER_SIZE,  32,
+        EGL_DEPTH_SIZE,   0,
+        EGL_STENCIL_SIZE, 0,
+        EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
+        EGL_NONE,
+    };
+    EGLint context_attr[] = {
+        EGL_CONTEXT_CLIENT_VERSION, 2,
+        EGL_NONE,
+    };
+
+    /* Terminate old EGL state. */
+    if (mansion_display->egl_display != EGL_NO_DISPLAY) {
+        eglMakeCurrent(mansion_display->egl_display, EGL_NO_SURFACE,
+                       EGL_NO_SURFACE, EGL_NO_CONTEXT);
+        if (mansion_display->egl_surface != EGL_NO_SURFACE)
+            eglDestroySurface(mansion_display->egl_display, mansion_display->egl_surface);
+        if (mansion_display->egl_context != EGL_NO_CONTEXT)
+            eglDestroyContext(mansion_display->egl_display, mansion_display->egl_context);
+        eglTerminate(mansion_display->egl_display);
+    }
+    mansion_display->egl_surface = EGL_NO_SURFACE;
+    mansion_display->egl_context = EGL_NO_CONTEXT;
+
+    /* Get and initialize EGL display. */
+    mansion_display->egl_display =
+        eglGetDisplay((EGLNativeDisplayType)x_display);
+    if (mansion_display->egl_display == EGL_NO_DISPLAY) {
+        std::cerr << "Reconnect: Failed to get EGL display" << std::endl;
+        return false;
+    }
+    if (!eglInitialize(mansion_display->egl_display, nullptr, nullptr)) {
+        std::cerr << "Reconnect: Failed to initialize EGL" << std::endl;
+        eglTerminate(mansion_display->egl_display);
+        mansion_display->egl_display = EGL_NO_DISPLAY;
+        return false;
+    }
+
+    EGLConfig egl_config;
+    EGLint egl_config_count;
+    if (!eglChooseConfig(mansion_display->egl_display, config_attr, &egl_config, 1,
+                          &egl_config_count)) {
+        std::cerr << "Reconnect: Failed to choose EGL config" << std::endl;
+        eglTerminate(mansion_display->egl_display);
+        mansion_display->egl_display = EGL_NO_DISPLAY;
+        return false;
+    }
+
+    mansion_display->egl_context = eglCreateContext(mansion_display->egl_display,
+                                                      egl_config,
+                                                      EGL_NO_CONTEXT, context_attr);
+    if (mansion_display->egl_context == EGL_NO_CONTEXT) {
+        std::cerr << "Reconnect: Failed to create EGL context" << std::endl;
+        eglTerminate(mansion_display->egl_display);
+        mansion_display->egl_display = EGL_NO_DISPLAY;
+        return false;
+    }
+
+    mansion_display->egl_surface = eglCreateWindowSurface(mansion_display->egl_display,
+                                                            egl_config,
+                                                            (EGLNativeWindowType)x_window,
+                                                            nullptr);
+    if (mansion_display->egl_surface == EGL_NO_SURFACE) {
+        std::cerr << "Reconnect: Failed to create EGL surface" << std::endl;
+        eglTerminate(mansion_display->egl_display);
+        mansion_display->egl_display = EGL_NO_DISPLAY;
+        return false;
+    }
+
+    if (eglMakeCurrent(mansion_display->egl_display, mansion_display->egl_surface,
+                        mansion_display->egl_surface, mansion_display->egl_context) == EGL_FALSE) {
+        std::cerr << "Reconnect: Failed to make EGL context current" << std::endl;
+        eglTerminate(mansion_display->egl_display);
+        mansion_display->egl_display = EGL_NO_DISPLAY;
+        return false;
+    }
+
+    /* Reinitialize the renderer (shaders, etc.) on the new EGL context. */
+    if (!init_renderer(mansion_display)) {
+        std::cerr << "Reconnect: Failed to reinitialize renderer" << std::endl;
+        eglTerminate(mansion_display->egl_display);
+        mansion_display->egl_display = EGL_NO_DISPLAY;
+        return false;
+    }
+
+    return true;
+}
+
 struct MansionDisplay* create_display(struct MansionCompositor* compositor, struct wl_display* wl_display) {
     auto* mansion_display = new MansionDisplay;
     mansion_display->compositor = compositor;
@@ -128,133 +247,22 @@ struct MansionDisplay* create_display(struct MansionCompositor* compositor, stru
     mansion_display->egl_context = EGL_NO_CONTEXT;
     mansion_display->egl_surface = EGLSurface(nullptr);
 
-    // Set an X11 IO error handler so the compositor exits gracefully
-    // when the X server disappears (e.g. Xwayland crash).
-    XSetIOErrorHandler([](Display*) -> int {
-        std::cerr << "X11 IO error — exiting gracefully" << std::endl;
-        _Exit(0);
-        return 0;
-    });
-
     // Create X11 window for the host window
     Display* x_display = XOpenDisplay(nullptr);
     if (!x_display) {
-        std::cerr << "Failed to open X11 display" << std::endl;
+        std::cerr << "Warning: Failed to open X11 display, running headless"
+                  << std::endl;
         delete mansion_display;
         return nullptr;
     }
 
-    int screen = DefaultScreen(x_display);
-    Window x_window = XCreateSimpleWindow(x_display, DefaultRootWindow(x_display),
-                                          0, 0, mansion_display->window_width,
-                                          mansion_display->window_height, 0,
-                                          BlackPixel(x_display, screen),  /* match EGL clear color */
-                                          BlackPixel(x_display, screen));
-
-    /* Raise the window so it sits on top of other windows. */
-    XRaiseWindow(x_display, x_window);
-    XMapRaised(x_display, x_window);
-    XFlush(x_display);
-
-    // Store X11 display and window directly in MansionDisplay.
     mansion_display->x_display = x_display;
-    mansion_display->x_window  = x_window;
-    XSetWindowBorderWidth(x_display, x_window, 2);
-    Colormap border_color = XCreateColormap(x_display, DefaultRootWindow(x_display),
-                                            DefaultVisual(x_display, screen), AllocNone);
-    XSetWindowBorder(x_display, x_window, border_color);
-    XFlush(x_display);
 
-    // Select input events we care about.
-    XSelectInput(x_display, x_window,
-        KeyPressMask | KeyReleaseMask |
-        ButtonPressMask | ButtonReleaseMask |
-        PointerMotionMask |
-        FocusChangeMask | StructureNotifyMask);
-    XFlush(x_display);
-
-    // Create EGL display for X11
-    mansion_display->egl_display = eglGetDisplay((EGLNativeDisplayType)x_display);
-    if (mansion_display->egl_display == EGL_NO_DISPLAY) {
-        std::cerr << "Failed to get EGL display" << std::endl;
-        XDestroyWindow(x_display, x_window);
+    if (!create_egl_and_window(mansion_display)) {
+        std::cerr << "Warning: Failed to create X11 window + EGL, running headless"
+                  << std::endl;
         XCloseDisplay(x_display);
-        delete mansion_display;
-        return nullptr;
-    }
-
-    EGLint major, minor;
-    if (!eglInitialize(mansion_display->egl_display, &major, &minor)) {
-        std::cerr << "Failed to initialize EGL" << std::endl;
-        XDestroyWindow(x_display, x_window);
-        XCloseDisplay(x_display);
-        eglTerminate(mansion_display->egl_display);
-        delete mansion_display;
-        return nullptr;
-    }
-
-    if (!eglChooseConfig(mansion_display->egl_display, config_attr, &mansion_display->egl_config, 1,
-                          &mansion_display->egl_config_count)) {
-        std::cerr << "Failed to choose EGL config" << std::endl;
-        XDestroyWindow(x_display, x_window);
-        XCloseDisplay(x_display);
-        eglTerminate(mansion_display->egl_display);
-        delete mansion_display;
-        return nullptr;
-    }
-
-    // Create EGL context
-    mansion_display->egl_context = eglCreateContext(mansion_display->egl_display,
-                                                     mansion_display->egl_config,
-                                                     EGL_NO_CONTEXT, context_attr);
-    if (mansion_display->egl_context == EGL_NO_CONTEXT) {
-        std::cerr << "Failed to create EGL context" << std::endl;
-        XDestroyWindow(x_display, x_window);
-        XCloseDisplay(x_display);
-        eglTerminate(mansion_display->egl_display);
-        delete mansion_display;
-        return nullptr;
-    }
-
-    // Create EGL window surface using X11
-    mansion_display->egl_surface = eglCreateWindowSurface(mansion_display->egl_display,
-                                                           mansion_display->egl_config,
-                                                           (EGLNativeWindowType)x_window,
-                                                           nullptr);
-    if (mansion_display->egl_surface == EGL_NO_SURFACE) {
-        std::cerr << "Failed to create EGL surface" << std::endl;
-        eglDestroyContext(mansion_display->egl_display, mansion_display->egl_context);
-        XDestroyWindow(x_display, x_window);
-        XCloseDisplay(x_display);
-        eglTerminate(mansion_display->egl_display);
-        delete mansion_display;
-        return nullptr;
-    }
-
-    // Make EGL context current
-    if (eglMakeCurrent(mansion_display->egl_display, mansion_display->egl_surface,
-                       mansion_display->egl_surface, mansion_display->egl_context) == EGL_FALSE) {
-        std::cerr << "Failed to make EGL context current" << std::endl;
-        eglDestroySurface(mansion_display->egl_display, mansion_display->egl_surface);
-        eglDestroyContext(mansion_display->egl_display, mansion_display->egl_context);
-        XDestroyWindow(x_display, x_window);
-        XCloseDisplay(x_display);
-        eglTerminate(mansion_display->egl_display);
-        delete mansion_display;
-        return nullptr;
-    }
-
-    // Set viewport
-    glViewport(0, 0, mansion_display->window_width, mansion_display->window_height);
-
-    // Initialize renderer
-    if (!init_renderer(mansion_display)) {
-        std::cerr << "Failed to initialize renderer" << std::endl;
-        eglDestroySurface(mansion_display->egl_display, mansion_display->egl_surface);
-        eglDestroyContext(mansion_display->egl_display, mansion_display->egl_context);
-        XDestroyWindow(x_display, x_window);
-        XCloseDisplay(x_display);
-        eglTerminate(mansion_display->egl_display);
+        mansion_display->x_display = nullptr;
         delete mansion_display;
         return nullptr;
     }

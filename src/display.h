@@ -82,6 +82,8 @@ struct MansionRenderer* get_renderer(struct MansionDisplay* display);
 EGLContext get_egl_context(struct MansionDisplay* display);
 bool init_renderer(struct MansionDisplay* display);
 void destroy_renderer(struct MansionDisplay* display);
+/* Recreate X11 window + EGL context after a connection loss. Returns true on success. */
+bool create_egl_and_window(struct MansionDisplay* display);
 void render_surface(struct MansionDisplay* display, struct wl_resource* surface, int32_t x, int32_t y);
 /* Render one final frame and write the framebuffer as a binary PPM (P6) file.
  * Returns false if EGL/renderer is unavailable. */

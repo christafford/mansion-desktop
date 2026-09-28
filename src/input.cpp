@@ -355,6 +355,10 @@ static bool has_prev_mouse = false;
 static void apply_movement(struct MansionDisplay* display, double delta_ms,
                            MovementState* ms);
 
+/* Forward declaration — apply_mouse_look is defined below in this file. */
+static void apply_mouse_look(struct MansionDisplay* display,
+                             MovementState* ms);
+
 static void apply_live_movement(MansionDisplay* display, double delta_ms) {
     if (!display || delta_ms <= 0 || display->flat_mode) return;
     MovementState ms;
@@ -365,12 +369,45 @@ static void apply_live_movement(MansionDisplay* display, double delta_ms) {
     live_mouse_x = 0;
     live_mouse_y = 0;
     apply_movement(display, delta_ms, &ms);
+    apply_mouse_look(display, &ms);
 }
 
 int input_process_x11(struct MansionDisplay* m_display) {
     if (!m_display || !m_display->x_display) return 0;
 
     Display* xdpy = m_display->x_display;
+
+    /* Check if the X11 connection is still alive. */
+    if (XConnectionNumber(xdpy) < 0) {
+        /* Connection was closed — try to reopen. */
+        std::cerr << "X11 connection lost, attempting reconnect..." << std::endl;
+        XCloseDisplay(xdpy);
+        m_display->x_display = nullptr;
+        m_display->x_window = None;
+        wm_delete_window_atom = None;
+        m_display->egl_display = EGL_NO_DISPLAY;
+        m_display->egl_context = EGL_NO_CONTEXT;
+        m_display->egl_surface = EGLSurface(nullptr);
+
+        /* Retry opening X11. */
+        Display* new_dpy = XOpenDisplay(nullptr);
+        if (!new_dpy) {
+            std::cerr << "Reconnect failed, running headless" << std::endl;
+            return 0;
+        }
+        m_display->x_display = new_dpy;
+
+        /* Recreate window and EGL context. */
+        create_egl_and_window(m_display);
+        if (!m_display->egl_display || m_display->egl_display == EGL_NO_DISPLAY) {
+            std::cerr << "EGL recreation failed, running headless" << std::endl;
+            XCloseDisplay(new_dpy);
+            m_display->x_display = nullptr;
+            m_display->egl_display = EGL_NO_DISPLAY;
+            return 0;
+        }
+        xdpy = new_dpy;
+    }
 
     /* Lazily create the WM_DELETE_WINDOW atom. */
     if (!wm_delete_window_atom) {
@@ -542,6 +579,10 @@ int input_process_x11(struct MansionDisplay* m_display) {
             break;
         }
 
+        /* ---- Expose events — suppress; EGL handles all rendering ---- */
+        case Expose:
+            break;
+
         default:
             break;
         }
@@ -610,11 +651,11 @@ static void apply_movement(MansionDisplay* display, double delta_ms,
 static void apply_mouse_look(MansionDisplay* display,
                              MovementState* ms) {
     if (!display || !ms || !display->renderer || display->flat_mode) return;
-    if (!ms->right_button_pressed) return;
+    /* Zero delta means no motion — no need for a button gate. */
 
     auto* cam = &display->camera;
-    cam->yaw   += static_cast<float>(ms->mouseX * MOUSE_SENSITIVITY);
-    cam->pitch += static_cast<float>(ms->mouseY * MOUSE_SENSITIVITY);
+    cam->yaw   -= static_cast<float>(ms->mouseX * MOUSE_SENSITIVITY);
+    cam->pitch -= static_cast<float>(ms->mouseY * MOUSE_SENSITIVITY);
 
     /* Clamp pitch to ±89° to avoid flipping. */
     const float MAX_PITCH = 89.0f * 3.14159265f / 180.0f;
