@@ -148,7 +148,7 @@ struct MansionDisplay* create_display(struct MansionCompositor* compositor, stru
     Window x_window = XCreateSimpleWindow(x_display, DefaultRootWindow(x_display),
                                           0, 0, mansion_display->window_width,
                                           mansion_display->window_height, 0,
-                                          WhitePixel(x_display, screen),  /* background = white (X11 default) */
+                                          BlackPixel(x_display, screen),  /* match EGL clear color */
                                           BlackPixel(x_display, screen));
 
     /* Raise the window so it sits on top of other windows. */

@@ -554,6 +554,17 @@ int main(int argc, char** argv) {
         if (!opts.headless) {
             swap_buffers(display);
         }
+
+        /* P2-T07: frame-rate cap at ~60 Hz to avoid burning CPU and
+         * reducing Xwayland flickering. */
+        auto frame_end = clock::now();
+        double elapsed = std::chrono::duration<double, std::milli>(frame_end - frame_start).count();
+        double target = 16.67;  /* 60 fps */
+        if (elapsed < target) {
+            struct timespec ts = {(long)((target - elapsed) / 1000),
+                                  (long)((target - elapsed) * 1000000.0)};
+            nanosleep(&ts, nullptr);
+        }
     }
 
     input_script_destroy(script);

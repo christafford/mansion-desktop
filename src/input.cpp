@@ -348,6 +348,8 @@ static bool g_seat_x11_focused = false;
 
 static bool live_w = false, live_a = false, live_s = false, live_d = false;
 static int32_t live_mouse_x = 0, live_mouse_y = 0;
+static int32_t prev_mouse_x = 0, prev_mouse_y = 0;
+static bool has_prev_mouse = false;
 
 /* Forward declaration — apply_movement is defined below in this file. */
 static void apply_movement(struct MansionDisplay* display, double delta_ms,
@@ -470,8 +472,13 @@ int input_process_x11(struct MansionDisplay* m_display) {
             pointer_y = wl_fixed_from_int(ev.xmotion.y);
 
             /* P5: track mouse delta for camera look. */
-            live_mouse_x += ev.xmotion.x;
-            live_mouse_y += ev.xmotion.y;
+            if (has_prev_mouse) {
+                live_mouse_x += ev.xmotion.x - prev_mouse_x;
+                live_mouse_y += ev.xmotion.y - prev_mouse_y;
+            }
+            prev_mouse_x = ev.xmotion.x;
+            prev_mouse_y = ev.xmotion.y;
+            has_prev_mouse = true;
 
             uint32_t serial = ++g_seat->serial;
             pointer_check_focus(serial);
@@ -508,6 +515,8 @@ int input_process_x11(struct MansionDisplay* m_display) {
             g_seat_x11_focused = false;
             live_w = live_a = live_s = live_d = false;
             live_mouse_x = live_mouse_y = 0;
+            prev_mouse_x = prev_mouse_y = 0;
+            has_prev_mouse = false;
             /* P3-T03: save current mode, then exit application mode and switch to World. */
             if (g_seat) {
                 g_seat->stored_mode_when_focus_lost = input_mode_get();
