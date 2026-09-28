@@ -602,17 +602,18 @@ int main(int argc, char** argv) {
         xdg_toplevel_set_app_id(c.toplevel, "mansion-test-client");
         xdg_surface_set_window_geometry(c.xdg_surface, 0, 0, bw, bh);
 
-        if (buffer_mode) {
-            /* Commit with buffer to trigger configure */
-            setup_buffer(&c, bw, bh, cr, cg, cb);
-        } else {
-            wl_surface_commit(c.surface);
-        }
+        /* Commit an empty surface first to trigger the compositor's
+         * configure event.  The xdg_shell spec says the configure is
+         * sent when the surface becomes visible (i.e. after the first
+         * commit).  We must acknowledge the configure before committing
+         * the actual buffer. */
+        wl_surface_commit(c.surface);
+        wl_display_roundtrip(c.display);
 
-        /* Wait for configure with timeout */
-        long deadline = now_ms() + 2000;
-        while (!c.received_configure && now_ms() < deadline) {
-            if (dispatch_with_timeout(&c, deadline) < 0) goto error;
+        if (buffer_mode) {
+            /* Now the configure has been acknowledged. Commit the real
+             * buffer. */
+            setup_buffer(&c, bw, bh, cr, cg, cb);
         }
 
         if (buffer_mode) {
