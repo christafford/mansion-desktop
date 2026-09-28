@@ -13,6 +13,7 @@
 #include "xdg-shell.h"
 #include "compositor.h"
 #include "compositor-private.h"
+#include "input.h"
 
 namespace {
 
@@ -360,6 +361,81 @@ void xdg_surface_restore_toplevel_size(struct MansionXdgSurface* xdg_surface) {
     auto* display = wl_client_get_display(wl_resource_get_client(xdg_surface->resource));
     uint32_t serial = wl_display_next_serial(display);
     xdg_surface_send_configure(xdg_surface->resource, serial);
+}
+
+/* P5-T02: cycle keyboard focus through the toplevel list. */
+void xdg_shell_cycle_focus(struct MansionSeat* seat,
+                            struct MansionCompositor* comp,
+                            bool forward) {
+    if (!seat || !comp || !comp->seat) return;
+    if (wl_list_empty(&comp->toplevel_list) || comp->toplevel_count < 2)
+        return;
+
+    struct wl_resource* current = comp->focused_surface_resource;
+    MansionXdgSurface* pos;
+
+    if (forward) {
+        /* Forward: find current, move to next. Wrap to first if current is last. */
+        struct wl_resource* next_surface = nullptr;
+        bool found_current = !current;
+
+        wl_list_for_each(pos, &comp->toplevel_list, toplevel_link) {
+            if (!pos->toplevel) continue;
+            if (pos->surface_resource == nullptr) continue;
+            if (found_current) {
+                next_surface = pos->surface_resource;
+                break;
+            }
+            if (pos->surface_resource == current) {
+                found_current = true;
+            }
+        }
+        /* Wrap: if current was last (or not found), go to the first entry. */
+        if (!next_surface) {
+            pos = wl_container_of(comp->toplevel_list.next, pos, toplevel_link);
+            if (pos->surface_resource) {
+                next_surface = pos->surface_resource;
+            }
+        }
+        if (next_surface) {
+            seat_set_keyboard_focus(seat, next_surface, comp);
+        }
+    } else {
+        /* Backward: find current, move to previous. Wrap to last if current is first. */
+        struct wl_resource* prev_surface = nullptr;
+        struct wl_resource* first_surface = nullptr;
+        bool found_current = false;
+        MansionXdgSurface* last_entry = nullptr;
+
+        wl_list_for_each(pos, &comp->toplevel_list, toplevel_link) {
+            if (!pos->toplevel) continue;
+            if (pos->surface_resource == nullptr) continue;
+
+            if (!first_surface) {
+                first_surface = pos->surface_resource;
+            }
+
+            if (pos->surface_resource == current) {
+                found_current = true;
+                break;
+            }
+            prev_surface = pos->surface_resource;
+            last_entry = pos;
+        }
+
+        struct wl_resource* target = nullptr;
+        if (found_current) {
+            if (prev_surface) {
+                target = prev_surface;
+            } else if (last_entry && last_entry->surface_resource) {
+                /* current is first — wrap to last */
+                target = last_entry->surface_resource;
+            }
+        }
+        if (target && target != current) {
+            seat_set_keyboard_focus(seat, target, comp);
+        }
+    }
 }
 
 struct MansionXdgShell* create_xdg_shell(struct MansionCompositor*, struct wl_display* display) {

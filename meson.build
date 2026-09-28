@@ -122,6 +122,9 @@ test('teleport', find_program('tests/teleport.sh'),
 test('milestone1', find_program('tests/milestone1.sh'),
     args: [mansion_exe, test_client], env: test_env, suite: 'p4', timeout: 60)
 
+test('focus-cycle', find_program('tests/focus_cycle.sh'),
+    args: [mansion_exe, test_client], env: test_env, suite: 'p5', timeout: 30)
+
 # P2-T01: header-only math module unit test
 math_test = executable('test_math',
     'tests/test_math.cpp',

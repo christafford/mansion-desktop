@@ -30,3 +30,8 @@ void xdg_surface_get_toplevel_size(struct MansionXdgSurface* xdg_surface,
  * be resized to fullscreen and back. */
 void xdg_surface_save_toplevel_size(struct MansionXdgSurface* xdg_surface);
 void xdg_surface_restore_toplevel_size(struct MansionXdgSurface* xdg_surface);
+
+/* P5-T02: cycle focus through the toplevel list. */
+void xdg_shell_cycle_focus(struct MansionSeat* seat,
+                            struct MansionCompositor* comp,
+                            bool forward);

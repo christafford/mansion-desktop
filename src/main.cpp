@@ -32,6 +32,7 @@ struct Options {
     bool egl_mode = false;   // P2-T05: client buffers are RGBA (no swizzle)
     bool stats = false;      // P2-T07: print frame timing / bytes uploaded
     int world_key = 88;      // P3-T02: evdev keycode for world-key (default F12=88)
+    int tab_key = 23;        // P5-T02: evdev keycode for tab key (default Tab=23)
     float camera[5] = {0, 0, 10, 0, 0}; // X,Y,Z,yaw,pitch for P2-T02
     bool camera_specified = false; // true if --camera was explicitly passed
     bool room_camera = false;    // P4-T01: default room camera position
@@ -52,6 +53,7 @@ void print_help() {
         "  --input-script FILE  execute scripted input events during the loop\n"
         "  --stats              print per-frame render time and bytes uploaded every 60 frames (P2-T07)\n"
         "  --world-key N        evdev keycode for world-mode shortcut (default: 88=F12, P3-T02)\n"
+        "  --tab-key N          evdev keycode for tab (default: 23=Tab, P5-T02)\n"
         "  --room-camera        use room-mode camera (inside a 3D room, P4-T01)\n"
         "  -h, --help           show this help\n"
         "The socket name is printed to stdout as MANSION_SOCKET=<name>.\n";
@@ -161,6 +163,9 @@ bool parse_args(int argc, char** argv, Options& opts) {
         } else if (name == "--world-key") {
             if (!take_value()) return false;
             opts.world_key = (int)strtol(value.c_str(), nullptr, 10);
+        } else if (name == "--tab-key") {
+            if (!take_value()) return false;
+            opts.tab_key = (int)strtol(value.c_str(), nullptr, 10);
         } else if (name == "--room-camera") {
             /* P4-T01: room mode camera (inside the room, looking at front wall). */
             opts.room_camera = true;
@@ -433,6 +438,8 @@ int main(int argc, char** argv) {
     compositor_set_seat(compositor, seat);
     /* P3-T02: configure world-key shortcut. */
     input_world_key_set(opts.world_key);
+    /* P5-T02: configure tab-key shortcut. */
+    input_tab_key_set(opts.tab_key);
 
     if (wl_display_add_socket(wl_display, socket_name.c_str()) < 0) {
         std::cerr << "Failed to add socket '" << socket_name << "': " << strerror(errno) << std::endl;

@@ -42,6 +42,9 @@ static int g_world_key = 88;
 /* P4-T02: evdev keycode for teleport (default: T = 20). */
 static int g_teleport_key = 0;
 
+/* P5-T02: evdev keycode for tab key (default: Tab = 23). */
+static int g_tab_key = 23;
+
 /* Movement key codes (evdev / linux/input-event-codes.h). */
 static constexpr unsigned KEY_W       = 17;
 static constexpr unsigned KEY_A       = 30;
@@ -72,6 +75,14 @@ void input_teleport_key_set(int code) {
 
 int input_teleport_key_get(void) {
     return g_teleport_key;
+}
+
+void input_tab_key_set(int code) {
+    g_tab_key = code;
+}
+
+int input_tab_key_get(void) {
+    return g_tab_key;
 }
 
 /* Global pointer to seat for input forwarding */
@@ -666,6 +677,10 @@ static void apply_mouse_look(MansionDisplay* display,
     ms->mouseY = 0;
 }
 
+/* ── P5-T02: keyboard focus cycling ──────────────────────────────────────── */
+
+/* Forward declaration — xdg_shell_cycle_focus is defined in xdg-shell.cpp. */
+
 /* Execute the next command from the script. Returns 0 if more commands
    remain, 1 if quit, -1 on EOF. */
 int input_script_step(struct InputScript* s,
@@ -817,6 +832,17 @@ int input_script_step(struct InputScript* s,
             case KEY_RIGHT:  s->movement.right = false; break;
             default: break;
             }
+        }
+    } else if (strcmp(line, "tab") == 0) {
+        /* P5-T02: tab key — cycle focus forward in World mode, pass
+         * through to client in Application mode. */
+        if (g_input_mode == InputMode::World) {
+            xdg_shell_cycle_focus(seat, comp, true);
+        }
+    } else if (strcmp(line, "shift_tab") == 0) {
+        /* P5-T02: shift+tab — cycle focus backward in World mode. */
+        if (g_input_mode == InputMode::World) {
+            xdg_shell_cycle_focus(seat, comp, false);
         }
     } else if (strncmp(line, "motion ", 7) == 0) {
         int x = 0, y = 0;

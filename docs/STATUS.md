@@ -7,10 +7,9 @@ running the check that proves it.
 
 ## Next task
 
-**P5-T00 Expand Project 5** (multiple windows and application lifecycle)
-into tasks of the same shape as above: window registry, several toplevels,
-`xdg_popup` and positioner, transient/dialog association by client,
-manual artifact assignment, focus switching by keyboard, tests for each.
+**P5-T02 Alt+Tab focus cycling.** In World mode, the tab key cycles keyboard
+focus through the window registry (registered in P5-T01). Shift+Tab cycles
+backwards. In Application mode, tab passes through to the client.
 
 ## This session (2026-09-28)
 
@@ -37,6 +36,23 @@ manual artifact assignment, focus switching by keyboard, tests for each.
 
 
 ## Verified by automated test
+
+- **P5-T01 Window registry.** `MansionCompositor` gains `toplevel_list` and
+  `toplevel_count`. `MansionXdgSurface` gains `toplevel_link`. Registration
+  occurs after `xdg_toplevel` creation; unregistration on both `xdg_surface`
+  and `wl_surface` destroy. A crash was fixed: during client disconnect the
+  wl_surface is destroyed before the xdg_surface, so `on_wl_surface_destroyed`
+  calls `toplevel_unregister` first; the subsequent call from
+  `xdg_surface_resource_destroyed` must check that `surface_resource` is still
+  valid. Acceptance: all 24 tests pass (including `lifecycle`). (2026-09-28)
+
+- **P5-T02 Alt+Tab focus cycling.** `input.cpp` gains `g_tab_key` (default 23),
+  `input_tab_key_set()`/`input_tab_key_get()`. `xdg-shell.cpp` gains
+  `xdg_shell_cycle_focus()` which walks the toplevel list and calls
+  `seat_set_keyboard_focus()` to cycle forward or backward. Input script gains
+  `tab` and `shift_tab` commands that invoke focus cycling in World mode only;
+  in Application mode tab passes through to the client. New test `focus-cycle`.
+  Acceptance: all 25 tests pass (including new `focus-cycle`). (2026-09-28)
 
 - **P3-T06 Client exit during application mode.** When the application client
   exits while in Application mode, the compositor returns to World mode, clears
