@@ -7,9 +7,8 @@ running the check that proves it.
 
 ## Next task
 
-**P5-T02 Alt+Tab focus cycling.** In World mode, the tab key cycles keyboard
-focus through the window registry (registered in P5-T01). Shift+Tab cycles
-backwards. In Application mode, tab passes through to the client.
+**P5-T03 xdg_popup support.** Implement `get_popup` for xdg_surface. The
+popup is owned by a parent xdg_surface (passed as the `parent` argument).
 
 ## This session (2026-09-28)
 

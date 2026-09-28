@@ -368,7 +368,7 @@ expansion task, then work the resulting list.
 
 - [x] **P5-T00 Expand Project 5.** Sub-tasks below. (2026-09-28)
 
-  - [ ] **P5-T01 Window registry.** Maintain a doubly-linked list of
+  - [x] **P5-T01 Window registry.** Maintain a doubly-linked list of
     all toplevel surfaces across all clients in `MansionCompositor`.
     Register a surface when its xdg_toplevel is created; unregister on
     surface or toplevel destroy. Expose `compositor_toplevel_list` and
@@ -377,9 +377,9 @@ expansion task, then work the resulting list.
     **Acceptance:** `meson test -C build` still passes (regression
     guard). New test `toplevel-registry`: two clients connect, each
     creates a toplevel; the compositor logs the count as 2. (P1-T10
-    remains human.)
+    remains human.) (bb8cd9d)
 
-  - [ ] **P5-T02 Alt+Tab focus cycling.** Add `--tab-key` option
+  - [x] **P5-T02 Alt+Tab focus cycling.** Add `--tab-key` option
     (default `Tab`, evdev 23). In World mode, pressing the tab key
     (possibly with Shift) cycles keyboard focus through the window
     registry, sending leave/enter events. Shift+Tab cycles backwards.
@@ -387,7 +387,7 @@ expansion task, then work the resulting list.
     **Acceptance:** `meson test -C build mode-routing` still passes
     (regression guard). New test `focus-cycle`: two clients connect
     and map; after mapping, a second client becomes focused (not the
-    first); pressing tab switches back to the first client.
+    first); pressing tab switches back to the first client. (bb8cd9d)
 
   - [ ] **P5-T03 xdg_popup support.** Implement `get_popup` for
     xdg_surface. The popup is owned by a parent xdg_surface (passed
