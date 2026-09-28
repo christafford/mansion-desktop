@@ -133,11 +133,7 @@ static void toplevel_register(MansionXdgSurface* xdg_surface) {
 }
 
 static void toplevel_unregister(MansionXdgSurface* xdg_surface) {
-    if (!xdg_surface) return;
-    /* P5-T01: wl_list_remove must be called only on a valid in-list link.
-     * Save the list pointer before removing, then re-init to prevent
-     * double-remove on the same link (client disconnect may trigger
-     * both xdg_surface destroy and wl_surface destroy paths). */
+    if (!xdg_surface || !xdg_surface->surface_resource) return;
     struct wl_list* list = xdg_surface->toplevel_link.prev;
     wl_list_remove(&xdg_surface->toplevel_link);
     wl_list_init(&xdg_surface->toplevel_link);
@@ -160,8 +156,11 @@ void xdg_surface_resource_destroyed(struct wl_resource* resource) {
     (void)resource;
     auto* xdg_surface = user_data<MansionXdgSurface>(resource);
     if (!xdg_surface) return;
-    /* P5-T01: unregister from the window registry before clearing. */
-    toplevel_unregister(xdg_surface);
+    /* P5-T01: unregister from the window registry before clearing.
+     * If surface_resource is null, the wl_surface was destroyed first
+     * and already called toplevel_unregister via on_wl_surface_destroyed. */
+    if (xdg_surface->surface_resource)
+        toplevel_unregister(xdg_surface);
     if (xdg_surface->toplevel) xdg_surface->toplevel->xdg_surface = nullptr;
     xdg_surface_detach_wl_surface(xdg_surface);
     /* Do NOT delete xdg_surface here — defer to xdg_shell destruction. */
