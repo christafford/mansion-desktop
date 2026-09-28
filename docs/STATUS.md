@@ -1,6 +1,6 @@
 # Project status
 
-Updated 2026-09-27. This file is the single source of truth for what works.
+Updated 2026-09-28. This file is the single source of truth for what works.
 Use exactly these labels: **verified by automated test**, **verified by a
 person**, **not verified**. Never move an item to a "verified" list without
 running the check that proves it.
@@ -9,6 +9,32 @@ running the check that proves it.
 
 **P5-T00 Expand Project 5** (multiple windows and application lifecycle)
 into tasks of the same shape as above: window registry, several toplevels,
+`xdg_popup` and positioner, transient/dialog association by client,
+manual artifact assignment, focus switching by keyboard, tests for each.
+
+## This session (2026-09-28)
+
+- **X11 reconnect mechanism.** Extracted window+EGL creation into
+  `create_egl_and_window()` helper. `input_process_x11()` now detects broken
+  X11 connection (`XConnectionNumber < 0`) and attempts full reconnect
+  (reopen display, recreate window+EGL/renderer). XIO error handler changed
+  from `_Exit(0)` to warning-only — compositor survives Xwayland disconnects.
+  Verified: compositor ran 30s+ without X11 crash (previously died within
+  seconds).
+- **Mouse X-axis invert.** Mouse left now looks left (same convention as
+  Y-axis: mouse up → look up).
+- **Frame count fix.** `frame_count` in `main.cpp` was declared but never
+  incremented; now incremented after each `swap_buffers`. Exit log shows
+  accurate frame count.
+- **Rendering pipeline verified.** `glReadPixels` before `eglSwapBuffers`
+  confirms clear color (0.15, 0.15, 0.2) and room geometry are correctly
+  present in the back buffer. All 24 tests pass.
+- **Known limitation:** Xwayland remains unstable in this container.
+  The compositor no longer crashes on disconnect but may need manual restart
+  to re-establish the X11 connection. Windowed mode rendering has been
+  observed on the Wayland compositor side but the X11 window appearance
+  on the host desktop is unreliable in this environment.
+
 
 ## Verified by automated test
 
