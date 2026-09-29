@@ -7,10 +7,13 @@ delete anything that stops being true.
 
 ## Ground rules
 
-- libwayland-server directly, C++20, Meson. No wlroots (see decision 02).
+- Implemented stack: libwayland-server, C++20, Meson, EGL/GLES2 (Decision 02).
+  Decision 05 authorizes a bounded wlroots/host/import experiment, not migration.
+- ARCHITECTURE.md defines target boundaries; TASKS.md defines execution order.
+  Apply the recovery gate before advancing features.
 - Protocol: `wl_compositor`, `wl_shm`, `wl_seat`, `xdg_wm_base` (+ popups
-  later), `wl_output` when clients need it. `wl_shell` is deprecated and goes
-  away in P1-T03.
+  later), `wl_output` when chosen clients require it. `wl_shell` was removed.
+  Pin supported versions to implemented behavior, not generated-header versions.
 - The compositor is nested. Input comes from the host window, never from
   `/dev/input`.
 - Everything testable is tested headless. A person only confirms feel and real
@@ -26,7 +29,8 @@ wl_global_create(display, &xdg_wm_base_interface, 6, data, bind_fn);
 auto* res = wl_resource_create(client, &xdg_wm_base_interface, std::min(version, 6u), id);
 wl_resource_set_implementation(res, &impl, data, destroy_fn);
 
-// Requests table: order and count must match the XML exactly; use nullptr for unhandled optional ones.
+// Request table layout must match the generated interface for the pinned XML.
+// Implement advertised-version requests; do not use nullptr to imply support.
 static const struct xdg_wm_base_interface impl = { destroy, create_positioner, get_xdg_surface, pong };
 
 // Resource user data
@@ -69,8 +73,20 @@ treat the client as unresponsive.
 - Formats to support first: `WL_SHM_FORMAT_ARGB8888`, `XRGB8888` (little
   endian BGRA in memory). Upload with `GL_BGRA_EXT` when
   `GL_EXT_texture_format_BGRA8888` is available, else swizzle.
-- Release the *previous* buffer (`wl_buffer_send_release`) after the new one is
-  committed and uploaded. Clients reuse released buffers.
+- attach changes pending state; commit applies it. No new attach preserves
+  content; attach-null removes content only on the next commit.
+- Release a committed buffer when the compositor has finished using its storage,
+  not simply when another buffer is attached. For copied shm pixels this may be
+  after the copy/upload; imported GPU buffers need a defined synchronization
+  strategy. Never access a client's reused storage after release. A replaced,
+  uncommitted pending attach is not a consumed buffer.
+- Track buffer resource destruction separately from owned pixel/texture content.
+  Use begin/end shm access around reads, respect stride and declared format,
+  handle premultiplied alpha, and test unequal RGB values. Do not choose formats
+  using a global flag or undocumented driver swizzles.
+- EGL extension lookup uses eglGetProcAddress plus relevant extension checks.
+  Verify imports with actual buffers and errors; export support or PBuffer
+  readback does not prove Wayland GPU-client import.
 - Frame callbacks: send `done` once per rendered frame for surfaces that were
   visible, then destroy the callback resource.
 - Projection: pixels to clip space `x' = 2x/W - 1`, `y' = 1 - 2y/H`.
@@ -89,8 +105,14 @@ treat the client as unresponsive.
   surface, `leave` before entering another, `motion` in surface-local
   coordinates (`wl_fixed_from_double`), `button` with `BTN_*` codes, `frame`
   after each group for pointer v5+.
-- On leaving application mode or losing focus: release every held key, send
-  `modifiers`, then `leave`.
+- On leaving application mode or losing focus: release held keys/buttons,
+  reset modifiers, and send the appropriate keyboard/pointer leave events.
+  Verify full-size letterboxing, logical coordinates, scale and transforms.
+- xdg_toplevel.close is a request to the application; it may be declined.
+  Compositor close controls must not forcibly destroy protocol resources.
+- Popups require positioners, configure/ack/commit, valid grab serials/parents,
+  surface-tree rendering and correct input/dismissal. A configure-only test
+  does not establish working menus.
 
 ## Launcher (P1-T08)
 
@@ -102,3 +124,13 @@ Set `WAYLAND_DISPLAY`, unset `DISPLAY`, inherit `XDG_RUNTIME_DIR`; reap with
 
 See [tests/README.md](tests/README.md). New behaviour → new script → new
 `test()` line. Never assert on timing you can assert on output.
+
+## Protocol references
+
+Use the XML installed for the pinned wayland/wayland-protocols versions as the
+implementation contract. Public references help explain behavior; newer protocol
+features are not implied support for this prototype.
+
+- [Wayland core specification](https://wayland.freedesktop.org/docs/html/apa.html)
+- [Official xdg-shell XML](https://gitlab.freedesktop.org/wayland/wayland-protocols/-/blob/main/stable/xdg-shell/xdg-shell.xml)
+- [Khronos EGL extension lookup](https://registry.khronos.org/EGL/sdk/docs/man/html/eglGetProcAddress.xhtml)

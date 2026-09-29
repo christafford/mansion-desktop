@@ -540,82 +540,121 @@ authorize a rewrite. If blocked, continue only independent eligible work.
 Each project starts with an expansion task. Autonomous sessions perform the
 expansion task, then work the resulting list.
 
-- [x] **P5-T00 Expand Project 5.** Sub-tasks below. (2026-09-28)
+- [x] **P5-T00 Expand Project 5.** Existing expansion revised below; feature
+  tasks require P4-T18 and P4-T28 accepted. Historical completion: 2026-09-28.
 
-  - [ ] **P5-T01 Window registry.** Maintain a doubly-linked list of
-    all toplevel surfaces across all clients in `MansionCompositor`.
-    Register a surface when its xdg_toplevel is created; unregister on
-    surface or toplevel destroy. Expose `compositor_toplevel_list` and
-    `compositor_toplevel_count`. No focus change yet — just the data
-    structure and registration.
-    **Acceptance:** `meson test -C build` still passes (regression
-    guard). New test `toplevel-registry`: two clients connect, each
-    creates a toplevel; the compositor logs the count as 2. (P1-T10
-    remains human.)
+- [ ] **P5-T01 Window registry and surface trees.** Prerequisites: P4-T28.
+  Inspect partial registry code before adding another registry. Track runtime
+  toplevel handles, mapped state, metadata and related surfaces across clients.
+  Registration/unregistration is idempotent for role teardown and disconnect;
+  invalidate every focus/render reference safely. No persistent resource pointers.
+  **Acceptance:** new registry tests cover multiple clients, multiple windows
+  from one client, unmapped windows, legal teardown, and abrupt disconnect.
+  Counts and lifetime assertions pass under sanitizers and the normal suite.
 
-  - [ ] **P5-T02 Alt+Tab focus cycling.** Add `--tab-key` option
-    (default `Tab`, evdev 23). In World mode, pressing the tab key
-    (possibly with Shift) cycles keyboard focus through the window
-    registry, sending leave/enter events. Shift+Tab cycles backwards.
-    In Application mode, tab passes through to the client.
-    **Acceptance:** `meson test -C build mode-routing` still passes
-    (regression guard). New test `focus-cycle`: two clients connect
-    and map; after mapping, a second client becomes focused (not the
-    first); pressing tab switches back to the first client.
+- [ ] **P5-T02 Focus cycling and input policy.** Prerequisites: P5-T01.
+  Define keyboard-only world-mode next/previous-window actions and one reserved
+  application-mode escape. Make defaults and modifier requirements unambiguous;
+  ordinary application Tab and typing reach the app. World mode does not deliver
+  client keyboard input just because a candidate is selected. Release held
+  keys/buttons on activation/focus loss and restore surface-local pointer mapping.
+  **Acceptance:** two clients and two same-client windows cycle correctly; world
+  selection emits no app typing, activation delivers input to only the chosen
+  window, focus loss/exit releases held input, and destroyed candidates are skipped.
 
-  - [ ] **P5-T03 xdg_popup support.** Implement `get_popup` for
-    xdg_surface. The popup is owned by a parent xdg_surface (passed
-    as the `parent` argument). The compositor must handle
-    `xdg_popup` requests by sending an immediate synchronous
-    configure, then tracking the popup for rendering. Popups are
-    always rendered above their parent. Implement `grab` request
-    (pointer grab on the parent's surface).
-    **Acceptance:** `meson test -C build client-globals` passes.
-    New test `popup-basic`: client creates a popup on an existing
-    toplevel; the compositor accepts the configure without error.
+- [ ] **P5-T03 Positioners and xdg_popup.** Prerequisites: P5-T01, P5-T02.
+  Implement required positioner state, validation, parent-relative placement,
+  configure/ack/commit ordering, popup stacking, hit testing, and dismissal.
+  Validate grab seat/serial/topmost rules; do not invent a synchronous protocol
+  handshake or grab only the parent's rectangle. Compose popups with their parent
+  in application mode and world preview. Advertise only implemented versions.
+  **Acceptance:** tests exercise configure and actual rendered popup pixels/input,
+  constrained placement, nested popups, dismissal, invalid grab/parent sequences,
+  and parent disconnect. A real client's menu is tested separately in P5-T10.
 
-  - [ ] **P5-T04 Transient and parent-child tracking.** Add
-    `parent_toplevel` and `is_transient` fields to `MansionXdgToplevel`.
-    Handle `xdg_toplevel.set_parent` (store the parent pointer).
-    When a surface is destroyed, clear parent references. In focus
-    cycling, skip transients unless they are the focused surface.
-    **Acceptance:** `meson test -C build lifecycle` passes. New
-    test `transient-parent`: two toplevels where one is set as the
-    parent of the other; when the parent is destroyed, the child
-    loses its parent reference.
+- [ ] **P5-T04 Transient/dialog associations.** Prerequisites: P5-T01.
+  Handle set_parent with protocol validation, cycles, changing parents, and
+  destruction. Define activation/grouping policy without hiding necessary dialogs
+  from the user. App IDs and PIDs may assist grouping but are not window identity.
+  **Acceptance:** tests cover same-process multiple windows, parent removal,
+  dialog focus/visibility and invalid parent cases, with no dangling references.
 
-  - [ ] **P5-T05 Alt+F4 close focused surface.** Intercept the
-    configured close key (default `F4`, evdev 55, with Alt) in
-    World mode. Find the focused surface and destroy its xdg_surface
-    (and thereby its wl_surface and buffer). The compositor should
-    handle the client's subsequent disconnect cleanly.
-    **Acceptance:** `meson test -C build app-exit` still passes.
-    New test `close-focused`: client maps a toplevel, another client
-    triggers Alt+F4, the first client disconnects, the compositor
-    returns to a clean state.
+- [ ] **P5-T05 Request focused-window close.** Prerequisites: P5-T01, P5-T02.
+  A documented compositor close shortcut sends xdg_toplevel.close to the target.
+  Do not destroy its xdg_surface/wl_surface/buffer, kill the client process, or
+  assume disconnect. The client may prompt, defer, or decline. Shortcut handling
+  must not confuse closing a window with shutting down launcher-owned children.
+  **Acceptance:** accepting client closes cleanly; declining/deferred client stays
+  mapped and interactive; two windows in one process show only the selected
+  window requested to close. Unrelated clients survive. Test under sanitizers.
 
-  - [ ] **P5-T06 Window list in world mode.** In world mode, render
-    a simple text window list on the 3D panel showing the focused
-    surface's title/app-id and a count of all toplevels. Use a
-    simple bitmap font or existing 2D rendering. This provides a
-    visible indication of multi-window state without complex 3D
-    layout.
-    **Acceptance:** `meson test -C build render-panel` still passes
-    (regression guard). The panel still shows the focused surface
-    content; the window list is visible as an overlay or title bar.
+- [ ] **P5-T06 Window list and manual assignment.**
+  Prerequisites: P5-T01, P5-T02, P5-T04.
+  Show a searchable/selectable world overlay with title/app ID and active state.
+  Support explicitly assigning an ambiguous live window to an artifact/monitor.
+  Keep overlay UI outside application pixels, preserve accessible keyboard use,
+  and avoid duplicating a fake application list inside the surface texture.
+  **Acceptance:** automated selection/assignment and teardown tests plus a manual
+  overlay readability trial; title/app ID changes appear without misbinding.
 
-  - [ ] **P5-T07 Project 5 wrap-up.** Handoff, status update.
-    Verify all tests pass. Document the multi-window architecture.
-    **Acceptance:** `meson test -C build` passes all tests (including
-    new ones). All P5 sub-tasks ticked or marked as not observed.
+- [ ] **P5-T07 Subsurface composition.** Prerequisites: P5-T01, P5-T03.
+  Implement or integrate the surface-tree behavior required by the chosen clients:
+  parent-relative position, stacking, synchronized/desynchronized commits, input
+  regions and lifecycle. Split into bounded tasks before implementation as needed.
+  **Acceptance:** test synchronized/desynchronized updates, overlapping content,
+  correct input targets and parent destruction; real-client coverage in P5-T10.
 
-- [ ] **P6-T00 Expand Project 6** (durable artifact model, SQLite schema,
-  slot-based movement, restart persistence, migration and interrupted-write
-  tests). Adding SQLite requires a decision record.
-- [ ] **P7-T00 Expand Project 7** (launch recipes, controlled restoration,
-  failure and duplicate handling).
-- [ ] **P8-T00 Expand Project 8** (search, keyboard selection, teleportation,
-  usability trial notes).
+- [ ] **P5-T08 Real multi-application integration harness.**
+  Prerequisites: P5-T03 through P5-T07.
+  Prepare native terminal/browser/editor launch commands with isolated test data
+  and backend flags where needed. Report unsupported protocols and accelerated
+  paths precisely. Do not fall back silently to the host X server or claim that
+  startup logs prove visible usability.
+  **Acceptance:** reproducible launch/mapping logs and ACCEPTANCE.md procedures
+  for three named app versions, menus/dialogs and independent close. Missing
+  applications/backend capabilities remain blockers.
 
-Projects 9 and later are defined in the roadmap only; expand them when their
-dependencies are ticked.
+- [ ] **P5-T10 (human) Multiple applications acceptance.**
+  Prerequisites: P5-T08. Verify terminal, browser and editor coexist, focus/input
+  remain correct, menus/dialogs appear at the correct parent, declined close is
+  honored, and closing one window leaves the others working.
+  **Acceptance:** dated observations, screenshots, exact versions and limitations
+  in ACCEPTANCE/STATUS. This evidence must exist before P5-T09 wrap-up.
+
+- [ ] **P5-T09 Project 5 product gate and wrap-up.**
+  Prerequisites: P5-T01 through P5-T08 and P5-T10.
+  **Acceptance:** normal/sanitizer suites and human multi-application criteria
+  pass; record tested scope, surface-tree ownership and remaining compatibility
+  limits in handoff 05. A task marked blocked/not observed is not a passing gate.
+
+- [ ] **P6-T00 Expand durable placement tasks.** Prerequisites: P5-T09.
+  Plan a versioned SQLite schema and migrations, resource/artifact/world-entity
+  separation, stable UUIDs, room/parent-relative transforms, slot-based movement,
+  transactions, export/reset and interrupted-write recovery. Runtime handles,
+  Wayland resources, PIDs and GPU IDs are excluded from persisted identity.
+  Closing an app preserves its inactive artifact; moving a file artifact does
+  not implicitly move the underlying file. Add tests for parent movement,
+  deleted resources, stale runtime bindings, duplicate names, restarts and failed
+  writes. Record SQLite dependency/version choice before adding it.
+  **Acceptance:** bounded dependency-ordered tasks and migration/identity ADR;
+  each task has commands, failure cases and a product restart demonstration.
+
+- [ ] **P7-T00 Expand launch and restoration tasks.** Prerequisites: Project 6
+  product gate (to be added by P6-T00).
+  Plan argv-safe launch recipes, explicit restore choices, reused-process and
+  multiple-window ambiguity, manual assignment, failed launches, duplicate
+  suppression, and shutdown ownership. Restoration reopens resources; it does
+  not recover arbitrary unsaved application memory.
+  **Acceptance:** bounded tests and a manual launch/restart sequence, including
+  ambiguous window binding and failure without duplicate artifacts.
+
+- [ ] **P8-T00 Expand useful-workspace tasks.** Prerequisites: Project 7 gate
+  (to be added by P7-T00).
+  Plan search, inactive artifacts, keyboard selection, list/teleport access,
+  reduced-motion options and a real usability trial. Searching must not populate
+  the room with every indexed file. Path illumination is the later 8N track.
+  **Acceptance:** bounded tasks and a demonstration finding/reopening a placed
+  item after restart, with ordinary files remaining accessible from the host.
+
+Projects 9 and later, including the 8N/14R/15I spatial feature tracks, are
+defined in the roadmap. Expand them only after their stated prerequisites.
