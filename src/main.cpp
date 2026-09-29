@@ -507,11 +507,10 @@ int main(int argc, char** argv) {
 
         auto frame_start = clock::now();
 
-        // Process X11 events (windowed mode only) — must run before Wayland
-        // dispatch so input events reach clients promptly.
+        // Process Wayland client events (windowed mode only).
         if (!opts.headless && display) {
-            if (input_process_x11(display)) {
-                // WM_DELETE_WINDOW received; exit gracefully.
+            if (input_process_wayland_client(display)) {
+                // xdg_toplevel.close received; exit gracefully.
                 running = 0;
                 break;
             }

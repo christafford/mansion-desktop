@@ -7,9 +7,10 @@
 #include <iostream>
 #include <fcntl.h>
 #include <unistd.h>
-
-#include <X11/Xlib.h>
-#include <X11/Xatom.h>
+#include <poll.h>
+#include <sys/ioctl.h>
+#include <linux/input.h>
+#include <dirent.h>
 
 #include <wayland-server-protocol.h>
 #include <xkbcommon/xkbcommon.h>
@@ -20,11 +21,6 @@
 #include "input.h"
 #include "room.h"
 #include "xdg-shell.h"
-
-/* Evdev button codes (from linux/input-event-codes.h). */
-static constexpr uint32_t BTN_LEFT   = 0x110;
-static constexpr uint32_t BTN_RIGHT  = 0x111;
-static constexpr uint32_t BTN_MIDDLE = 0x112;
 
 /* memfd_create may not be declared without _GNU_SOURCE. */
 extern "C" int memfd_create(const char *name, unsigned int flags);
@@ -45,13 +41,17 @@ static int g_teleport_key = 0;
 /* P5-T02: evdev keycode for tab key (default: Tab = 23). */
 static int g_tab_key = 23;
 
-/* Movement key codes (evdev / linux/input-event-codes.h). */
-static constexpr unsigned KEY_W       = 17;
-static constexpr unsigned KEY_A       = 30;
-static constexpr unsigned KEY_S       = 31;
-static constexpr unsigned KEY_D       = 32;
+/* Movement key codes (from linux/input.h). */
 static constexpr double MOVEMENT_SPEED = 0.01;
 static constexpr double MOUSE_SENSITIVITY = 0.002;
+
+/* Evdev file descriptors (opened at startup, closed at teardown). */
+static int evdev_kb_fd = -1;
+static int evdev_pt_fd = -1;
+
+/* P5: live camera movement state — updated from evdev keys/mouse. */
+static bool live_w = false, live_a = false, live_s = false, live_d = false;
+static int32_t live_mouse_x = 0, live_mouse_y = 0;
 
 void input_mode_set(InputMode mode) {
     g_input_mode = mode;
@@ -128,13 +128,69 @@ struct MansionSeat {
 };
 
 int input_init(void) {
-    /* X11 input is handled via input_process_x11() in the main loop
-     * (windowed mode) or via --input-script (headless / tests). */
+    /* Scan /dev/input/ for keyboard and pointer evdev devices. */
+    DIR* dir = opendir("/dev/input");
+    if (!dir) return 0;  /* no input devices — fine for headless */
+
+    struct dirent* ent;
+    while ((ent = readdir(dir)) != nullptr) {
+        if (ent->d_name[0] == '.') continue;
+
+        char path[256];
+        snprintf(path, sizeof(path), "/dev/input/%s", ent->d_name);
+
+        int fd = open(path, O_RDWR | O_CLOEXEC | O_NONBLOCK);
+        if (fd < 0) continue;
+
+        /* Check capability mask. */
+        uint64_t bits = 0;
+        if (ioctl(fd, EVIOCGBIT(0, sizeof(bits)), &bits) < 0) {
+            close(fd);
+            continue;
+        }
+
+        bool has_ev_key = bits & (1ULL << EV_KEY);
+        bool has_ev_rel = bits & (1ULL << EV_REL);
+
+        if (has_ev_key && !has_ev_rel) {
+            /* Potential keyboard — check for movement keys. */
+            uint8_t key_bits[KEY_MAX / 8 + 1] = {};
+            if (ioctl(fd, EVIOCGBIT(EV_KEY, sizeof(key_bits)), key_bits) >= 0) {
+                if ((key_bits[KEY_W / 8] & (1 << (KEY_W % 8))) ||
+                    (key_bits[KEY_S / 8] & (1 << (KEY_S % 8)))) {
+                    if (evdev_kb_fd < 0) {
+                        evdev_kb_fd = fd;
+                        closedir(dir);
+                        return 0;
+                    }
+                }
+            }
+        }
+
+        if (has_ev_rel) {
+            /* Potential pointer — check for REL_X/REL_Y. */
+            uint8_t rel_bits[REL_MAX / 8 + 1] = {};
+            if (ioctl(fd, EVIOCGBIT(EV_REL, sizeof(rel_bits)), rel_bits) >= 0) {
+                if ((rel_bits[REL_X / 8] & (1 << (REL_X % 8))) &&
+                    (rel_bits[REL_Y / 8] & (1 << (REL_Y % 8)))) {
+                    if (evdev_pt_fd < 0) {
+                        evdev_pt_fd = fd;
+                        closedir(dir);
+                        return 0;
+                    }
+                }
+            }
+        }
+
+        close(fd);
+    }
+    closedir(dir);
     return 0;
 }
 
 void input_destroy(void) {
-    /* Nothing to clean up — X11 is managed by the display. */
+    if (evdev_kb_fd >= 0) { close(evdev_kb_fd); evdev_kb_fd = -1; }
+    if (evdev_pt_fd >= 0) { close(evdev_pt_fd); evdev_pt_fd = -1; }
 }
 
 /* P3-T06: Clear all seat-level focus pointers to prevent dangling references
@@ -344,274 +400,130 @@ static void pointer_check_focus(uint32_t serial) {
 }
 
 void input_process(void) {
-    /* X11 events are processed via input_process_x11() in windowed mode.
-     * Evdev is no longer used. */
-}
+    /* Process evdev input for camera movement (keyboard + pointer).
+     * This runs in the main loop and updates live_w/a/s/d,
+     * live_mouse_x/y for the camera look system. */
+    if (evdev_kb_fd < 0 && evdev_pt_fd < 0) return;
 
-/* ---------- X11 event processing (P1-T07) ---------- */
+    struct input_event ev;
+    struct pollfd pfds[2];
+    int nfds = 0;
 
-static Atom wm_delete_window_atom = None;
-
-/* ---------- Live X11 camera movement ---------- */
-
-/* Whether the X11 window currently has input focus. */
-static bool g_seat_x11_focused = false;
-
-static bool live_w = false, live_a = false, live_s = false, live_d = false;
-static int32_t live_mouse_x = 0, live_mouse_y = 0;
-static int32_t prev_mouse_x = 0, prev_mouse_y = 0;
-static bool has_prev_mouse = false;
-
-/* Forward declaration — apply_movement is defined below in this file. */
-static void apply_movement(struct MansionDisplay* display, double delta_ms,
-                           MovementState* ms);
-
-/* Forward declaration — apply_mouse_look is defined below in this file. */
-static void apply_mouse_look(struct MansionDisplay* display,
-                             MovementState* ms);
-
-static void apply_live_movement(MansionDisplay* display, double delta_ms) {
-    if (!display || delta_ms <= 0 || display->flat_mode) return;
-    MovementState ms;
-    ms.w = live_w;  ms.a = live_a;  ms.s = live_s;  ms.d = live_d;
-    ms.up    = false; ms.down = false;  ms.left  = false; ms.right = false;
-    ms.mouseX = live_mouse_x;
-    ms.mouseY = live_mouse_y;
-    live_mouse_x = 0;
-    live_mouse_y = 0;
-    apply_movement(display, delta_ms, &ms);
-    apply_mouse_look(display, &ms);
-}
-
-int input_process_x11(struct MansionDisplay* m_display) {
-    if (!m_display || !m_display->x_display) return 0;
-
-    Display* xdpy = m_display->x_display;
-
-    /* Check if the X11 connection is still alive. */
-    if (XConnectionNumber(xdpy) < 0) {
-        /* Connection was closed — try to reopen. */
-        std::cerr << "X11 connection lost, attempting reconnect..." << std::endl;
-        XCloseDisplay(xdpy);
-        m_display->x_display = nullptr;
-        m_display->x_window = None;
-        wm_delete_window_atom = None;
-        m_display->egl_display = EGL_NO_DISPLAY;
-        m_display->egl_context = EGL_NO_CONTEXT;
-        m_display->egl_surface = EGLSurface(nullptr);
-
-        /* Retry opening X11. */
-        Display* new_dpy = XOpenDisplay(nullptr);
-        if (!new_dpy) {
-            std::cerr << "Reconnect failed, running headless" << std::endl;
-            return 0;
-        }
-        m_display->x_display = new_dpy;
-
-        /* Recreate window and EGL context. */
-        create_egl_and_window(m_display);
-        if (!m_display->egl_display || m_display->egl_display == EGL_NO_DISPLAY) {
-            std::cerr << "EGL recreation failed, running headless" << std::endl;
-            XCloseDisplay(new_dpy);
-            m_display->x_display = nullptr;
-            m_display->egl_display = EGL_NO_DISPLAY;
-            return 0;
-        }
-        xdpy = new_dpy;
+    if (evdev_kb_fd >= 0) {
+        pfds[nfds].fd = evdev_kb_fd;
+        pfds[nfds].events = POLLIN;
+        nfds++;
+    }
+    if (evdev_pt_fd >= 0) {
+        pfds[nfds].fd = evdev_pt_fd;
+        pfds[nfds].events = POLLIN;
+        nfds++;
     }
 
-    /* Lazily create the WM_DELETE_WINDOW atom. */
-    if (!wm_delete_window_atom) {
-        wm_delete_window_atom =
-            XInternAtom(xdpy, "WM_DELETE_WINDOW", False);
-    }
+    int rc = poll(pfds, nfds, 0);  /* non-blocking */
+    if (rc <= 0) return;
 
-    XEvent ev;
-    while (XPending(xdpy) > 0) {
-        XNextEvent(xdpy, &ev);
+    for (int i = 0; i < nfds; i++) {
+        if (pfds[i].revents & POLLIN) {
+            int fd = pfds[i].fd;
+            while (read(fd, &ev, sizeof(ev)) == sizeof(ev)) {
+                if (ev.type == EV_KEY) {
+                    bool is_button = (ev.code >= BTN_LEFT && ev.code <= BTN_MISC) ||
+                                     ev.code == BTN_TOUCH ||
+                                     ev.code == BTN_MOUSE;
+                    uint32_t state = (ev.value == 1) ?
+                        WL_KEYBOARD_KEY_STATE_PRESSED :
+                        WL_KEYBOARD_KEY_STATE_RELEASED;
 
-        switch (ev.type) {
-        /* ---- Key events ---- */
-        case KeyPress:
-        case KeyRelease: {
-            uint32_t x11_keycode = ev.xkey.keycode;   /* X11 keycode (≥ 8) */
-            uint32_t linux_keycode = x11_keycode - 8; /* → evdev / Linux keycode */
-            uint32_t time_msec   = ev.xkey.time;
-            uint32_t state       = (ev.type == KeyPress) ?
-                WL_KEYBOARD_KEY_STATE_PRESSED :
-                WL_KEYBOARD_KEY_STATE_RELEASED;
+                    if (is_button) {
+                        /* Mouse button — forward to Wayland clients. */
+                        uint32_t button = 0;
+                        if (ev.code == BTN_LEFT)    button = BTN_LEFT;
+                        else if (ev.code == BTN_RIGHT)  button = BTN_RIGHT;
+                        else if (ev.code == BTN_MIDDLE) button = BTN_MIDDLE;
 
-            /* P5: live camera movement (only when window has focus). */
-            if (g_seat_x11_focused) {
-                if (linux_keycode == KEY_W)  live_w  = (state == WL_KEYBOARD_KEY_STATE_PRESSED);
-                if (linux_keycode == KEY_A)  live_a  = (state == WL_KEYBOARD_KEY_STATE_PRESSED);
-                if (linux_keycode == KEY_S)  live_s  = (state == WL_KEYBOARD_KEY_STATE_PRESSED);
-                if (linux_keycode == KEY_D)  live_d  = (state == WL_KEYBOARD_KEY_STATE_PRESSED);
-            }
+                        if (button) {
+                            if (state == WL_KEYBOARD_KEY_STATE_PRESSED)
+                                g_seat->grab_surface_resource = g_seat->pointer_surface_resource;
+                            else
+                                g_seat->grab_surface_resource = nullptr;
 
-            /* Update xkb state (xkbcommon uses X11 keycode range). */
-            if (g_seat && g_seat->xkbstate) {
-                xkb_state_update_key(g_seat->xkbstate, x11_keycode,
-                    state == WL_KEYBOARD_KEY_STATE_PRESSED ?
-                        XKB_KEY_DOWN : XKB_KEY_UP);
-            }
+                            uint32_t serial = ++g_seat->serial;
+                            send_pointer_button(serial, 0, button, state);
+                        }
+                    } else {
+                        /* Keyboard key — camera movement + forward to clients. */
+                        /* P5: live camera movement from evdev keys. */
+                        if (ev.value == 1) {
+                            if (ev.code == KEY_W)  live_w  = true;
+                            if (ev.code == KEY_A)  live_a  = true;
+                            if (ev.code == KEY_S)  live_s = true;
+                            if (ev.code == KEY_D)  live_d = true;
+                        }
+                        if (ev.value == 0) {
+                            if (ev.code == KEY_W)  live_w  = false;
+                            if (ev.code == KEY_A)  live_a  = false;
+                            if (ev.code == KEY_S)  live_s = false;
+                            if (ev.code == KEY_D)  live_d = false;
+                        }
 
-            uint32_t serial = ++g_seat->serial;
+                        /* Update xkb state and forward to Wayland clients. */
+                        if (g_seat && g_seat->xkbstate && state) {
+                            xkb_state_update_key(g_seat->xkbstate,
+                                ev.code + 8,
+                                state == WL_KEYBOARD_KEY_STATE_PRESSED ?
+                                    XKB_KEY_DOWN : XKB_KEY_UP);
+                        }
 
-            /* Send key event to all keyboard clients. */
-            {
-                SeatKeyboardClient *kc, *kc_next;
-                wl_list_for_each_safe(kc, kc_next,
-                    &g_seat->keyboard_clients, seat_link) {
-                    if (kc->resource)
-                        wl_keyboard_send_key(kc->resource,
-                            serial, time_msec, linux_keycode, state);
+                        uint32_t serial = ++g_seat->serial;
+                        SeatKeyboardClient *kc, *kc_next;
+                        wl_list_for_each_safe(kc, kc_next,
+                            &g_seat->keyboard_clients, seat_link) {
+                            if (kc->resource)
+                                wl_keyboard_send_key(kc->resource,
+                                    serial, 0, ev.code, state);
+                        }
+                        send_keymap_modifiers(serial);
+                    }
+
+                } else if (ev.type == EV_REL) {
+                    /* Relative pointer motion — accumulate delta for camera look. */
+                    if (ev.code == REL_X)  live_mouse_x += ev.value;
+                    if (ev.code == REL_Y)  live_mouse_y += ev.value;
+
+                    /* Also forward pointer motion to Wayland clients. */
+                    if (g_seat) {
+                        uint32_t serial = ++g_seat->serial;
+                        pointer_check_focus(serial);
+                        send_pointer_motion(0);
+                        send_pointer_axis_done(0);
+                    }
                 }
             }
-
-            /* Send updated modifier state. */
-            send_keymap_modifiers(serial);
-            break;
-        }
-
-        /* ---- Pointer button events ---- */
-        case ButtonPress:
-        case ButtonRelease: {
-            uint32_t button = 0;
-            switch (ev.xbutton.button) {
-            case 1: button = BTN_LEFT;   break;
-            case 2: button = BTN_MIDDLE; break;
-            case 3: button = BTN_RIGHT;  break;
-            /* Buttons 4/5 = wheel — handled below via axis. */
-            default: break;
-            }
-
-            uint32_t serial;
-            if (button) {
-                uint32_t button_state = (ev.type == ButtonPress) ?
-                    WL_POINTER_BUTTON_STATE_PRESSED :
-                    WL_POINTER_BUTTON_STATE_RELEASED;
-
-                if (button_state == WL_POINTER_BUTTON_STATE_PRESSED)
-                    g_seat->grab_surface_resource = g_seat->pointer_surface_resource;
-                else
-                    g_seat->grab_surface_resource = nullptr;
-
-                serial = ++g_seat->serial;
-                send_pointer_button(serial, ev.xbutton.time,
-                                    button, button_state);
-            } else {
-                /* Wheel: buttons 4 (up) and 5 (down). */
-                uint32_t axis  = (ev.xbutton.button == 4) ?
-                    static_cast<uint32_t>(WL_POINTER_AXIS_VERTICAL_SCROLL) :
-                    static_cast<uint32_t>(WL_POINTER_AXIS_VERTICAL_SCROLL);
-                wl_fixed_t value = (ev.xbutton.button == 4) ?
-                    wl_fixed_from_int(10) : wl_fixed_from_int(-10);
-                serial = ++g_seat->serial;
-                send_pointer_axis(ev.xbutton.time,
-                    static_cast<enum wl_pointer_axis>(axis), value);
-            }
-            break;
-        }
-
-        /* ---- Pointer motion events ---- */
-        case MotionNotify: {
-            pointer_x = wl_fixed_from_int(ev.xmotion.x);
-            pointer_y = wl_fixed_from_int(ev.xmotion.y);
-
-            /* P5: track mouse delta for camera look. */
-            if (has_prev_mouse) {
-                live_mouse_x += ev.xmotion.x - prev_mouse_x;
-                live_mouse_y += ev.xmotion.y - prev_mouse_y;
-            }
-            prev_mouse_x = ev.xmotion.x;
-            prev_mouse_y = ev.xmotion.y;
-            has_prev_mouse = true;
-
-            uint32_t serial = ++g_seat->serial;
-            pointer_check_focus(serial);
-            send_pointer_motion(ev.xmotion.time);
-            send_pointer_axis_done(ev.xmotion.time);
-            break;
-        }
-
-        /* ---- Window resize ---- */
-        case ConfigureNotify: {
-            int new_w = ev.xconfigure.width;
-            int new_h = ev.xconfigure.height;
-            if (new_w > 0 && new_h > 0 &&
-                (new_w != m_display->window_width ||
-                 new_h != m_display->window_height)) {
-                m_display->window_width  = new_w;
-                m_display->window_height = new_h;
-                display_resize(m_display);
-            }
-            break;
-        }
-
-        /* ---- WM_DELETE_WINDOW (window close) ---- */
-        case ClientMessage: {
-            if (ev.xclient.message_type == wm_delete_window_atom) {
-                return -1;
-            }
-            break;
-        }
-
-        /* ---- Focus changes (informational) ---- */
-        case FocusOut: {
-            /* P5: stop live camera movement when focus is lost. */
-            g_seat_x11_focused = false;
-            live_w = live_a = live_s = live_d = false;
-            live_mouse_x = live_mouse_y = 0;
-            prev_mouse_x = prev_mouse_y = 0;
-            has_prev_mouse = false;
-            /* P3-T03: save current mode, then exit application mode and switch to World. */
-            if (g_seat) {
-                g_seat->stored_mode_when_focus_lost = input_mode_get();
-                exit_application_mode();
-                input_mode_set(InputMode::World);
-            }
-            break;
-        }
-        case FocusIn: {
-            /* P5: allow live camera movement when window has focus. */
-            g_seat_x11_focused = true;
-            /* P3-T03: re-enter application mode if stored mode was Application. */
-            if (g_seat && g_seat->stored_mode_when_focus_lost == InputMode::Application
-                && g_compositor && g_compositor->focused_surface_resource) {
-                input_mode_set(InputMode::Application);
-                seat_set_keyboard_focus(g_seat,
-                    g_compositor->focused_surface_resource, g_compositor);
-            } else if (g_seat && g_compositor &&
-                       g_compositor->focused_surface_resource) {
-                seat_set_keyboard_focus(g_seat,
-                    g_compositor->focused_surface_resource, g_compositor);
-            }
-            break;
-        }
-
-        /* ---- Expose events — suppress; EGL handles all rendering ---- */
-        case Expose:
-            break;
-
-        default:
-            break;
         }
     }
+}
 
-    /* P5: apply live X11 keyboard + mouse to the camera. */
-    apply_live_movement(m_display, 16.67);
+/* Window close state for Wayland client (xdg_toplevel.close). */
+static bool g_window_closed = false;
 
+/* Process Wayland client events (dispatch pending events, check close flag).
+ * Returns 0 on success, -1 if the window was closed by the user. */
+int input_process_wayland_client(struct MansionDisplay* m_display) {
+    (void)m_display;
+    if (g_window_closed) {
+        g_window_closed = false;
+        return -1;
+    }
     return 0;
 }
 
-/* ---------- Input script execution (P1-T06-E) ---------- */
+/* Called from the toplevel.close listener in display.cpp. */
+void input_handle_window_close(void) {
+    g_window_closed = true;
+}
 
-/* Movement key codes (evdev / linux/input-event-codes.h). */
-static constexpr unsigned KEY_UP      = 103;
-static constexpr unsigned KEY_DOWN    = 108;
-static constexpr unsigned KEY_LEFT    = 105;
-static constexpr unsigned KEY_RIGHT   = 106;
+/* ---------- Input script execution (P1-T06-E) ---------- */
 
 struct InputScript* input_script_init(const char* filename) {
     auto* s = new InputScript();

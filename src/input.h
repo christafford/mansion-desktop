@@ -86,11 +86,15 @@ void input_script_apply_movement(struct InputScript* s,
 /* Destroy the script handle. */
 void input_script_destroy(struct InputScript* s);
 
-/* Evdev input device handling (now a no-op; replaced by X11 in windowed mode). */
+/* Evdev input device handling (now a no-op; replaced by Wayland client
+ * input in windowed mode). */
 int input_init(void);
 void input_process(void);
 void input_destroy(void);
 
-/* Process X11 events from the display and dispatch them to the Wayland seat.
-   Returns 0 on success, -1 if the window was closed (WM_DELETE_WINDOW). */
-int input_process_x11(struct MansionDisplay* m_display);
+/* Handle window close request from the Wayland client (xdg_toplevel.close). */
+void input_handle_window_close(void);
+
+/* Process Wayland client events (dispatch pending events, check close flag).
+ * Returns 0 on success, -1 if the window was closed by the user. */
+int input_process_wayland_client(struct MansionDisplay* m_display);

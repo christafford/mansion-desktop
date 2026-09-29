@@ -2,8 +2,8 @@
 
 #include <EGL/egl.h>
 #include <wayland-server.h>
-#include <X11/Xlib.h>
-#include <X11/Xatom.h>
+#include <wayland-client.h>
+#include <wayland-egl.h>
 
 struct MansionCompositor;
 struct MansionRenderer;
@@ -35,8 +35,12 @@ struct MansionDisplay {
     int window_width;
     int window_height;
     struct MansionRenderer* renderer;
-    Display* x_display;      /* X11 display (windowed mode only) */
-    Window x_window;         /* X11 window (windowed mode only) */
+
+    /* Wayland client connection for the host window (P5: native presentation).
+     * All pointers default to null; only set in windowed mode. */
+    struct wl_display* wl_client_display = nullptr;
+    struct wl_surface* wl_surface = nullptr;
+    struct wl_egl_window* wl_egl_window = nullptr;
 
     /* P2-T02: 3D panel rendering state */
     Camera camera;
@@ -82,8 +86,6 @@ struct MansionRenderer* get_renderer(struct MansionDisplay* display);
 EGLContext get_egl_context(struct MansionDisplay* display);
 bool init_renderer(struct MansionDisplay* display);
 void destroy_renderer(struct MansionDisplay* display);
-/* Recreate X11 window + EGL context after a connection loss. Returns true on success. */
-bool create_egl_and_window(struct MansionDisplay* display);
 void render_surface(struct MansionDisplay* display, struct wl_resource* surface, int32_t x, int32_t y);
 /* Render one final frame and write the framebuffer as a binary PPM (P6) file.
  * Returns false if EGL/renderer is unavailable. */

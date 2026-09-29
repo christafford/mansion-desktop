@@ -39,9 +39,9 @@ sources = files(
 )
 
 mansion_exe = executable('mansion-desktop',
-    sources, xdg_shell_server_h, xdg_shell_code,
+    sources, xdg_shell_server_h, xdg_shell_code, xdg_shell_client_h,
     cpp_args: cpp_args,
-    dependencies: [wayland_server, wayland_egl, egl, glesv2, xkbcommon, x11],
+    dependencies: [wayland_server, wayland_client, wayland_egl, egl, glesv2, xkbcommon],
     include_directories: include_directories('.'),
     install: true,
 )

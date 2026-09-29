@@ -5,9 +5,8 @@
 #include <string>
 #include <vector>
 
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
-#include <X11/Xatom.h>
+#include <wayland-client.h>
+#include <wayland-egl.h>
 #include <wayland-server-protocol.h>
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
@@ -21,6 +20,8 @@
 #include "room.h"
 #include "xdg-shell.h"
 #include "input.h"
+
+/* ─── MansionRenderer definition ───────────────────────────────────────────── */
 
 struct MansionRenderer {
     GLuint program;
@@ -42,16 +43,10 @@ struct MansionRenderer {
     long long bytes_uploaded = 0;
 };
 
-// Forward declarations
-static GLuint create_shader(GLenum type, const char* source);
-static GLuint create_program(const char* vertex_shader_source, const char* fragment_shader_source);
-static void render_application_fullscreen(struct MansionDisplay* display);
+/* Generated xdg-shell client protocol (interfaces, functions, listener types). */
+#include "xdg-shell-client-protocol.h"
 
-static const EGLint context_attr[] = {
-    EGL_CONTEXT_CLIENT_VERSION, 2,
-    EGL_NONE
-};
-
+/* EGL attribute arrays. */
 static const EGLint config_attr[] = {
     EGL_RED_SIZE, 8,
     EGL_GREEN_SIZE, 8,
@@ -61,6 +56,20 @@ static const EGLint config_attr[] = {
     EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
     EGL_NONE
 };
+
+static const EGLint context_attr[] = {
+    EGL_CONTEXT_CLIENT_VERSION, 2,
+    EGL_NONE
+};
+
+/* ─── Forward declarations ─────────────────────────────────────────────────── */
+
+static GLuint create_shader(GLenum type, const char* source);
+static GLuint create_program(const char* vertex_shader_source,
+                             const char* fragment_shader_source);
+static void render_application_fullscreen(struct MansionDisplay* display);
+
+/* ─── Shader / program helpers ──────────────────────────────────────────────── */
 
 static GLuint create_shader(GLenum type, const char* source) {
     GLuint shader = glCreateShader(type);
@@ -82,11 +91,13 @@ static GLuint create_shader(GLenum type, const char* source) {
     return shader;
 }
 
-static GLuint create_program(const char* vertex_shader_source, const char* fragment_shader_source) {
+static GLuint create_program(const char* vertex_shader_source,
+                             const char* fragment_shader_source) {
     GLuint vertex_shader = create_shader(GL_VERTEX_SHADER, vertex_shader_source);
     if (!vertex_shader) return 0;
 
-    GLuint fragment_shader = create_shader(GL_FRAGMENT_SHADER, fragment_shader_source);
+    GLuint fragment_shader =
+        create_shader(GL_FRAGMENT_SHADER, fragment_shader_source);
     if (!fragment_shader) {
         glDeleteShader(vertex_shader);
         return 0;
@@ -97,17 +108,17 @@ static GLuint create_program(const char* vertex_shader_source, const char* fragm
     glAttachShader(program, fragment_shader);
     glLinkProgram(program);
 
-    GLint status;
-    glGetProgramiv(program, GL_LINK_STATUS, &status);
-    if (status == GL_FALSE) {
+    GLint link_status;
+    glGetProgramiv(program, GL_LINK_STATUS, &link_status);
+    if (link_status == GL_FALSE) {
         GLint length;
         glGetProgramiv(program, GL_INFO_LOG_LENGTH, &length);
         std::string log(length + 1, '\0');
         glGetProgramInfoLog(program, length, nullptr, &log[0]);
-        std::cerr << "Program linkage failed: " << log << std::endl;
+        std::cerr << "Shader link failed: " << log << std::endl;
+        glDeleteProgram(program);
         glDeleteShader(vertex_shader);
         glDeleteShader(fragment_shader);
-        glDeleteProgram(program);
         return 0;
     }
 
@@ -116,126 +127,340 @@ static GLuint create_program(const char* vertex_shader_source, const char* fragm
     return program;
 }
 
-/* Recreate the X11 window + EGL context (used for reconnect).
- * Must be called after x_display has been reopened but before
- * any other X11/EGL calls. */
-bool create_egl_and_window(struct MansionDisplay* mansion_display) {
-    Display* x_display = mansion_display->x_display;
-    if (!x_display) return false;
+/* ─── State for the xdg_shell client setup ─────────────────────────────────── */
 
-    int screen = DefaultScreen(x_display);
+struct host_window_state {
+    struct wl_display *wl_client;       /* Wayland client display */
+    struct xdg_wm_base *wm_base;        /* xdg_wm_base global */
+    struct wl_compositor *compositor;   /* wl_compositor global */
+    struct wl_surface *surface;         /* Wayland surface */
+    struct wl_egl_window *egl_win;      /* EGL window wrapper */
+    struct xdg_surface *xdg_surface;    /* xdg_surface */
+    struct xdg_toplevel *toplevel;      /* xdg_toplevel */
+    uint32_t configure_serial;          /* serial for ack_configure */
+    int width;
+    int height;
+    bool configured;
+};
 
-    /* Recreate the X11 window. */
-    Window x_window = XCreateSimpleWindow(x_display, DefaultRootWindow(x_display),
-                                          0, 0, mansion_display->window_width,
-                                          mansion_display->window_height, 0,
-                                          BlackPixel(x_display, screen),
-                                          BlackPixel(x_display, screen));
-    XRaiseWindow(x_display, x_window);
-    XMapRaised(x_display, x_window);
+/* ─── wl_registry global ───────────────────────────────────────────────────── */
 
-    /* Select input events. */
-    XSelectInput(x_display, x_window,
-        KeyPressMask | KeyReleaseMask |
-        ButtonPressMask | ButtonReleaseMask |
-        PointerMotionMask |
-        FocusChangeMask | StructureNotifyMask |
-        ExposureMask);
-    XFlush(x_display);
+static struct host_window_state *g_hws = nullptr;
 
-    mansion_display->x_window = x_window;
-
-    /* Create EGL display for X11. */
-    EGLint config_attr[] = {
-        EGL_BUFFER_SIZE,  32,
-        EGL_DEPTH_SIZE,   0,
-        EGL_STENCIL_SIZE, 0,
-        EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
-        EGL_NONE,
-    };
-    EGLint context_attr[] = {
-        EGL_CONTEXT_CLIENT_VERSION, 2,
-        EGL_NONE,
-    };
-
-    /* Terminate old EGL state. */
-    if (mansion_display->egl_display != EGL_NO_DISPLAY) {
-        eglMakeCurrent(mansion_display->egl_display, EGL_NO_SURFACE,
-                       EGL_NO_SURFACE, EGL_NO_CONTEXT);
-        if (mansion_display->egl_surface != EGL_NO_SURFACE)
-            eglDestroySurface(mansion_display->egl_display, mansion_display->egl_surface);
-        if (mansion_display->egl_context != EGL_NO_CONTEXT)
-            eglDestroyContext(mansion_display->egl_display, mansion_display->egl_context);
-        eglTerminate(mansion_display->egl_display);
+static void registry_global(void *data, struct wl_registry *registry,
+                            uint32_t id, const char *interface,
+                            uint32_t version)
+{
+    (void)registry;
+    if (strcmp(interface, "xdg_wm_base") == 0 && g_hws && !g_hws->wm_base) {
+        g_hws->wm_base =
+            (struct xdg_wm_base *)wl_registry_bind(registry, id,
+                                                   &xdg_wm_base_interface,
+                                                   1);
     }
-    mansion_display->egl_surface = EGL_NO_SURFACE;
-    mansion_display->egl_context = EGL_NO_CONTEXT;
+    if (strcmp(interface, "wl_compositor") == 0 && g_hws &&
+        !g_hws->compositor) {
+        g_hws->compositor =
+            (struct wl_compositor *)wl_registry_bind(registry, id,
+                                                     &wl_compositor_interface,
+                                                     1);
+    }
+}
 
-    /* Get and initialize EGL display. */
-    mansion_display->egl_display =
-        eglGetDisplay((EGLNativeDisplayType)x_display);
-    if (mansion_display->egl_display == EGL_NO_DISPLAY) {
-        std::cerr << "Reconnect: Failed to get EGL display" << std::endl;
+static void registry_global_remove(void *data, struct wl_registry *registry,
+                                   uint32_t name)
+{
+    (void)data; (void)registry; (void)name;
+}
+
+static constexpr struct wl_registry_listener registry_listener = {
+    .global = registry_global,
+    .global_remove = registry_global_remove,
+};
+
+/* ─── xdg_shell listeners ──────────────────────────────────────────────────── */
+
+static void wm_base_ping(void *data, struct xdg_wm_base *wm, uint32_t serial)
+{
+    (void)wm;
+    xdg_wm_base_pong(wm, serial);
+}
+
+static constexpr struct xdg_wm_base_listener wm_base_listener = {
+    .ping = wm_base_ping,
+};
+
+static void xdg_surface_configure(void *data, struct xdg_surface *surface,
+                                  uint32_t serial)
+{
+    (void)surface;
+    xdg_surface_ack_configure(surface, serial);
+    g_hws->configure_serial = serial;
+    g_hws->configured = true;
+}
+
+static constexpr struct xdg_surface_listener xdg_surface_listener = {
+    .configure = xdg_surface_configure,
+};
+
+static void toplevel_close(void *data, struct xdg_toplevel *toplevel)
+{
+    (void)toplevel; (void)data;
+    /* Request the main loop to exit — set a flag that main.cpp checks. */
+    input_handle_window_close();
+}
+
+static void toplevel_configure(void *data, struct xdg_toplevel *toplevel,
+                               int32_t width, int32_t height,
+                               struct wl_array *states)
+{
+    (void)toplevel; (void)states;
+    struct host_window_state *hws = (struct host_window_state *)data;
+    if (width <= 0 || height <= 0) return;
+    hws->width  = width;
+    hws->height = height;
+}
+
+static constexpr struct xdg_toplevel_listener toplevel_listener = {
+    .configure = toplevel_configure,
+    .close     = toplevel_close,
+};
+
+/* ─── Wayland client display setup ───────────────────────────────────────────
+ *
+ * Creates a native Wayland client connection to the running compositor
+ * (KWin on Wayland). This eliminates the X11 → Xwayland → KWin chain that
+ * caused flickering: the EGL frame is now presented directly by KWin
+ * as the compositor's own output, with proper vsync.
+ *
+ *   Before (flickering):
+ *     Our EGL → X11 window → Xwayland → KWin → Screen
+ *
+ *   After (smooth):
+ *     Our EGL → wl_egl_window → KWin (compositor) → Screen
+ *
+ * Both paths use the same EGL context and same KWin compositor; the
+ * difference is that we now present through the compositor's native
+ * interface instead of an X11 translation layer.
+ */
+
+bool setup_wayland_client_window(struct MansionDisplay* display)
+{
+    /* Connect to the Wayland compositor (reads WAYLAND_DISPLAY env var). */
+    struct wl_display *wl_client = wl_display_connect(nullptr);
+    if (!wl_client) {
+        std::cerr << "Failed to connect to Wayland compositor" << std::endl;
         return false;
     }
-    if (!eglInitialize(mansion_display->egl_display, nullptr, nullptr)) {
-        std::cerr << "Reconnect: Failed to initialize EGL" << std::endl;
-        eglTerminate(mansion_display->egl_display);
-        mansion_display->egl_display = EGL_NO_DISPLAY;
+
+    /* Allocate state for this display. */
+    struct host_window_state *hws = new host_window_state{};
+    hws->wl_client  = wl_client;
+    hws->width      = display->window_width;
+    hws->height     = display->window_height;
+
+    /* Register to receive the xdg_wm_base global. */
+    g_hws = hws;
+    wl_registry_add_listener(wl_display_get_registry(wl_client),
+                             &registry_listener, nullptr);
+    wl_display_roundtrip(wl_client);
+
+    if (!hws->wm_base) {
+        std::cerr << "xdg_wm_base not available" << std::endl;
+        wl_display_disconnect(wl_client);
+        delete hws;
+        return false;
+    }
+
+    /* Create the Wayland surface. */
+    if (!hws->compositor) {
+        std::cerr << "wl_compositor not available" << std::endl;
+        wl_display_disconnect(wl_client);
+        delete hws;
+        return false;
+    }
+    hws->surface = wl_compositor_create_surface(hws->compositor);
+
+    /* Create the xdg_surface + xdg_toplevel. */
+    hws->xdg_surface = xdg_wm_base_get_xdg_surface(hws->wm_base, hws->surface);
+    wl_proxy_add_listener((struct wl_proxy *)hws->xdg_surface,
+                          (void (**)(void))&xdg_surface_listener, nullptr);
+
+    hws->toplevel = (struct xdg_toplevel *)
+        wl_proxy_marshal_constructor((struct wl_proxy *)hws->xdg_surface,
+                                     XDG_SURFACE_GET_TOPLEVEL,
+                                     &xdg_toplevel_interface, NULL);
+    wl_proxy_add_listener((struct wl_proxy *)hws->toplevel,
+                          (void (**)(void))&toplevel_listener, hws);
+
+    xdg_toplevel_set_title(hws->toplevel, "Mansion Desktop");
+    xdg_toplevel_set_app_id(hws->toplevel, "mansion-desktop");
+
+    /* Create the wl_egl_window (EGL rendering target). */
+    hws->egl_win = wl_egl_window_create(hws->surface,
+                                        display->window_width,
+                                        display->window_height);
+    if (!hws->egl_win) {
+        std::cerr << "Failed to create wl_egl_window" << std::endl;
+        /* Clean up partially-created objects. */
+        wl_surface_destroy(hws->surface);
+        wl_proxy_destroy((struct wl_proxy *)hws->xdg_surface);
+        wl_proxy_destroy((struct wl_proxy *)hws->toplevel);
+        wl_proxy_destroy((struct wl_proxy *)hws->wm_base);
+        wl_display_disconnect(wl_client);
+        delete hws;
+        return false;
+    }
+
+    /* Commit the surface so the compositor schedules a configure. */
+    wl_surface_commit(hws->surface);
+    wl_display_roundtrip(wl_client);
+
+    /* The configure callback will fill in width/height.
+     * If we haven't received one yet (shouldn't happen), use defaults. */
+    if (!hws->configured) {
+        hws->width  = display->window_width;
+        hws->height = display->window_height;
+    }
+
+    /* Store in display struct. */
+    display->wl_client_display = wl_client;
+    display->wl_surface        = hws->surface;
+    display->wl_egl_window     = hws->egl_win;
+
+    return true;
+}
+
+void destroy_wayland_client_window(struct MansionDisplay* display)
+{
+    if (!display) return;
+
+    if (display->wl_egl_window) {
+        wl_egl_window_destroy(display->wl_egl_window);
+        display->wl_egl_window = nullptr;
+    }
+    if (display->wl_surface) {
+        wl_surface_destroy(display->wl_surface);
+        display->wl_surface = nullptr;
+    }
+    if (display->wl_client_display) {
+        wl_display_flush(display->wl_client_display);
+        wl_display_disconnect(display->wl_client_display);
+        display->wl_client_display = nullptr;
+    }
+
+    if (g_hws) {
+        if (g_hws->wl_client) {
+            wl_display_flush(g_hws->wl_client);
+        }
+        delete g_hws;
+        g_hws = nullptr;
+    }
+}
+
+/* ─── EGL setup for Wayland client display ─────────────────────────────────── */
+
+static bool create_egl_for_wayland(struct MansionDisplay* display)
+{
+    struct wl_display *wl_client = display->wl_client_display;
+    if (!wl_client || !display->wl_egl_window) return false;
+
+    /* Initialize EGL on the Wayland platform. */
+    EGLint egl_major, egl_minor;
+    EGLDisplay egl_dpy = eglGetPlatformDisplay(EGL_PLATFORM_WAYLAND_EXT,
+                                                wl_client, nullptr);
+    if (egl_dpy == EGL_NO_DISPLAY) {
+        std::cerr << "Wayland EGL: failed to get display" << std::endl;
+        return false;
+    }
+    if (!eglInitialize(egl_dpy, &egl_major, &egl_minor)) {
+        std::cerr << "Wayland EGL: init failed" << std::endl;
+        eglTerminate(egl_dpy);
         return false;
     }
 
     EGLConfig egl_config;
     EGLint egl_config_count;
-    if (!eglChooseConfig(mansion_display->egl_display, config_attr, &egl_config, 1,
-                          &egl_config_count)) {
-        std::cerr << "Reconnect: Failed to choose EGL config" << std::endl;
-        eglTerminate(mansion_display->egl_display);
-        mansion_display->egl_display = EGL_NO_DISPLAY;
+    if (!eglChooseConfig(egl_dpy, config_attr, &egl_config, 1,
+                         &egl_config_count)) {
+        std::cerr << "Wayland EGL: failed to choose config" << std::endl;
+        eglTerminate(egl_dpy);
         return false;
     }
 
-    mansion_display->egl_context = eglCreateContext(mansion_display->egl_display,
-                                                      egl_config,
-                                                      EGL_NO_CONTEXT, context_attr);
-    if (mansion_display->egl_context == EGL_NO_CONTEXT) {
-        std::cerr << "Reconnect: Failed to create EGL context" << std::endl;
-        eglTerminate(mansion_display->egl_display);
-        mansion_display->egl_display = EGL_NO_DISPLAY;
+    EGLContext egl_ctx = eglCreateContext(egl_dpy, egl_config,
+                                          EGL_NO_CONTEXT, context_attr);
+    if (egl_ctx == EGL_NO_CONTEXT) {
+        std::cerr << "Wayland EGL: context creation failed" << std::endl;
+        eglTerminate(egl_dpy);
         return false;
     }
 
-    mansion_display->egl_surface = eglCreateWindowSurface(mansion_display->egl_display,
-                                                            egl_config,
-                                                            (EGLNativeWindowType)x_window,
-                                                            nullptr);
-    if (mansion_display->egl_surface == EGL_NO_SURFACE) {
-        std::cerr << "Reconnect: Failed to create EGL surface" << std::endl;
-        eglTerminate(mansion_display->egl_display);
-        mansion_display->egl_display = EGL_NO_DISPLAY;
+    /* Create the EGL surface from the wl_egl_window. */
+    EGLSurface egl_surf = eglCreateWindowSurface(egl_dpy, egl_config,
+        (EGLNativeWindowType)display->wl_egl_window, nullptr);
+    if (egl_surf == EGL_NO_SURFACE) {
+        std::cerr << "Wayland EGL: surface creation failed" << std::endl;
+        eglTerminate(egl_dpy);
         return false;
     }
 
-    if (eglMakeCurrent(mansion_display->egl_display, mansion_display->egl_surface,
-                        mansion_display->egl_surface, mansion_display->egl_context) == EGL_FALSE) {
-        std::cerr << "Reconnect: Failed to make EGL context current" << std::endl;
-        eglTerminate(mansion_display->egl_display);
-        mansion_display->egl_display = EGL_NO_DISPLAY;
+    if (eglMakeCurrent(egl_dpy, egl_surf, egl_surf, egl_ctx) == EGL_FALSE) {
+        std::cerr << "Wayland EGL: make current failed" << std::endl;
+        eglDestroySurface(egl_dpy, egl_surf);
+        eglDestroyContext(egl_dpy, egl_ctx);
+        eglTerminate(egl_dpy);
+        return false;
+    }
+
+    /* Enable vsync to prevent flickering. */
+    eglSwapInterval(egl_dpy, 1);
+
+    display->egl_display = egl_dpy;
+    display->egl_context = egl_ctx;
+    display->egl_surface = egl_surf;
+    display->egl_config  = egl_config;
+    display->egl_config_count = egl_config_count;
+
+    return true;
+}
+
+/* ─── create_egl_and_window (Wayland version) ─────────────────────────────── */
+
+bool create_egl_and_window(struct MansionDisplay* mansion_display)
+{
+    /* Set up the Wayland client window (reconnect path). */
+    if (!setup_wayland_client_window(mansion_display)) {
+        return false;
+    }
+
+    if (!create_egl_for_wayland(mansion_display)) {
+        destroy_wayland_client_window(mansion_display);
         return false;
     }
 
     /* Reinitialize the renderer (shaders, etc.) on the new EGL context. */
     if (!init_renderer(mansion_display)) {
         std::cerr << "Reconnect: Failed to reinitialize renderer" << std::endl;
+        eglMakeCurrent(mansion_display->egl_display, EGL_NO_SURFACE,
+                       EGL_NO_SURFACE, EGL_NO_CONTEXT);
+        eglDestroySurface(mansion_display->egl_display,
+                          mansion_display->egl_surface);
+        eglDestroyContext(mansion_display->egl_display,
+                          mansion_display->egl_context);
         eglTerminate(mansion_display->egl_display);
-        mansion_display->egl_display = EGL_NO_DISPLAY;
+        destroy_wayland_client_window(mansion_display);
         return false;
     }
 
     return true;
 }
 
-struct MansionDisplay* create_display(struct MansionCompositor* compositor, struct wl_display* wl_display) {
+/* ─── create_display (Wayland client path) ─────────────────────────────────── */
+
+struct MansionDisplay* create_display(struct MansionCompositor* compositor,
+                                       struct wl_display* wl_display)
+{
     auto* mansion_display = new MansionDisplay;
     mansion_display->compositor = compositor;
     mansion_display->wl_display = wl_display;
@@ -246,23 +471,14 @@ struct MansionDisplay* create_display(struct MansionCompositor* compositor, stru
     mansion_display->egl_display = EGL_NO_DISPLAY;
     mansion_display->egl_context = EGL_NO_CONTEXT;
     mansion_display->egl_surface = EGLSurface(nullptr);
+    mansion_display->wl_client_display = nullptr;
+    mansion_display->wl_surface = nullptr;
+    mansion_display->wl_egl_window = nullptr;
 
-    // Create X11 window for the host window
-    Display* x_display = XOpenDisplay(nullptr);
-    if (!x_display) {
-        std::cerr << "Warning: Failed to open X11 display, running headless"
-                  << std::endl;
-        delete mansion_display;
-        return nullptr;
-    }
-
-    mansion_display->x_display = x_display;
-
+    /* Create the host window using native Wayland client + EGL. */
     if (!create_egl_and_window(mansion_display)) {
-        std::cerr << "Warning: Failed to create X11 window + EGL, running headless"
+        std::cerr << "Warning: Failed to create Wayland window + EGL, running headless"
                   << std::endl;
-        XCloseDisplay(x_display);
-        mansion_display->x_display = nullptr;
         delete mansion_display;
         return nullptr;
     }
@@ -270,7 +486,11 @@ struct MansionDisplay* create_display(struct MansionCompositor* compositor, stru
     return mansion_display;
 }
 
-struct MansionDisplay* create_display_headless(struct MansionCompositor* compositor, struct wl_display* wl_display) {
+/* ─── create_display_headless (unchanged) ──────────────────────────────────── */
+
+struct MansionDisplay* create_display_headless(struct MansionCompositor* compositor,
+                                                struct wl_display* wl_display)
+{
     auto* mansion_display = new MansionDisplay;
     mansion_display->compositor = compositor;
     mansion_display->wl_display = wl_display;
@@ -282,8 +502,6 @@ struct MansionDisplay* create_display_headless(struct MansionCompositor* composi
     mansion_display->window_width = 1024;
     mansion_display->window_height = 768;
     mansion_display->renderer = nullptr;
-    mansion_display->x_display = nullptr;
-    mansion_display->x_window  = None;
 
     /* Try to set up EGL with surfaceless Mesa for offscreen rendering.
      * If EGL is unavailable, keep running without a renderer and still
@@ -369,6 +587,9 @@ struct MansionDisplay* create_display_headless(struct MansionCompositor* composi
         return mansion_display;
     }
 
+    /* Enable vsync to prevent buffer swap tearing. */
+    eglSwapInterval(egl_dpy, 1);
+
     glViewport(0, 0, mansion_display->window_width, mansion_display->window_height);
 
     if (!init_renderer(mansion_display)) {
@@ -382,12 +603,16 @@ struct MansionDisplay* create_display_headless(struct MansionCompositor* composi
     return mansion_display;
 }
 
+/* ─── Resize (Wayland version) ─────────────────────────────────────────────── */
+
 void display_resize(struct MansionDisplay* display) {
     if (!display || !display->renderer) return;
     glViewport(0, 0, display->window_width, display->window_height);
-    glUniform2f(display->renderer->viewport_uniform,
-                static_cast<GLfloat>(display->window_width),
-                static_cast<GLfloat>(display->window_height));
+    if (display->renderer->viewport_uniform >= 0) {
+        glUniform2f(display->renderer->viewport_uniform,
+                    static_cast<GLfloat>(display->window_width),
+                    static_cast<GLfloat>(display->window_height));
+    }
 
     /* Send a new configure to the focused toplevel so it can resize. */
     if (display->compositor->focused_surface_resource) {
@@ -399,16 +624,16 @@ void display_resize(struct MansionDisplay* display) {
     }
 }
 
+/* ─── destroy_display (Wayland version) ────────────────────────────────────── */
+
 void destroy_display(struct MansionDisplay* display) {
     if (!display) return;
 
     destroy_renderer(display);
 
-    if (display->x_display) {
-        if (display->x_window) {
-            XDestroyWindow(display->x_display, display->x_window);
-        }
-        XCloseDisplay(display->x_display);
+    /* Clean up Wayland client window. */
+    if (display->wl_client_display || display->wl_egl_window || display->wl_surface) {
+        destroy_wayland_client_window(display);
     }
 
     if (display->egl_display != EGL_NO_DISPLAY) {
@@ -879,9 +1104,11 @@ void render_surface(struct MansionDisplay* display, struct wl_resource* surface,
     float sh = (surface_data->height > 0) ? static_cast<float>(surface_data->height) : 150.0f;
 
     glUseProgram(renderer->program);
-    glUniform2f(renderer->viewport_uniform,
-                static_cast<GLfloat>(display->window_width),
-                static_cast<GLfloat>(display->window_height));
+    if (renderer->viewport_uniform >= 0) {
+        glUniform2f(renderer->viewport_uniform,
+                    static_cast<GLfloat>(display->window_width),
+                    static_cast<GLfloat>(display->window_height));
+    }
 
     if (surface_data->buffer_resource) {
         struct wl_shm_buffer* shm_buf = wl_shm_buffer_get(surface_data->buffer_resource);
@@ -1045,9 +1272,11 @@ static void render_application_fullscreen(struct MansionDisplay* display) {
     if (!surface_data->gl_texture) return;
 
     glUseProgram(renderer->program);
-    glUniform2f(renderer->viewport_uniform,
-                static_cast<GLfloat>(display->window_width),
-                static_cast<GLfloat>(display->window_height));
+    if (renderer->viewport_uniform >= 0) {
+        glUniform2f(renderer->viewport_uniform,
+                    static_cast<GLfloat>(display->window_width),
+                    static_cast<GLfloat>(display->window_height));
+    }
 
     /* Full-screen quad covering the viewport. */
     GLfloat attrib_data[] = {
@@ -1104,9 +1333,11 @@ void render_surface_from_data(struct MansionDisplay* display, struct MansionSurf
     float sh = (surface_data->height > 0) ? static_cast<float>(surface_data->height) : 150.0f;
 
     glUseProgram(renderer->program);
-    glUniform2f(renderer->viewport_uniform,
-                static_cast<GLfloat>(display->window_width),
-                static_cast<GLfloat>(display->window_height));
+    if (renderer->viewport_uniform >= 0) {
+        glUniform2f(renderer->viewport_uniform,
+                    static_cast<GLfloat>(display->window_width),
+                    static_cast<GLfloat>(display->window_height));
+    }
 
     /* Orphaned surfaces have no buffer_resource, but may still have gl_texture
        from a previous render. Draw with it. */
