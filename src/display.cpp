@@ -274,12 +274,19 @@ static void keyboard_modifiers(void *data, struct wl_keyboard *keyboard,
     (void)group;
 }
 
+static void keyboard_repeat_info(void *data, struct wl_keyboard *keyboard,
+                                  int32_t rate, int32_t delay)
+{
+    (void)data; (void)keyboard; (void)rate; (void)delay;
+}
+
 static constexpr struct wl_keyboard_listener keyboard_listener = {
-    .keymap   = nullptr,
-    .enter    = nullptr,
-    .leave    = nullptr,
-    .key      = keyboard_key,
-    .modifiers = keyboard_modifiers,
+    .keymap        = nullptr,
+    .enter         = nullptr,
+    .leave         = nullptr,
+    .key           = keyboard_key,
+    .modifiers     = keyboard_modifiers,
+    .repeat_info   = keyboard_repeat_info,
 };
 
 /* ─── wl_pointer event listener ─────────────────────────────────────────────── */
@@ -291,12 +298,50 @@ static void pointer_motion(void *data, struct wl_pointer *pointer,
     (void)pointer; (void)time; (void)surface_x; (void)surface_y;
 }
 
+/* Generic placeholder for pointer events the camera doesn't handle. */
+#define POINTER_PLACEHOLDER(name) \
+    static void name(void *data, struct wl_pointer *p, \
+                     uint32_t serial, struct wl_surface *s, \
+                     void *reserved) \
+    { (void)data; (void)p; (void)serial; (void)s; (void)reserved; }
+
+static void pointer_frame(void *data, struct wl_pointer *pointer)
+{ (void)data; (void)pointer; }
+
+static void pointer_axis_source(void *data, struct wl_pointer *pointer,
+                                 uint32_t source)
+{ (void)data; (void)pointer; (void)source; }
+
+static void pointer_axis_stop(void *data, struct wl_pointer *pointer,
+                               uint32_t time, uint32_t axis)
+{ (void)data; (void)pointer; (void)time; (void)axis; }
+
+static void pointer_axis_discrete(void *data, struct wl_pointer *pointer,
+                                   uint32_t axis, int32_t discrete)
+{ (void)data; (void)pointer; (void)axis; (void)discrete; }
+
+static void pointer_axis_value120(void *data, struct wl_pointer *pointer,
+                                   uint32_t axis, int32_t value120)
+{ (void)data; (void)pointer; (void)axis; (void)value120; }
+
+static void pointer_axis_relative_direction(
+    void *data, struct wl_pointer *pointer, uint32_t axis,
+    uint32_t wl_pointer_axis_relative_direction)
+{ (void)data; (void)pointer; (void)axis; (void)wl_pointer_axis_relative_direction; }
+
 static constexpr struct wl_pointer_listener pointer_listener = {
-    .enter   = nullptr,
-    .leave   = nullptr,
-    .motion  = pointer_motion,
-    .button  = nullptr,
-    .axis    = nullptr,
+    .enter                   = nullptr,
+    .leave                   = nullptr,
+    .motion                  = pointer_motion,
+    .button                  = nullptr,
+    .axis                    = nullptr,
+    .frame                   = pointer_frame,
+    .axis_source             = pointer_axis_source,
+    .axis_stop               = pointer_axis_stop,
+    .axis_discrete           = pointer_axis_discrete,
+    .axis_value120           = pointer_axis_value120,
+    .axis_relative_direction = pointer_axis_relative_direction,
+    .warp                    = nullptr,
 };
 
 /* ─── zwp_relative_pointer event listener ──────────────────────────────────── */
@@ -318,6 +363,52 @@ static void relative_pointer_motion(void *data,
 static constexpr struct zwp_relative_pointer_v1_listener relative_pointer_listener = {
     .relative_motion = relative_pointer_motion,
 };
+
+/* ─── wl_seat capabilities handler ───────────────────────────────────────────
+ *
+ * Called by the compositor when seat capabilities change (hotplug, focus
+ * changes, etc.).  This replaces the nullptr that caused KWin to suppress
+ * pointer and keyboard events.
+ */
+static void seat_capabilities(void *data, struct wl_seat *seat,
+                              uint32_t capabilities)
+{
+    struct host_window_state *hws =
+        (struct host_window_state *)data;
+    if (capabilities & WL_SEAT_CAPABILITY_POINTER && !hws->pointer) {
+        hws->pointer = (struct wl_pointer *)
+            wl_seat_get_pointer(seat);
+        if (hws->pointer) {
+            wl_proxy_add_listener(
+                (struct wl_proxy *)hws->pointer,
+                (void (**)(void))&pointer_listener,
+                nullptr);
+            if (hws->rel_ptr_mgr) {
+                hws->rel_ptr =
+                    (struct zwp_relative_pointer_v1 *)
+                    zwp_relative_pointer_manager_v1_get_relative_pointer(
+                        hws->rel_ptr_mgr, hws->pointer);
+                if (hws->rel_ptr) {
+                    wl_proxy_add_listener(
+                        (struct wl_proxy *)hws->rel_ptr,
+                        (void (**)(void))
+                            &relative_pointer_listener,
+                        nullptr);
+                }
+            }
+        }
+    }
+    if (capabilities & WL_SEAT_CAPABILITY_KEYBOARD && !hws->keyboard) {
+        hws->keyboard = (struct wl_keyboard *)
+            wl_seat_get_keyboard(seat);
+        if (hws->keyboard) {
+            wl_proxy_add_listener(
+                (struct wl_proxy *)hws->keyboard,
+                (void (**)(void))&keyboard_listener,
+                nullptr);
+        }
+    }
+}
 
 /* ─── Wayland client display setup ───────────────────────────────────────────
  *
@@ -410,42 +501,66 @@ bool setup_wayland_client_window(struct MansionDisplay* display)
     wl_display_roundtrip(wl_client);
 
     /* ─── Set up seat / keyboard / pointer input ──────────────────── */
-
-    static constexpr struct wl_seat_listener seat_listener = {
-        .capabilities = nullptr,
-        .name         = nullptr,
-    };
+    /*
+     * On Wayland, the compositor sends seat.capabilities events when
+     * input devices become available.  We must handle this event (not
+     * leave it nullptr) or the compositor may not deliver pointer/
+     * keyboard events to our window.
+     */
 
     if (hws->seat) {
-        wl_proxy_add_listener((struct wl_proxy *)hws->seat,
-                              (void (**)(void))&seat_listener, nullptr);
-        hws->keyboard = (struct wl_keyboard *)
-            wl_seat_get_keyboard(hws->seat);
-        if (hws->keyboard) {
-            wl_proxy_add_listener((struct wl_proxy *)hws->keyboard,
-                                  (void (**)(void))&keyboard_listener,
-                                  nullptr);
-        }
-        hws->pointer = (struct wl_pointer *)
-            wl_seat_get_pointer(hws->seat);
-        if (hws->pointer) {
-            wl_proxy_add_listener((struct wl_proxy *)hws->pointer,
-                                  (void (**)(void))&pointer_listener,
-                                  nullptr);
-        }
-
-        /* Request relative pointer motion for smooth camera look. */
-        if (hws->rel_ptr_mgr && hws->pointer) {
-            hws->rel_ptr = (struct zwp_relative_pointer_v1 *)
-                zwp_relative_pointer_manager_v1_get_relative_pointer(
-                    hws->rel_ptr_mgr, hws->pointer);
-            if (hws->rel_ptr) {
+        /* Helper: set up keyboard, pointer, and relative pointer. */
+        auto setup_input = [&](struct wl_seat *seat) {
+            hws->keyboard = (struct wl_keyboard *)
+                wl_seat_get_keyboard(seat);
+            if (hws->keyboard) {
                 wl_proxy_add_listener(
-                    (struct wl_proxy *)hws->rel_ptr,
-                    (void (**)(void))&relative_pointer_listener,
+                    (struct wl_proxy *)hws->keyboard,
+                    (void (**)(void))&keyboard_listener,
                     nullptr);
             }
-        }
+            hws->pointer = (struct wl_pointer *)
+                wl_seat_get_pointer(seat);
+            if (hws->pointer) {
+                wl_proxy_add_listener(
+                    (struct wl_proxy *)hws->pointer,
+                    (void (**)(void))&pointer_listener,
+                    nullptr);
+                /* Request relative pointer motion for smooth camera look. */
+                if (hws->rel_ptr_mgr) {
+                    hws->rel_ptr = (struct zwp_relative_pointer_v1 *)
+                        zwp_relative_pointer_manager_v1_get_relative_pointer(
+                            hws->rel_ptr_mgr, hws->pointer);
+                    if (hws->rel_ptr) {
+                        wl_proxy_add_listener(
+                            (struct wl_proxy *)hws->rel_ptr,
+                            (void (**)(void))&relative_pointer_listener,
+                            nullptr);
+                    }
+                }
+            }
+        };
+
+        /*
+         * Initial setup (compositor likely already sent capabilities
+         * during the roundtrip above).
+         */
+        setup_input(hws->seat);
+
+        /*
+         * Register the seat capabilities listener (defined at file
+         * scope) so the compositor knows we handle input capability
+         * changes.  This replaces the nullptr that caused KWin to
+         * suppress pointer/keyboard events.
+         */
+        static constexpr struct wl_seat_listener seat_listener = {
+            .capabilities = seat_capabilities,
+            .name         = nullptr,
+        };
+
+        wl_proxy_add_listener((struct wl_proxy *)hws->seat,
+                              (void (**)(void))&seat_listener,
+                              hws);
     }
 
     /* The configure callback will fill in width/height.
