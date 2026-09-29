@@ -401,7 +401,9 @@ exclusions, and decision gates.
 
 After each verified task, tick it in docs/TASKS.md, update docs/STATUS.md and
 the applicable handoff with changes, exact validation commands and results,
-limitations, and the next task, then commit locally (never push).
+limitations, and the next task, then stage only task files and commit locally
+(never push). Human observations and reopened gate decisions are prerequisites;
+an old checkmark or synthetic-only demonstration cannot override them.
 Immediately begin the next eligible task without asking whether to continue.
 Do not end the run merely because one task or numbered project is complete.
 

@@ -49,3 +49,22 @@ meson test -C build client-globals --verbose
 
 Manual acceptance procedures that need a person live in `docs/ACCEPTANCE.md`
 (written in P1-T10). Autonomous sessions must not report them as passed.
+
+## Evidence boundaries and automation checks
+
+Synthetic client events prove protocol assertions; PPM samples prove specified
+pixel values. Neither proves a real terminal is usable. Real-client and human
+procedures are in [ACCEPTANCE](../docs/ACCEPTANCE.md); normal/sanitizer lifetime,
+commit, format and coordinate audits are the P4 recovery tasks.
+
+Plugin checks are separate from Meson:
+
+```sh
+node --test .opencode/tests/*.test.js
+```
+
+The archive has a repository-content test assuming Projects 1–4 are perpetually
+unfinished. Recovery temporarily makes it pass by adding open tasks; P4-T07 must
+replace that brittle assumption with fixtures so finishing recovery cannot break
+the suite. Current plugin parsing recognizes numeric IDs at column zero and
+ignores human tasks; a DONE marker does not validate dependency evidence.
