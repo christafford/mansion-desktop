@@ -10,7 +10,78 @@ running the check that proves it.
 **P5-T03 xdg_popup support.** Implement `get_popup` for xdg_surface. The
 popup is owned by a parent xdg_surface (passed as the `parent` argument).
 
-## This session (2026-09-28)
+## This session (2026-09-28, second turn)
+
+- **X11 → Wayland client migration (flickering fix attempt).** Replaced X11
+  host window with a native Wayland client presentation (`xdg_wm_base` +
+  `wl_egl_window` + `wl_surface`). Goal: eliminate the triple-layer mismatch
+  (EGL → X11 → Xwayland → KWin) that caused flickering in windowed mode
+  (`--room-camera`).
+  - `display.h` fields changed: X11 `display`, `xwin`, `colormap` replaced with
+    `wl_client_display`, `wl_surface`, `wl_egl_window` (all `= nullptr` default).
+  - `display.cpp`: generated xdg-shell client protocol included; Wayland client
+    setup (registry, xdg_wm_base, wl_compositor, wl_surface, xdg_surface,
+    xdg_toplevel, wl_egl_window) replaces X11 window creation.
+    `destroy_display` calls `destroy_wayland_client_window`.
+    Mesa's Wayland EGL backend (`EGL_PLATFORM_WAYLAND_EXT`) used with our
+    `wl_display` pointer.
+    `swap_buffers()` removed the manual `wl_surface_commit()` — Mesa's Wayland
+    EGL backend commits the surface internally during `eglSwapBuffers()`.
+  - `input.h/c`: X11 includes removed; X11 globals removed.
+    `input_process_wayland_client()` now dispatches Wayland client events
+    (`wl_display_dispatch_pending` + `wl_display_flush`).
+    `input_handle_window_close()` sets `g_window_closed` from xdg_toplevel.close.
+    `input_process()` now processes evdev input for camera movement (WASD +
+    mouse delta) and forwards key/button events to Wayland clients.
+    evdev FD globals and live camera state globals properly defined.
+  - `main.cpp`: replaced `input_process_x11(display)` with
+    `input_process_wayland_client(display)`.
+  - `meson.build`: removed x11 from deps; added wayland_client; added
+    xdg_shell_client_h to mansion_exe sources.
+  - **Build and tests:** all 25/25 tests pass (verified).
+
+- **Wayland seat input for host window (P5-T02 follow-up).** Added keyboard and
+  pointer input handling to the host Wayland client window so the user can
+  control camera movement in windowed mode (`--room-camera`).
+  - Added `wl_seat` (version 7), `wl_keyboard`, `wl_pointer`, and
+    `zwp_relative_pointer_manager_v1` binding in the registry handler.
+  - Keyboard listener: maps Linux keycodes 26/38/39/40 (W/A/S/D) to WASD
+    camera movement via `input_wayland_key()`.
+  - Relative pointer listener: captures unaccelerated mouse delta
+    (`dx_unaccel`, `dy_unaccel`) for camera rotation via
+    `input_wayland_pointer_motion()`.
+  - Pointer listener: empty (pointer position tracked but not used for camera).
+  - `input.cpp/h`: added `input_wayland_key()` and
+    `input_wayland_pointer_motion()` to update live camera state variables.
+  - `meson.build`: generated relative-pointer protocol header + code added
+    to mansion_exe.
+  - **Build and tests:** all 25/25 tests pass (verified).
+  - **Not verified:** flickering is "terrible" (worse than X11) and no mouse or
+    keyboard input received from the host compositor (KWin). The root cause is
+    likely Mesa's Wayland EGL backend creating its own internal `wl_display`
+    connection for buffer management, conflicting with our `wl_client_display`
+    connection. Investigation ongoing.
+
+- **X11 reconnect mechanism.** Extracted window+EGL creation into
+  `create_egl_and_window()` helper. `input_process_x11()` now detects broken
+  X11 connection (`XConnectionNumber < 0`) and attempts full reconnect
+  (reopen display, recreate window+EGL/renderer). XIO error handler changed
+  from `_Exit(0)` to warning-only — compositor survives Xwayland disconnects.
+  Verified: compositor ran 30s+ without X11 crash (previously died within
+  seconds).
+- **Mouse X-axis invert.** Mouse left now looks left (same convention as
+  Y-axis: mouse up → look up).
+- **Frame count fix.** `frame_count` in `main.cpp` was declared but never
+  incremented; now incremented after each `swap_buffers`. Exit log shows
+  accurate frame count.
+- **Rendering pipeline verified.** `glReadPixels` before `eglSwapBuffers`
+  confirms clear color (0.15, 0.15, 0.2) and room geometry are correctly
+  present in the back buffer. All 24 tests pass.
+- **Known limitation:** Xwayland remains unstable in this container.
+  The compositor no longer crashes on disconnect but may need manual restart
+  to re-establish the X11 connection. Windowed mode rendering has been
+  observed on the Wayland compositor side but the X11 window appearance
+  on the host desktop is unreliable in this environment.
 
 - **X11 reconnect mechanism.** Extracted window+EGL creation into
   `create_egl_and_window()` helper. `input_process_x11()` now detects broken
