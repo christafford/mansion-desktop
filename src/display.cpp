@@ -46,6 +46,9 @@ struct MansionRenderer {
 /* Generated xdg-shell client protocol (interfaces, functions, listener types). */
 #include "xdg-shell-client-protocol.h"
 
+/* Generated relative-pointer client protocol. */
+#include "relative-pointer-client-protocol.h"
+
 /* EGL attribute arrays. */
 static const EGLint config_attr[] = {
     EGL_RED_SIZE, 8,
@@ -133,6 +136,11 @@ struct host_window_state {
     struct wl_display *wl_client;       /* Wayland client display */
     struct xdg_wm_base *wm_base;        /* xdg_wm_base global */
     struct wl_compositor *compositor;   /* wl_compositor global */
+    struct wl_seat *seat;               /* wl_seat for input */
+    struct wl_keyboard *keyboard;       /* wl_keyboard resource */
+    struct wl_pointer *pointer;         /* wl_pointer resource */
+    struct zwp_relative_pointer_manager_v1 *rel_ptr_mgr;
+    struct zwp_relative_pointer_v1 *rel_ptr;
     struct wl_surface *surface;         /* Wayland surface */
     struct wl_egl_window *egl_win;      /* EGL window wrapper */
     struct xdg_surface *xdg_surface;    /* xdg_surface */
@@ -164,6 +172,20 @@ static void registry_global(void *data, struct wl_registry *registry,
             (struct wl_compositor *)wl_registry_bind(registry, id,
                                                      &wl_compositor_interface,
                                                      1);
+    }
+    if (strcmp(interface, "wl_seat") == 0 && g_hws && !g_hws->seat &&
+        version >= 7) {
+        g_hws->seat =
+            (struct wl_seat *)wl_registry_bind(registry, id,
+                                                &wl_seat_interface, 7);
+    }
+    if (strcmp(interface, "zwp_relative_pointer_manager_v1") == 0 &&
+        g_hws && !g_hws->rel_ptr_mgr) {
+        g_hws->rel_ptr_mgr =
+            (struct zwp_relative_pointer_manager_v1 *)
+                wl_registry_bind(registry, id,
+                                 &zwp_relative_pointer_manager_v1_interface,
+                                 1);
     }
 }
 
@@ -224,6 +246,77 @@ static void toplevel_configure(void *data, struct xdg_toplevel *toplevel,
 static constexpr struct xdg_toplevel_listener toplevel_listener = {
     .configure = toplevel_configure,
     .close     = toplevel_close,
+};
+
+/* ─── wl_keyboard event listener ──────────────────────────────────────────── */
+
+static void keyboard_key(void *data, struct wl_keyboard *keyboard,
+                         uint32_t serial, uint32_t time, uint32_t key,
+                         uint32_t state)
+{
+    (void)data; (void)keyboard; (void)serial; (void)time;
+    /* Map keys to WASD: w=26, a=38, s=39, d=40 (Linux keycode). */
+    bool w = false, a = false, s = false, d = false;
+    if (key == 26 && state == WL_KEYBOARD_KEY_STATE_PRESSED) w = true;
+    if (key == 38 && state == WL_KEYBOARD_KEY_STATE_PRESSED) a = true;
+    if (key == 39 && state == WL_KEYBOARD_KEY_STATE_PRESSED) s = true;
+    if (key == 40 && state == WL_KEYBOARD_KEY_STATE_PRESSED) d = true;
+    input_wayland_key(w, a, s, d);
+}
+
+static void keyboard_modifiers(void *data, struct wl_keyboard *keyboard,
+                               uint32_t serial, uint32_t mods_depressed,
+                               uint32_t mods_latched, uint32_t mods_locked,
+                               uint32_t group)
+{
+    (void)data; (void)keyboard; (void)serial;
+    (void)mods_depressed; (void)mods_latched; (void)mods_locked;
+    (void)group;
+}
+
+static constexpr struct wl_keyboard_listener keyboard_listener = {
+    .keymap   = nullptr,
+    .enter    = nullptr,
+    .leave    = nullptr,
+    .key      = keyboard_key,
+    .modifiers = keyboard_modifiers,
+};
+
+/* ─── wl_pointer event listener ─────────────────────────────────────────────── */
+
+static void pointer_motion(void *data, struct wl_pointer *pointer,
+                           uint32_t time, wl_fixed_t surface_x,
+                           wl_fixed_t surface_y)
+{
+    (void)pointer; (void)time; (void)surface_x; (void)surface_y;
+}
+
+static constexpr struct wl_pointer_listener pointer_listener = {
+    .enter   = nullptr,
+    .leave   = nullptr,
+    .motion  = pointer_motion,
+    .button  = nullptr,
+    .axis    = nullptr,
+};
+
+/* ─── zwp_relative_pointer event listener ──────────────────────────────────── */
+
+static void relative_pointer_motion(void *data,
+                                     struct zwp_relative_pointer_v1 *rel_ptr,
+                                     uint32_t time_hi, uint32_t time_lo,
+                                     wl_fixed_t dx, wl_fixed_t dy,
+                                     wl_fixed_t dx_unaccel, wl_fixed_t dy_unaccel)
+{
+    (void)data; (void)rel_ptr; (void)time_hi; (void)time_lo;
+    int32_t ddx = wl_fixed_to_int(dx_unaccel);
+    int32_t ddy = wl_fixed_to_int(dy_unaccel);
+    if (ddx != 0 || ddy != 0) {
+        input_wayland_pointer_motion(ddx, ddy);
+    }
+}
+
+static constexpr struct zwp_relative_pointer_v1_listener relative_pointer_listener = {
+    .relative_motion = relative_pointer_motion,
 };
 
 /* ─── Wayland client display setup ───────────────────────────────────────────
@@ -315,6 +408,45 @@ bool setup_wayland_client_window(struct MansionDisplay* display)
     /* Commit the surface so the compositor schedules a configure. */
     wl_surface_commit(hws->surface);
     wl_display_roundtrip(wl_client);
+
+    /* ─── Set up seat / keyboard / pointer input ──────────────────── */
+
+    static constexpr struct wl_seat_listener seat_listener = {
+        .capabilities = nullptr,
+        .name         = nullptr,
+    };
+
+    if (hws->seat) {
+        wl_proxy_add_listener((struct wl_proxy *)hws->seat,
+                              (void (**)(void))&seat_listener, nullptr);
+        hws->keyboard = (struct wl_keyboard *)
+            wl_seat_get_keyboard(hws->seat);
+        if (hws->keyboard) {
+            wl_proxy_add_listener((struct wl_proxy *)hws->keyboard,
+                                  (void (**)(void))&keyboard_listener,
+                                  nullptr);
+        }
+        hws->pointer = (struct wl_pointer *)
+            wl_seat_get_pointer(hws->seat);
+        if (hws->pointer) {
+            wl_proxy_add_listener((struct wl_proxy *)hws->pointer,
+                                  (void (**)(void))&pointer_listener,
+                                  nullptr);
+        }
+
+        /* Request relative pointer motion for smooth camera look. */
+        if (hws->rel_ptr_mgr && hws->pointer) {
+            hws->rel_ptr = (struct zwp_relative_pointer_v1 *)
+                zwp_relative_pointer_manager_v1_get_relative_pointer(
+                    hws->rel_ptr_mgr, hws->pointer);
+            if (hws->rel_ptr) {
+                wl_proxy_add_listener(
+                    (struct wl_proxy *)hws->rel_ptr,
+                    (void (**)(void))&relative_pointer_listener,
+                    nullptr);
+            }
+        }
+    }
 
     /* The configure callback will fill in width/height.
      * If we haven't received one yet (shouldn't happen), use defaults. */
@@ -1372,14 +1504,6 @@ void swap_buffers(struct MansionDisplay* display) {
     if (display && display->egl_display != EGL_NO_DISPLAY &&
         display->egl_surface != EGL_NO_SURFACE) {
         eglSwapBuffers(display->egl_display, display->egl_surface);
-    }
-
-    /* Commit the Wayland surface so KWin presents the new buffer.
-     * Without this commit, the compositor keeps showing the first
-     * (stale) buffer while EGL swaps internally — causing flickering. */
-    if (display && display->wl_client_display && display->wl_surface) {
-        wl_surface_commit(display->wl_surface);
-        wl_display_flush(display->wl_client_display);
     }
 }
 

@@ -98,3 +98,8 @@ void input_handle_window_close(void);
 /* Process Wayland client events (dispatch pending events, check close flag).
  * Returns 0 on success, -1 if the window was closed by the user. */
 int input_process_wayland_client(struct MansionDisplay* m_display);
+
+/* Wayland seat input callbacks — called from the Wayland client
+ * display event handlers to drive camera movement in windowed mode. */
+void input_wayland_key(bool w, bool a, bool s, bool d);
+void input_wayland_pointer_motion(int32_t dx, int32_t dy);

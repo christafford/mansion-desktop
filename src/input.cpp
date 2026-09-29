@@ -526,6 +526,20 @@ void input_handle_window_close(void) {
     g_window_closed = true;
 }
 
+/* Wayland seat input callbacks — update live camera movement state.
+ * Called from the Wayland client display event handlers in display.cpp. */
+void input_wayland_key(bool w, bool a, bool s, bool d) {
+    live_w  = w;
+    live_a  = a;
+    live_s  = s;
+    live_d  = d;
+}
+
+void input_wayland_pointer_motion(int32_t dx, int32_t dy) {
+    live_mouse_x += dx;
+    live_mouse_y += dy;
+}
+
 /* ---------- Input script execution (P1-T06-E) ---------- */
 
 struct InputScript* input_script_init(const char* filename) {

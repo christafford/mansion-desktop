@@ -28,6 +28,14 @@ xdg_shell_code = custom_target('xdg-shell-code',
     input: xdg_shell_xml, output: 'xdg-shell-protocol.c',
     command: [wayland_scanner, 'private-code', '@INPUT@', '@OUTPUT@'])
 
+relative_ptr_xml = wp_dir / 'unstable' / 'relative-pointer' / 'relative-pointer-unstable-v1.xml'
+relative_ptr_client_h = custom_target('relative-pointer-client-header',
+    input: relative_ptr_xml, output: 'relative-pointer-client-protocol.h',
+    command: [wayland_scanner, 'client-header', '@INPUT@', '@OUTPUT@'])
+relative_ptr_code = custom_target('relative-pointer-code',
+    input: relative_ptr_xml, output: 'relative-pointer-protocol.c',
+    command: [wayland_scanner, 'private-code', '@INPUT@', '@OUTPUT@'])
+
 sources = files(
     'src/main.cpp',
     'src/compositor.cpp',
@@ -40,6 +48,7 @@ sources = files(
 
 mansion_exe = executable('mansion-desktop',
     sources, xdg_shell_server_h, xdg_shell_code, xdg_shell_client_h,
+    relative_ptr_client_h, relative_ptr_code,
     cpp_args: cpp_args,
     dependencies: [wayland_server, wayland_client, wayland_egl, egl, glesv2, xkbcommon],
     include_directories: include_directories('.'),
