@@ -1,5 +1,47 @@
 # AGENTS.md
 
+## Product and acceptance rules
+
+Mansion Desktop is a functional Linux desktop presented as a persistent
+first-person 3D environment. The immediate target is a real terminal on a
+monitor in one attractive room, with reliable movement, focus, typing,
+pointer input, resizing, return to world mode, and application close.
+
+Read docs/STATUS.md and docs/TASKS.md first, then docs/ARCHITECTURE.md and the
+relevant decisions. These project-specific rules take precedence over generic
+workflow advice below and older handoffs. Historical test passes do not satisfy
+a reopened gate. Current gate policy is decisions/05-foundation-recovery.md.
+
+1. Application content comes from real Wayland clients; clients need no
+   Mansion-specific changes. Synthetic clients remain valuable test fixtures.
+2. Persistent world/artifact IDs are independent of PIDs, Wayland resource
+   addresses/IDs, live-window handles, and GPU objects.
+3. Application mode preserves readable text and ordinary input behavior.
+   World lighting must not darken application content; camera shortcuts must
+   not steal ordinary application keys except documented reserved shortcuts.
+4. Keep compositor state, runtime presentation, world entities, shell policy,
+   and host backend responsibilities separate. Refactor one boundary at a time.
+5. Do not substitute simulated functionality or screenshot replay for a live
+   desktop interaction. Label mocks explicitly when a task requests them.
+6. A synthetic test proves only its assertions. Real-application compatibility
+   and visual usability require separate evidence in docs/ACCEPTANCE.md.
+7. Missing tools/hardware are blockers, not passed checks. A research task can
+   finish with an evidence-backed negative result; its missing feature remains
+   unimplemented. Never turn a feature task into research to tick its box.
+8. No wholesale compositor rewrite, game-engine migration, new graphics API,
+   or native-session installation is authorized by the roadmap. A bounded
+   feasibility experiment is allowed where explicitly tasked; record its result
+   and the migration proposal before undertaking a migration.
+9. Preserve nested and headless development paths. Do not replace the user's
+   host desktop or host services during development.
+10. Complete one useful interaction before accumulating disconnected features.
+    Use the dependency-ordered recovery tasks before Project 5.
+
+For documentation-only work, validate links, task references, parser
+compatibility, and diffs; a C++ build is needed only if implementation changed.
+When committing, stage only this task's files. Never sweep unrelated user work
+into a commit with `git add -A`.
+
 ## Purpose
 
 This repository is intended to be worked on by autonomous coding agents for extended periods, including unattended overnight sessions.
@@ -619,8 +661,11 @@ Do not invent unrelated work.
 The work is organised as small tasks in `docs/TASKS.md`; the verified state is
 in `docs/STATUS.md`. Every autonomous turn follows the same loop:
 
-1. Read `docs/STATUS.md` ("Next task") and `docs/TASKS.md`. Take the first
-   unchecked task in scope whose prerequisites are ticked. Do not skip ahead.
+1. Read `docs/STATUS.md` ("Next task"), `docs/TASKS.md`, and the current gate
+   decision. Take the first eligible unchecked task in the authorized scope.
+   Eligibility requires both checked prerequisites and their stated evidence;
+   a historical checkmark cannot override a reopened gate. A stale "Next task"
+   is a hint to reconcile, not permission to bypass dependencies.
 2. Implement only that task. If it turns out too large, split it into
    sub-tasks in `docs/TASKS.md` and do the first one.
 3. Build and test:
@@ -637,7 +682,8 @@ in `docs/STATUS.md`. Every autonomous turn follows the same loop:
    `docs/handoffs/NN.md`, and commit locally:
 
    ```sh
-   git add -A && git commit -q -m "<task id>: <summary>"
+   git add -- <files changed for this task>
+   git commit -q -m "<task id>: <summary>"
    ```
 
    Never push. Never amend or rewrite history.
@@ -648,9 +694,11 @@ Hard rules:
 
 - Tasks marked **(human)** are never performed, ticked, or claimed by an
   autonomous session. Write the procedure; record the result as "not observed".
-- Never write "verified", "works", or "passes" about anything you did not run
-  in this turn. Screens cannot be seen from here; only `meson test` output,
-  logs, and screenshot pixel checks count as evidence.
+- Attribute historical evidence to its date, revision, and observer. New
+  verification claims require checks actually run in this session. A GUI-capable
+  agent may collect explicitly labeled agent-observed evidence; it cannot tick
+  a task marked (human) or invent personal observation. Pixel checks alone do
+  not prove readability, latency, or real-application usability.
 - Do not weaken, skip, or delete tests to get green. Record a blocker instead.
 - Do not add dependencies without a `docs/decisions/` record.
 - Do not use `sudo`, install packages, or touch files outside the repository.
