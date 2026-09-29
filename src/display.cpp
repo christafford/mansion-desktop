@@ -1373,6 +1373,14 @@ void swap_buffers(struct MansionDisplay* display) {
         display->egl_surface != EGL_NO_SURFACE) {
         eglSwapBuffers(display->egl_display, display->egl_surface);
     }
+
+    /* Commit the Wayland surface so KWin presents the new buffer.
+     * Without this commit, the compositor keeps showing the first
+     * (stale) buffer while EGL swaps internally — causing flickering. */
+    if (display && display->wl_client_display && display->wl_surface) {
+        wl_surface_commit(display->wl_surface);
+        wl_display_flush(display->wl_client_display);
+    }
 }
 
 bool take_screenshot(struct MansionDisplay* display, const char* path) {

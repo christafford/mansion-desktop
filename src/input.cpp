@@ -510,10 +510,13 @@ static bool g_window_closed = false;
 /* Process Wayland client events (dispatch pending events, check close flag).
  * Returns 0 on success, -1 if the window was closed by the user. */
 int input_process_wayland_client(struct MansionDisplay* m_display) {
-    (void)m_display;
     if (g_window_closed) {
         g_window_closed = false;
         return -1;
+    }
+    if (m_display && m_display->wl_client_display) {
+        wl_display_dispatch_pending(m_display->wl_client_display);
+        wl_display_flush(m_display->wl_client_display);
     }
     return 0;
 }
