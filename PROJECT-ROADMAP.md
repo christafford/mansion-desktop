@@ -4,6 +4,13 @@ This plan accompanies [the concept](mansion-desktop-concept.md). It proposes an 
 
 **Working from this roadmap:** the numbered projects below are broken into small, individually testable tasks in [docs/TASKS.md](docs/TASKS.md). Autonomous sessions work from that file; this document defines each project's scope, acceptance boundary, dependencies, and decision gates. Current verified state lives in [docs/STATUS.md](docs/STATUS.md); binding technical decisions live in [docs/decisions/](docs/decisions/).
 
+**Current direction (2026-09-29, Decision 05):** preserve the prototype;
+recover its foundation and real-terminal proof, introduce small architecture
+boundaries, build one presentable room, then resume multiwindow/persistence.
+TASKS.md recovery P4-T06–P4-T18 and visual P4-T20–P4-T28 are the current work
+order. Old handoff approval does not bypass these gates. No wholesale rewrite
+or game-engine migration is authorized. See docs/ARCHITECTURE.md.
+
 **Corrections recorded after the first implementation attempt (decision 02):** the shell protocol is `xdg_shell`, not the deprecated `wl_shell`; nested input comes from the host window, not `/dev/input`; the compositor uses libwayland-server directly rather than wlroots or Smithay; and every task must carry an acceptance check that runs headless, because unattended sessions cannot look at a screen.
 
 ## Assessment
@@ -22,7 +29,12 @@ The first four projects answer the initial engineering question. Projects 5–8 
 ## Changes I recommend to the concept
 
 - **Treat fullscreen as a presentation mode initially.** Show the client at full size inside Mansion's host window. Do not require direct scanout, changing the physical display mode, or a client fullscreen state transition just to focus it. Define client-requested fullscreen behavior separately.
-- **Make the rendering choice an experiment.** Start by evaluating Rust + Smithay and its GLES/custom-rendering path. Do not commit to Vulkan/wgpu until live-buffer integration has been demonstrated. Smithay documents both nested backends and a GLES renderer; its GlowRenderer exposes custom GL rendering with explicit context-state precautions. This makes a shared GL path a reasonable first experiment, not a proven implementation. [Backend documentation](https://smithay.github.io/smithay/smithay/backend/index.html), [GlowRenderer documentation](https://smithay.github.io/smithay/smithay/backend/renderer/glow/struct.GlowRenderer.html).
+- **Make integration choices evidence-based.** Continue the implemented C++20,
+  Meson, EGL/GLES path. Evaluate native nested Wayland hosting, direct client
+  buffer import, and a bounded wlroots adapter in recovery. Smithay/Rust,
+  Vulkan/wgpu, and heavyweight engines are alternatives requiring a new scoped
+  decision, not instructions to replace this project. GPU readback/shm tests
+  demonstrate the fallback path, not direct accelerated-client import.
 - **Separate resources, artifacts, and live windows.** A file or launch recipe is a resource; its representation in a room is an artifact; a connected client window is temporary runtime state. One application can have several windows, and one resource may eventually have several spatial references. Never persist Wayland object IDs or process IDs as durable identity.
 - **Avoid promising exact launch-to-window matching.** Application IDs and titles are hints, not unique instance identifiers. Applications may reuse existing processes. Use launch tracking and supported activation mechanisms, with an explicit manual assignment fallback.
 - **Treat saving as a pending operation.** A file chooser selects a destination; the application writes the file afterward. Placement should initially be provisional, with cancellation, failure, overwrite, and filename handling. The portal response is not evidence that bytes were saved. [FileChooser API](https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.FileChooser.html).
@@ -99,13 +111,44 @@ Suggested locations: `docs/decisions/`, `docs/handoffs/NN.md`, and `docs/STATUS.
 
 **Session task:** “Implement Project 4 using the real compositor surface from Projects 1–3. Complete and document the concept's Milestone 1 acceptance sequence.”
 
-**Decision gate A:** Continue only when the real surface and input path works. If it fails, revise the renderer/compositor integration before adding features or scenery.
+**Decision gate A (reopened by Decision 05):** synthetic-client results alone
+do not establish real terminal usability. Execute foundation recovery, including
+a person's terminal observations, before the first presentable room.
+
+### 4R. Foundation stabilization (numeric tasks P4-T06–P4-T18)
+
+Reconcile evidence, repair automation fixtures, audit protocol/resource lifetimes,
+pending/current commits, formats/input coordinates and configure sequencing.
+Investigate native hosting and accelerated import; compare wlroots in isolation.
+Extract one useful boundary and complete a real-terminal demonstration.
+
+**Done when:** relevant normal/sanitizer checks and real flat/room terminal
+observations pass, and Decision 05 names the accepted stack/backend/client and
+remaining limits. An explicitly constrained shm-only next step may be accepted;
+unimplemented direct import stays blocked. The human gate cannot be waived by
+a negative experiment or synthetic pixel test.
+
+### 4V. First presentable room (numeric tasks P4-T20–P4-T28)
+
+**Depends on:** accepted P4-T18. Introduce minimal scene entities/transforms,
+Blender glTF/GLB loading, textures/basic materials, ambient/directional lighting,
+one furnished study, ray selection, slot movement, and a working animated door.
+Integrate a real terminal on the monitor with unlit readable app content and
+ordinary full-size application mode. Record licenses and target-device costs.
+
+**Done when:** the furnished-room interaction is both tested and observed by a
+person, with readable text, reliable input/lifetime, camera/door collision and
+comfortable fast access. P4-T28 records the product gate. Do not build a separate
+scene demo or require a general engine, PBR, skeletal animation or new graphics API.
+
+Visual maturity grows incrementally after this room; Project 15 now expands
+data-driven rooms/assets rather than introducing all scene capability at once.
 
 ## Projects 5–8: build a useful persistent workspace
 
 ### 5. Multiple windows and application lifecycle
 
-**Depends on:** 4.
+**Depends on:** foundation gate P4-T18 and presentable-room gate P4-T28.
 
 **Deliver:** runtime window registry, several artifacts, launch/close/reassign actions, and policies for additional top-level windows, transient dialogs, popups, and subsurfaces. Compose related surfaces correctly in focused view and define their world-preview behavior. Include manual artifact assignment when automatic association is ambiguous.
 
@@ -119,7 +162,7 @@ Suggested locations: `docs/decisions/`, `docs/handoffs/NN.md`, and `docs/STATUS.
 
 **Depends on:** 5.
 
-**Deliver:** a versioned SQLite schema separating resources, artifacts, and temporary live-window bindings; stable artifact UUIDs; slot-based movement; transactional saves; reset/export support. Define local versus room-relative transforms. Enforce valid container membership without cycles.
+**Deliver:** a versioned SQLite schema separating resources, artifacts, world entities, and temporary live-window bindings; stable artifact/entity UUIDs independent of PIDs, Wayland resources and GPU objects; slot-based movement; transactional saves; reset/export support. Define local versus room-relative transforms. Enforce valid container membership without cycles.
 
 **Done when:** move three artifacts, restart Mansion, and find their placeholders at the saved positions. Schema migration and interrupted-write behavior are checked. No stale surface pointer or process ID is treated as a restorable application.
 
@@ -250,6 +293,61 @@ These remain separate follow-on projects. A mature nested application can be a w
 
 For these sessions, use the project number and acceptance boundary above with the general session template below. Expand each brief from observed requirements before implementing it; do not ask one AI session to “finish desktop integration.”
 
+## Distinctive spatial feature tracks
+
+These are planned capabilities, not implemented features or unattended work
+authorization. Expand them into bounded numeric tasks only when prerequisites
+pass. Use P8/P14/P15 numeric IDs at expansion; do not use suffix IDs with the
+current continuation parser. Keep shell data independent of its 3D presentation.
+
+### 8N. Search and illuminated navigation
+
+**Depends on:** the useful persistent workspace gate in Project 8; traversable
+room/door data from 4V, with multiroom routes expanded after Project 15.
+
+**Deliver:** search resolves a live app or file artifact's current world transform;
+a graph/navmesh computes a valid route around obstacles and closed doors; emissive
+path geometry guides the player. Track a moved target or changing door state.
+Offer list, keyboard selection and teleport equivalents. Pick a pathfinding
+library only after a minimal graph proves the interaction.
+
+**Done when:** find a placed file and a running window by name, follow an
+illuminated route to each, move the target and verify replanning, handle
+unreachable/deleted targets, and use the same flow without walking. World
+rendering must not claim a straight line through furniture is a navigable route.
+
+### 14R. Reminders and optional creatures
+
+**Depends on:** Project 6 durable data, Project 8 fast access, Project 14
+notifications/service isolation, and a working 8N navigation capability.
+
+**Deliver:** persistent reminders with explicit timezone/due-time policy,
+acknowledge/snooze/disable and missed-deadline handling. Present reminders in a
+conventional accessible list/notification during application mode and optionally
+as animated creatures spawning/navigating toward the player in world mode.
+Define behavior on restart, suspend, clock changes and timezone changes.
+
+**Done when:** a test clock triggers one reminder deterministically; acknowledgement,
+snooze, restart and overdue cases work without duplicate reminders. A person
+observes the creature reaching the player without trapping them or capturing
+application input. The reminder remains visible and actionable with creatures,
+sound and movement disabled. Animation/physics dependencies require an ADR.
+
+### 15I. Richer physical interaction
+
+**Depends on:** Project 6 persistence and 4V targeting/doors; extend across rooms
+after Project 15. It can progress independently of creature animation.
+
+**Deliver:** movable objects on desks/shelves/counters/tables, openable
+drawers/containers, stable parent/slot relationships and durable door/object state.
+Add freeform dragging/physics only after slot behavior is useful; preserve normal
+filesystem paths. Provide undo/reset and keyboard equivalents.
+
+**Done when:** place a file shortcut, move its furniture parent, open a container,
+and restart with identities/placements intact. Handle deleted files, invalid slots,
+occupied doors, asset changes and failed saves without losing resources. Search
+and routes update as objects move; keyboard-only access remains practical.
+
 ## Optional later projects
 
 - Direct input into angled in-world surfaces, with correct popup, scale, and coordinate handling. Full-size application mode should remain available.
@@ -316,4 +414,4 @@ I ask you to stop, or no eligible work remains that can be performed safely.
 On stopping, report verified results and any remaining blockers precisely.
 ```
 
-Start with **Project 1**, then make **Project 2** the main technical go/no-go experiment. The first product target is **Project 8**, a useful persistent nested workspace; the complete native desktop is a substantially larger undertaking.
+For this checkout, start with **P4-T06 foundation recovery** and the reopened gate, then the first presentable room. Projects 1–4 remain useful historical milestones. The first product target is **Project 8**, a useful persistent nested workspace; the complete native desktop is a substantially larger undertaking.

@@ -535,6 +535,74 @@ authorize a rewrite. If blocked, continue only independent eligible work.
 
 ---
 
+## Project 4 visual slice: the first presentable room
+
+Goal: one coherent textured study with a live application, ordinary focus mode,
+and a working door. This is an integrated desktop milestone, not a detached
+scene viewer. Detailed PBR, shadows and creature animation remain later work.
+
+- [ ] **P4-T20 Minimal scene entities and transforms.** Prerequisites: P4-T18.
+  Introduce data-driven entity/parent IDs and mesh/material instances using the
+  established architecture boundary. Keep runtime application bindings separate.
+  **Acceptance:** transform/hierarchy and invalid-parent tests plus the existing
+  room/terminal checks pass. Parent movement changes child world transforms.
+
+- [ ] **P4-T21 glTF/GLB asset loading.** Prerequisites: P4-T20.
+  Choose a small loader with a dependency ADR; document the supported static mesh,
+  node, UV/index/normal and texture subset. Import one Blender-exported fixture;
+  handle missing/malformed/unsupported assets without corrupting the desktop.
+  **Acceptance:** load/render the fixture with tested transforms and index types;
+  invalid asset tests fail with useful diagnostics; provenance/license recorded.
+
+- [ ] **P4-T22 Textures and basic materials.** Prerequisites: P4-T21.
+  Implement UVs, base color textures/factors, sampler behavior and a documented
+  color-space/alpha policy. Separate scene material sampling from client pixels.
+  **Acceptance:** asymmetric texture/UV fixtures match expected locations/colors,
+  missing textures have a clear fallback, and real app text colors are preserved.
+
+- [ ] **P4-T23 Ambient and directional lighting.** Prerequisites: P4-T22.
+  Use normals and simple predictable lighting; retain an unlit application path.
+  Measure GLES2 compatibility. Consider GLES3 only through a bounded ADR-backed
+  capability experiment, retaining the baseline if unsupported.
+  **Acceptance:** controlled normal/light fixtures and application pixel checks
+  pass. Record frame times on the named hardware; no required PBR/shadow engine.
+
+- [ ] **P4-T24 Furnish one coherent study.** Prerequisites: P4-T23.
+  Assemble textured walls/floor, desk, shelf, monitor and door from licensed assets.
+  Document scale, collision bounds and placement slots; avoid decorative geometry
+  that obstructs navigation or app readability. Use a modest reproducible workload.
+  **Acceptance:** scene reload is deterministic; camera collision/teleport tests
+  pass; record screenshots for later human assessment, asset license and budgets.
+
+- [ ] **P4-T25 Object targeting and placement.** Prerequisites: P4-T24.
+  Ray-pick supported furniture/objects, show selection feedback, and move one
+  object between valid slots. Keep world actions out of application input.
+  **Acceptance:** deterministic ray/occlusion and valid/invalid slot tests pass;
+  the artifact/entity keeps its ID while moved. Restart persistence waits for P6.
+
+- [ ] **P4-T26 Interactive door.** Prerequisites: P4-T24, P4-T25.
+  Add a door hinge transform and bounded opening/closing animation, updated
+  collision, and a reduced-motion alternative. A door need not lead to a second
+  room yet; maintain the player's valid position when closing it.
+  **Acceptance:** scripted targeting/toggle updates door transform and collision;
+  repeated toggles and occupied doorway cases do not trap the camera.
+
+- [ ] **P4-T27 (human) Live terminal in the furnished study.**
+  Prerequisites: P4-T24 through P4-T26.
+  Bind the real terminal to the scene monitor. Follow ACCEPTANCE.md for walking/
+  teleport, selection, readable full-size typing/click/scroll, return to world,
+  object move, door interaction and close/reopen. Assess comfort and appearance.
+  **Acceptance:** a person's recorded results and screenshots; the same live
+  client survives mode transitions and furniture does not hide important UI.
+
+- [ ] **P4-T28 Presentable-room gate and handoff.**
+  Prerequisites: P4-T20 through P4-T27 and continued P4-T18 acceptance.
+  **Acceptance:** relevant automated checks and human furnished-room criteria
+  pass; document exact scene/client/backend, frame-time/copy measurements and
+  limitations in handoff 04-visual. Record the gate decision before resuming P5.
+
+---
+
 ## Projects 5–8: useful persistent workspace
 
 Each project starts with an expansion task. Autonomous sessions perform the

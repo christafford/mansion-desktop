@@ -1,5 +1,14 @@
 # Mansion Desktop
 
+## Current implementation direction
+
+This is the product vision, not an implementation status report. Follow
+docs/STATUS.md, docs/TASKS.md and Decision 05 for the current work order.
+The next product demonstration is a real terminal on a monitor in a textured
+study, with ordinary application mode and reliable lifecycle. The implemented
+stack is C++20/Meson/libwayland-server/EGL/GLES; proposed alternatives elsewhere
+in this concept are not instructions for an automatic migration.
+
 ## Concept and Architecture
 
 Mansion Desktop is a proposed Linux desktop environment that replaces the traditional two-dimensional desktop metaphor with a persistent, navigable three-dimensional world.
@@ -526,3 +535,28 @@ rather than:
 > "Which virtual desktop, tab, directory, or window did I leave that in?"
 
 The smallest meaningful validation is therefore not a beautiful mansion. It is a single room in which an ordinary Linux application becomes a persistent, interactive object and can move cleanly between the 3D world and focused desktop use.
+
+## Living-world features to preserve in the roadmap
+
+The environment supports textured architecture/furniture, movable physical
+shortcuts, animated doors and eventually creatures. OpenGL ES can supply the
+graphics; mesh loading, animation, collision and navigation are distinct systems
+to integrate as needed. Begin with one integrated presentable room rather than
+postponing all visual quality until multiroom expansion.
+
+Finding an application or file can illuminate a traversable path to its current
+physical location. Search resolves a stable artifact/entity ID and accounts for
+room transforms, furniture, closed doors and moved targets. Teleport and ordinary
+list access remain available. See roadmap track 8N.
+
+A due task such as “submit your timesheet by 4pm” can spawn a creature that
+approaches or chases the player in world mode. The underlying reminder persists
+independently, with due-time/timezone policy, acknowledge, snooze and disable.
+During application mode an accessible notification/list still delivers it.
+Creature behavior is configurable and cannot block typing or unsaved-work dialogs.
+See roadmap track 14R.
+
+File references can be placed on desks, shelves, counters and tables, or inside
+openable containers. Furniture/door/object state and parent-relative placement
+are durable world data. Moving a shortcut changes metadata, not its ordinary
+filesystem path; users can undo/reset a placement. See roadmap track 15I.
