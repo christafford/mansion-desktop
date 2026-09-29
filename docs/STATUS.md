@@ -1,16 +1,35 @@
 # Project status
 
-Updated 2026-09-28. This file is the single source of truth for what works.
+Documentation direction updated 2026-09-29 from the supplied archive.
+This edit performs no new compositor verification. Older results below are
+attributed historical reports, not fresh executions. This file tracks evidence
+and limits; source inspection plus current acceptance determines what works.
 Use exactly these labels: **verified by automated test**, **verified by a
 person**, **not verified**. Never move an item to a "verified" list without
 running the check that proves it.
 
 ## Next task
 
-**P5-T00 Expand Project 5** (multiple windows and application lifecycle)
-into tasks of the same shape as above: window registry, several toplevels,
-`xdg_popup` and positioner, transient/dialog association by client,
-manual artifact assignment, focus switching by keyboard, tests for each.
+**P4-T06 Reconcile implementation and evidence**, then the bounded foundation
+recovery tasks through P4-T18 in TASKS.md. Project 5 feature work is blocked
+until the foundation and presentable-room gates pass. P5-T00 was already
+expanded; do not run that expansion again.
+
+## Review boundaries and open gates
+
+| Item | Current evidence | What is required next |
+| --- | --- | --- |
+| Foundation gate | Reopened; old Decision 04 approval superseded | P4-T06–P4-T18 and a real terminal observed by a person |
+| GPU client import | Not verified; PBuffer/readback/shm is fallback evidence | P4-T13; direct import proof before ticking P2-T05 |
+| Native Wayland host | Not verified | P4-T12 prototype and separate host-window observation |
+| Lifetimes and surface commits | Review found paths needing audit; no new runtime conclusion | P4-T08–P4-T11 regressions and sanitizer evidence |
+| Automation | Archive test assumes Projects 1–4 always have open tasks; nested P5 tasks are not parsed | P4-T07 fixtures, parser/gate coverage and instruction alignment |
+| First presentable room | Not implemented/accepted | P4-T20–P4-T28 after the foundation gate |
+
+Potential source issues are audit leads, not claims of a reproduced crash.
+Preserve the dated automated results below within their actual test scope.
+Use `docs/ACCEPTANCE.md` for new real-client/visual evidence. Do not describe
+synthetic scripted input as a successful ordinary terminal workflow.
 
 ## This session (2026-09-28)
 
@@ -78,8 +97,9 @@ manual artifact assignment, focus switching by keyboard, tests for each.
 
 - **P4-T05 Project 4 wrap-up.** Handoff 04 created with full architectural
   documentation (room geometry, collision, teleport, texture swizzle fix).
-  Decision gate A recorded in `docs/decisions/04-room-gate.md`: continue to
-  Project 5 (multi-room expansion). All 24 tests pass.
+  Historical Decision 04 approved continuation from synthetic evidence.
+  That approval is superseded by Decision 05; Project 5 is multiple windows,
+  not multiple rooms. The 24-test pass is a historical report.
 
 - `smoke-headless` (P1-T01): `mansion-desktop --headless --socket NAME
   --exit-after-ms N` starts without a display, prints `MANSION_SOCKET=NAME`,
@@ -169,7 +189,7 @@ manual artifact assignment, focus switching by keyboard, tests for each.
   `[B,R,G,A]` rearrangement. `meson test -C build render-lifecycle` passes
   (three connect/draw/disconnect cycles, last screenshot valid, no GL errors).
   All 12 tests pass on `build`.
-- **P2-T05 Accelerated client experiment.** Test client `--egl` flag renders
+- **P2-T05 fallback experiment (feature reopened).** Test client `--egl` flag renders
   green to an EGL PBuffer, reads pixels via `glReadPixels`, exports as RGBA
   memfd-backed `wl_shm` buffer. Compositor `--egl` flag skips the ARGB→RGBA
   swizzle in `render_surface()` and `render_panel()`, uploading RGBA directly.
@@ -185,9 +205,10 @@ manual artifact assignment, focus switching by keyboard, tests for each.
   `w × h × 4`). Every 60 frames the accumulated averages are printed to stderr
   as `fps` and `KiB uploaded`, then counters reset. `meson test -C build`
   passes unchanged. Measured numbers in `docs/handoffs/02.md`.
-- **P2-T08 Project 2 wrap-up.** All P2 tasks (T01–T07) ticked. Handoff updated
-  with gate A decision: continue with current renderer/compositor integration.
-  `meson test -C build` passes (14/14).
+- **P2-T08 historical Project 2 wrap-up.** The 2026-09-27 handoff reported all
+  P2 tasks ticked and 14/14 tests passing. P2-T05 is now reopened, and the old
+  continuation approval is superseded by Decision 05. Keep the fallback test
+  result within its actual scope.
 - **P3-T01 Explicit modes.** `enum class InputMode { World, Application }` with
   one owner. World mode: input drives the camera, clients get nothing.
   Application mode: input goes to the focused surface. `--input-script` gains
@@ -228,8 +249,10 @@ manual artifact assignment, focus switching by keyboard, tests for each.
 
 ## Verified by a person
 
-Nothing yet. No real Wayland client has ever opened a window on this
-compositor. `weston-terminal` is not installed in the development container
+No personal observation is recorded in the supplied archive. The archive
+reports no successful ordinary Wayland application trial; synthetic clients
+have connected and rendered. This is a missing acceptance record, not a claim
+about later work in another checkout. `weston-terminal` is not installed in the development container
 (`sudo pacman -S weston` provides it). P1-T10 not observed (human task).
 
 ## Not verified / known broken
@@ -239,10 +262,11 @@ compositor. `weston-terminal` is not installed in the development container
   checked, `set_window_geometry`/title/app_id/min/max ignored, `xdg_positioner`
   accepted and ignored, `get_popup` posts a protocol error. No `ping` is sent.
   Resize configures on host window resize (P1-T09), popups in Project 5.
-- **Seat handles one client badly.** A second `get_keyboard` posts a protocol
-  error; `wl_seat` binds overwrite each other. Fixed in P1-T06-A (multi-seat
-  lists). Proper keymap (xkbcommon), repeat_info, modifiers, keyboard enter/leave,
-  pointer enter/leave/motion with hit testing in P1-T06-B through P1-T06-F.
+- **Seat verification boundary.** Multi-seat objects, keymap, modifiers, and
+  focus delivery have historical synthetic-test evidence. Their real-client
+  behavior, pointer coordinate mapping, held-button release, and concurrent
+  focus transitions must be checked in recovery; the older single-seat defect
+  is reported fixed, not a current failure claim.
 - **Launcher** works for simple commands (whitespace split, environment set,
   `DISPLAY` unset), children are reaped via SIGCHLD, and client connect/disconnect
   is logged. Exit status from `--launch` errors is still only logged (not

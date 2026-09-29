@@ -1,22 +1,48 @@
 # Task list
 
 This is the executable form of [PROJECT-ROADMAP.md](../PROJECT-ROADMAP.md).
-Autonomous sessions work from this file: take the first unchecked task whose
-prerequisites are checked, finish it, prove it, tick it, commit.
+Autonomous sessions work from this file: take the first eligible unchecked
+task in scope, prove its acceptance, record the evidence, and commit.
+
+## Current execution order (2026-09-29 review)
+
+1. Foundation recovery: P4-T06 through P4-T18.
+2. First presentable room: P4-T20 through P4-T28.
+3. Resume Projects 5–8, then the dependency-ordered roadmap.
+
+P4-T18 and P4-T28 are real product gates. Project 5 expansion already exists,
+but its feature tasks are blocked until both gates pass. Keep earlier automated
+work and checkmarks as historical records; the old P4-T05 decision does not
+authorize new development past these gates. P2-T05 is reopened for direct GPU
+buffer import and is investigated by P4-T13; a readback/shm test cannot tick it.
+
+Recovery/visual phases use numeric P4 IDs because the bundled continuation
+parser does not understand P4R/P4V. Keep executable checklist items at column
+zero; the current parser ignores indented tasks. Use explicit bounded ranges.
+Completion of a range is not acceptance of the product or a later gate.
 
 ## Conventions
 
 - One task per turn. A task is small enough to finish, build, and test in one
   sitting. If it is not, split it (add sub-tasks here) instead of doing half.
-- Every task has an **Acceptance** line. It is a command, or a short list of
-  commands, that must pass with no display attached. Run it before ticking.
+- Every task has an **Acceptance** line and explicit prerequisites for new
+  recovery tasks. Behavioral changes require appropriate automated checks;
+  graphical/product acceptance also requires observation where stated.
+  Documentation/research tasks accept reviewable evidence, not invented tests.
+- Distinguish implementation, automated checks, real-client integration, visual
+  observation, and product gate decisions. Record command, date, revision,
+  environment, expected/actual result, and remaining limits in STATUS/handoff.
+- A completed investigation with a blocker does not complete the feature it
+  investigated. Keep that feature unchecked and its compatibility limitation
+  visible. A gate must explicitly decide whether a constrained fallback is
+  sufficient for the next phase.
 - Tick a task by changing `- [ ]` to `- [x]` and appending the commit hash or
   date, for example `- [x] P1-T01 ... (a1b2c3d)`.
 - Tasks marked **(human)** need a person at the screen. Autonomous sessions do
   not perform them, do not tick them, and do not claim them. They write the
   procedure and leave the result as "not observed" in `docs/STATUS.md`.
-- Commit after each verified task: `git add -A && git commit -q -m "<id>: <summary>"`.
-  Never push. Never rewrite history.
+- Commit verified task changes only: `git add -- <task files>`, then
+  `git commit -q -m "<id>: <summary>"`. Never push or rewrite history.
 - Build and test commands are always:
 
   ```sh
@@ -247,7 +273,7 @@ Depends on Project 1 automated tasks (P1-T10 may still be unobserved).
   connect/draw/disconnect cycles, last screenshot valid, no GL error lines).
   (2026-09-27, fixed cyclic swizzle in `render_surface()`)
 
-- [x] **P2-T05 Accelerated client experiment (Decision gate A input).** Add a
+- [ ] **P2-T05 Accelerated client experiment (reopened 2026-09-29).** Add a
   test client mode `--egl` using `wayland-egl` that clears to a colour and
   swaps. Import its buffers with `EGL_WL_bind_wayland_display`
   (`eglBindWaylandDisplayWL`, `eglQueryWaylandBufferWL`, `eglCreateImageKHR`)
@@ -255,11 +281,15 @@ Depends on Project 1 automated tasks (P1-T10 may still be unobserved).
   the exact failure (extension list, error codes) in
   `docs/decisions/03-accelerated-buffers.md` and mark the task blocked, not
   done.
-  **Acceptance:** `meson test -C build render-egl` passes, or the decision
-  record exists with evidence and `docs/STATUS.md` lists the blocker.
-  (2026-09-27, `EGL_WL_bind_wayland_display` unavailable; test client uses
-  EGL PBuffer + `glReadPixels` + memfd/shm export; compositor skips swizzle
-  with `--egl`; full pipeline verified by `render-egl` test)
+  **Acceptance:** a direct accelerated-client import regression passes with
+  no client GPU-to-CPU readback/shm substitution; document buffer ownership and
+  synchronization and run the full suite. The existing `render-egl` fallback
+  test remains useful but cannot satisfy this acceptance by itself.
+  **Current requirement:** direct import of an accelerated client's buffer must
+  be demonstrated before ticking. P4-T13 owns the renewed investigation. The
+  2026-09-27 PBuffer + `glReadPixels` + shm experiment remains historical
+  fallback evidence; it does not demonstrate direct import. A negative research
+  outcome is recorded as a feature blocker, not completion of this task.
 
 - [x] **P2-T06 Camera movement.** WASD/arrow keys move, mouse look with the
   right button held (windowed mode). The same actions are available to
@@ -358,6 +388,150 @@ Depends on Project 1 automated tasks (P1-T10 may still be unobserved).
   and an explicit gate decision in `docs/decisions/`.
   **Acceptance:** `meson test -C build milestone1` passes (all 24 tests).
   (2026-09-27)
+
+---
+
+## Project 4 recovery: foundation stabilization
+
+Goal: demonstrate a functioning nested graphical desktop and repair the
+evidence/architecture gaps before feature expansion. These tasks do not
+authorize a rewrite. If blocked, continue only independent eligible work.
+
+- [ ] **P4-T06 Reconcile implementation and evidence.** Prerequisites: none.
+  Inspect source, Meson registrations, tests, STATUS, decisions, and handoffs.
+  Establish a baseline; identify partial registry code, stale next-task claims,
+  contradictory swizzle explanations, orphaned-surface retention, and missing
+  real-client evidence. Attribute old results; do not re-label them as new runs.
+  **Acceptance:** reviewable evidence table and bounded follow-up list in
+  `docs/handoffs/04-recovery.md`; run existing checks where available and record
+  exact failures/missing prerequisites. No unchecked capability is called done.
+
+- [ ] **P4-T07 Repair automation verification.** Prerequisites: P4-T06.
+  Replace the plugin test's assumption that the live Projects 1–4 task list
+  always contains unfinished work with stable fixtures. Add coverage for
+  top-level task parsing and reopened gates; ensure Project 5 tasks are seen.
+  Align generated run instructions with safe staging and prerequisite checks.
+  Keep numeric IDs and explicit task scopes; fail closed for unrecognized scopes
+  in normal runs. Do not bypass a gate because human tasks are excluded from
+  the plugin's DONE check. This task authorizes a focused plugin/test change.
+  **Acceptance:** `node --test .opencode/tests/*.test.js` passes; parsing tests
+  show open P5 tasks, completed fixtures, blocked gate behavior, and unknown
+  scope rejection. Existing interruption, limit, persistence and takeover
+  behavior remains covered. Record a live run separately when available.
+
+- [ ] **P4-T08 Audit resource and list lifetimes.** Prerequisites: P4-T06.
+  Audit wl_surface, wl_buffer, xdg_surface, xdg_toplevel, listeners, registry
+  links, and GPU cleanup. Test xdg_surface destruction before role assignment,
+  legal role/surface teardown orders, abrupt disconnect during rendering,
+  repeated connections, and concurrent clients. Handle protocol-invalid orders
+  with specified errors rather than treating every order as valid. Bound test
+  snapshots; remove unbounded retention of disconnected resources.
+  **Acceptance:** add targeted lifecycle regressions, run the normal suite and
+  `meson setup build-asan --buildtype=debug -Db_sanitize=address,undefined`
+  (first time), `meson compile -C build-asan`, and
+  `meson test -C build-asan --print-errorlogs`. No sanitizer errors, corrupted
+  lists, double cleanup, or unbounded growth across repeated disconnects.
+
+- [ ] **P4-T09 Correct pending/current surface state.** Prerequisites: P4-T08.
+  Separate no-new-attach from attach-null. Apply attachment/damage/frame state
+  on commit, preserve current content until then, and release each consumed
+  buffer only once access has ended. Respect stride and protect shm access.
+  Resource destruction invalidates pointers without inventing pixel ownership.
+  **Acceptance:** new tests cover attach-without-commit, replaced pending attach,
+  commit without attach, null attach/commit, repeated buffer reuse after release,
+  resource destruction after release, and disconnect while rendering. Verify
+  pixels/event order in normal and sanitizer builds against protocol semantics.
+
+- [ ] **P4-T10 Verify formats and coordinates.** Prerequisites: P4-T09.
+  Replace driver-specific color guesses with a tested format/stride/alpha path.
+  Test unequal R/G/B values, XRGB and premultiplied ARGB, nontrivial stride,
+  scaling, transforms, logical dimensions, letterboxing, and pointer mapping.
+  Implement requirements for advertised versions; document unsupported protocols.
+  **Acceptance:** format tests assert expected pixels in flat, panel, and
+  application modes; coordinate tests hit corners/center after resize and scale
+  changes. No globally selected --egl flag changes interpretation of ordinary
+  clients' declared shm formats. All existing tests remain valid or their
+  previous incorrect fixtures are corrected with a documented protocol reason.
+
+- [ ] **P4-T11 Validate xdg-shell handshake and metadata.**
+  Prerequisites: P4-T08, P4-T09.
+  Check initial configure/ack/commit ordering, valid outstanding serials,
+  unmap/remap, resize, title/app_id and window geometry. Audit advertised versions
+  and mandatory requests; add minimal output/decoration support only where a
+  chosen real client requires it. Do not claim broad toolkit support from this.
+  **Acceptance:** protocol regressions cover valid repeated configure sequences
+  and specified invalid cases without crashes, in normal and sanitizer builds.
+  Metadata reaches runtime presentation; supported-version claims are accurate.
+
+- [ ] **P4-T12 Native nested Wayland host experiment.** Prerequisites: P4-T06.
+  Investigate a host Wayland window with EGL, input/focus, resize, and close.
+  Preserve X11 and headless paths. Keep the host connection distinct from
+  Mansion's private client socket and launcher environment. Diagnose the actual
+  X11 failure instead of relying on a warning-only XIO handler as recovery proof.
+  **Acceptance:** a bounded prototype plus reproducible commands/logs demonstrates
+  rendering and host events, or a precise blocker/capability report explains why
+  it cannot. Record required versions and what remains unobserved; a report alone
+  does not mark a native Wayland backend implemented. P4-T16 needs a usable host.
+
+- [ ] **P4-T13 Accelerated buffer import investigation.** Prerequisites: P4-T09.
+  Recheck EGL client/display extension strings and extension entry points with
+  eglGetProcAddress. Compare EGL Wayland binding and linux-dmabuf import,
+  including advertised protocol, formats/modifiers, ownership and synchronization.
+  Record Mesa/driver/GPU, errors and copy points; keep wl_shm functioning.
+  **Acceptance:** a real accelerated Wayland client submits a buffer that Mansion
+  directly imports and displays, or Decision 03 documents an exact reproducible
+  blocker and the changes needed. Report research completion separately from
+  P2-T05 feature completion. PBuffer/readback/shm remains a fallback experiment.
+
+- [ ] **P4-T14 Bounded wlroots suitability experiment.**
+  Prerequisites: P4-T06; use P4-T12/P4-T13 findings when available.
+  In an isolated experiment, evaluate nested/headless backends, buffer import,
+  surface trees and seat input while retaining custom C++ spatial rendering.
+  Compare integration burden with the implemented libwayland-server path.
+  Pin the evaluated version; record dependency proposals before adding them.
+  **Acceptance:** a small demonstrator or exact dependency/environment blocker,
+  and an ADR comparing measured integration work, ownership, risk, and next steps.
+  No production stack replacement or bulk rewrite is part of this task.
+
+- [ ] **P4-T15 Introduce one architecture boundary.**
+  Prerequisites: P4-T08, P4-T10, P4-T11, P4-T14.
+  Map current code to ARCHITECTURE.md. Extract the smallest useful runtime
+  presentation/world boundary from display.cpp, documenting ownership, logical
+  dimensions, damage, invalidation and input coordinates. Use existing math.
+  **Acceptance:** existing demonstrations/tests pass, plus one lifetime regression
+  through the new boundary. World data has no persistent Wayland/GL/PID identity.
+  Document actual changes and deferred boundaries; no new general engine/ECS.
+
+- [ ] **P4-T16 Prepare a reproducible real-terminal trial.**
+  Prerequisites: P4-T10, P4-T11, P4-T12, P4-T15.
+  Launch an installed native Wayland terminal via Mansion's launcher on a usable
+  host backend; log its connection/mapping and updates. Fix the smallest blocking
+  protocol/host issue; record missing packages for a person to install. Publish
+  exact flat and room commands and diagnostics in ACCEPTANCE.md. Log assertions
+  supplement the visual trial; they do not establish usability.
+  **Acceptance:** reproducible launch evidence from a real terminal and a complete
+  manual procedure. If the terminal or host window is unavailable, leave this
+  task blocked; do not replace it with the synthetic test client.
+
+- [ ] **P4-T17 (human) Foundation desktop demonstration.**
+  Prerequisites: P4-T16. Follow ACCEPTANCE.md in flat and room modes: readable
+  text, typing, pointer selection, scrolling, resize, repeated enter/return,
+  host focus loss, terminal close/reopen, and safe Mansion exit. Record actual
+  screenshots, application/backend versions, observations and limitations.
+  **Acceptance:** a person's recorded successful checks with date and source
+  revision. The same evidence may also satisfy P1-T10 and P4-T04 if it covers
+  their full procedures. Never tick those automatically from synthetic tests.
+
+- [ ] **P4-T18 Foundation decision gate.**
+  Prerequisites: P4-T06 through P4-T17, including human evidence.
+  Review failures, sanitizers, real terminal behavior, backend/stack experiments,
+  and architecture boundaries. Record accepted/deferred/blocked in Decision 05.
+  A bounded shm-only next phase may be accepted explicitly for the tested client
+  and hardware; GPU-import capability remains blocked and P2-T05 stays open.
+  A required stack migration needs its own bounded plan before proceeding.
+  **Acceptance:** no required foundation check is missing or failing; ADR names
+  the accepted backend/client/configuration and limits. Only an accepted gate
+  enables P4-T20. Research reports alone cannot satisfy the real-terminal gate.
 
 ---
 

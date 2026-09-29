@@ -3,7 +3,16 @@
 Date: 2026-09-27
 Related tasks: P4-T01, P4-T02, P4-T03, P4-T05
 
-## Question
+## Review amendment (2026-09-29): gate reopened
+
+Decision 05 supersedes the continuation approval below. The recorded synthetic
+journey/pixel checks demonstrate their assertions; they do not prove ordinary
+terminal compatibility, visible host-window reliability, or visual usability.
+P1-T10/P4-T04 were unobserved. Require P4-T18, then P4-T28, before Project 5.
+Project 5 is multiple windows and application lifecycle; multiple rooms remain
+Project 15. Retain the original findings as dated evidence, not current approval.
+
+## Question (historical assessment)
 
 Is the current room-mode implementation ready to serve as the foundation
 for a multi-room persistent workspace? Specifically:
@@ -74,7 +83,7 @@ directly in non-EGL mode. All 24 tests pass with this fix. **Passes.**
 24/24 total — all pass
 ```
 
-## Conclusion
+## Historical conclusion (continuation approval superseded)
 
 **Gate A: Continue to Project 5.**
 
