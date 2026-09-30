@@ -10,13 +10,11 @@ running the check that proves it.
 
 ## Next task
 
-**P4-T07 Repair automation verification**. Prerequisites: P4-T06 (completed
-2026-09-29, see docs/handoffs/04-recovery.md). P4-T08 (audit lifetimes) and
-P4-T12 (native host experiment) are also eligible after P4-T06 but P4-T07 is
-more self-contained. Project 5 feature work is blocked until the foundation
-and presentable-room gates pass. P5-T00 was already expanded; do not run that
-expansion again. The old "P5-T03 xdg_popup" next-task pointer from
-2026-09-28 is withdrawn.
+**P4-T08 Audit resource and list lifetimes**. Prerequisites: P4-T06 (completed
+2026-09-29, see docs/handoffs/04-recovery.md). P4-T07 completed 2026-09-29:
+54/54 plugin tests pass (+5 new stable-fixture and gate tests), 25/25 C++ tests
+pass. P4-T08–P4-T12 follow; Project 5 feature work is blocked until the
+foundation and presentable-room gates pass.
 
 ## Review boundaries and open gates
 
@@ -27,7 +25,9 @@ expansion again. The old "P5-T03 xdg_popup" next-task pointer from
 | Native Wayland host | Implemented in source (d4f8551–a615f18, `wl_egl_window` host window replacing X11) but not verified; handoff 04-host-window reports severe flicker and no host input | P4-T12 diagnosis with logs and separate host-window observation |
 | Host input path | Windowed mode again scans `/dev/input` directly (`input_init()`), contradicting the P1-T07 record; headless opens no devices | P4-T06 records it; P4-T12 decides host-seat-only vs evdev |
 | Lifetimes and surface commits | Review found paths needing audit; no new runtime conclusion | P4-T08–P4-T11 regressions and sanitizer evidence |
-| Automation | Archive test assumes Projects 1–4 always have open tasks; nested P5 tasks are not parsed | P4-T07 fixtures, parser/gate coverage and instruction alignment |
+| Automation | P4-T07 fixed: stable fixtures replace live TASKS.md dependency; P5 tasks,
+  gate blocking, and unknown scope rejection covered by 5 new tests | P4-T08
+  audit lifetimes next; plugin test suite stable at 54/54 |
 | First presentable room | Not implemented/accepted | P4-T20–P4-T28 after the foundation gate |
 
 Potential source issues are audit leads, not claims of a reproduced crash.

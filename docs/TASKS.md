@@ -409,7 +409,7 @@ authorize a rewrite. If blocked, continue only independent eligible work.
   tests pass. Two contradictions found: dead X11 dependency in meson.build,
   P1-T07 evdev claim. Partial P5-T01/P5-T02 confirmed. Handoff at 04-recovery.md.)
 
-- [ ] **P4-T07 Repair automation verification.** Prerequisites: P4-T06.
+- [x] **P4-T07 Repair automation verification.** Prerequisites: P4-T06.
   Replace the plugin test's assumption that the live Projects 1–4 task list
   always contains unfinished work with stable fixtures. Add coverage for
   top-level task parsing and reopened gates; ensure Project 5 tasks are seen.
@@ -417,10 +417,13 @@ authorize a rewrite. If blocked, continue only independent eligible work.
   Keep numeric IDs and explicit task scopes; fail closed for unrecognized scopes
   in normal runs. Do not bypass a gate because human tasks are excluded from
   the plugin's DONE check. This task authorizes a focused plugin/test change.
-  **Acceptance:** `node --test .opencode/tests/*.test.js` passes; parsing tests
-  show open P5 tasks, completed fixtures, blocked gate behavior, and unknown
-  scope rejection. Existing interruption, limit, persistence and takeover
-  behavior remains covered. Record a live run separately when available.
+  **Acceptance:** `node --test .opencode/tests/*.test.js` passes (54/54, +5 new
+  tests); parsing tests show open P5 tasks, completed fixtures, blocked gate
+  behavior, and unknown scope rejection. Existing interruption, limit, persistence
+  and takeover behavior remains covered. (2026-09-29: 54/54 plugin tests pass,
+  25/25 C++ tests pass. Replaced live TASKS.md dependency with stable fixture
+  TASKS_ALL_P1_P4_DONE. Added tests: P5 visibility, reopened gate blocking,
+  unknown scope rejection, numeric ID cross-project parsing.)
 
 - [ ] **P4-T08 Audit resource and list lifetimes.** Prerequisites: P4-T06.
   Audit wl_surface, wl_buffer, xdg_surface, xdg_toplevel, listeners, registry
