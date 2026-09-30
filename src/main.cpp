@@ -378,8 +378,11 @@ int main(int argc, char** argv) {
     }
 
     /* P2-T02: configure 3D panel rendering.
-     * Default to 2D mode for backward compatibility; 3D only when --camera given. */
-    display->flat_mode = opts.flat || !opts.camera_specified;
+     * Default to 3D world mode; flat mode only when --flat is given or
+     * when headless testing needs 2D backward compatibility. */
+    display->flat_mode = opts.headless && !opts.camera_specified;
+    if (opts.flat)
+        display->flat_mode = true;
     /* P2-T07: frame timing stats */
     display->stats_enabled = opts.stats;
     if (opts.room_camera) {
