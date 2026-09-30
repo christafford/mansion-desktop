@@ -1776,13 +1776,14 @@ static struct wl_buffer* create_shm_buffer(struct MansionDisplay* display,
     glPixelStorei(GL_PACK_ALIGNMENT, 4);
     glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, rgba.data());
 
-    /* Convert GL_RGBA [R,G,B,A] to ARGB8888 [A,R,G,B] on little-endian. */
+    /* Convert GL_RGBA [R,G,B,A] to ARGB8888 (0xAARRGGBB) for the display.
+     * On little-endian, 0xAARRGGBB is stored in memory as [B,G,R,A]. */
     uint32_t* pixels = (uint32_t*)ptr;
     for (int i = 0; i < w * h; i++) {
-        pixels[i] = (rgba[i * 4 + 3] & 0xff)                   /* A */
-                    | ((rgba[i * 4 + 0] & 0xff) << 16)          /* R */
-                    | ((rgba[i * 4 + 1] & 0xff) << 8)           /* G */
-                    | ((rgba[i * 4 + 2] & 0xff));               /* B */
+        pixels[i] = ((uint32_t)rgba[i * 4 + 3] << 24)  /* A in bits 24-31 */
+                  | ((uint32_t)rgba[i * 4 + 0] << 16)  /* R in bits 16-23 */
+                  | ((uint32_t)rgba[i * 4 + 1] << 8)   /* G in bits 8-15 */
+                  | (uint32_t)rgba[i * 4 + 2];         /* B in bits 0-7 */
     }
 
     munmap(ptr, size);
