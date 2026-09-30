@@ -1,16 +1,58 @@
 # Project status
 
-Updated 2026-09-28. This file is the single source of truth for what works.
+Documentation direction updated 2026-09-29 from the supplied archive.
+This edit performs no new compositor verification. Older results below are
+attributed historical reports, not fresh executions. This file tracks evidence
+and limits; source inspection plus current acceptance determines what works.
 Use exactly these labels: **verified by automated test**, **verified by a
 person**, **not verified**. Never move an item to a "verified" list without
 running the check that proves it.
 
 ## Next task
 
-**P5-T03 xdg_popup support.** Implement `get_popup` for xdg_surface. The
-popup is owned by a parent xdg_surface (passed as the `parent` argument).
+**P4-T06 Reconcile implementation and evidence**, then the bounded foundation
+recovery tasks through P4-T18 in TASKS.md. Project 5 feature work is blocked
+until the foundation and presentable-room gates pass. P5-T00 was already
+expanded; do not run that expansion again. The old "P5-T03 xdg_popup" next-task
+pointer from 2026-09-28 is withdrawn.
 
-## This session (2026-09-28, second turn)
+## Review boundaries and open gates
+
+| Item | Current evidence | What is required next |
+| --- | --- | --- |
+| Foundation gate | Reopened; old Decision 04 approval superseded | P4-T06–P4-T18 and a real terminal observed by a person |
+| GPU client import | Not verified; PBuffer/readback/shm is fallback evidence | P4-T13; direct import proof before ticking P2-T05 |
+| Native Wayland host | Implemented in source (d4f8551–a615f18, `wl_egl_window` host window replacing X11) but not verified; handoff 04-host-window reports severe flicker and no host input | P4-T12 diagnosis with logs and separate host-window observation |
+| Host input path | Windowed mode again scans `/dev/input` directly (`input_init()`), contradicting the P1-T07 record; headless opens no devices | P4-T06 records it; P4-T12 decides host-seat-only vs evdev |
+| Lifetimes and surface commits | Review found paths needing audit; no new runtime conclusion | P4-T08–P4-T11 regressions and sanitizer evidence |
+| Automation | Archive test assumes Projects 1–4 always have open tasks; nested P5 tasks are not parsed | P4-T07 fixtures, parser/gate coverage and instruction alignment |
+| First presentable room | Not implemented/accepted | P4-T20–P4-T28 after the foundation gate |
+
+Potential source issues are audit leads, not claims of a reproduced crash.
+Preserve the dated automated results below within their actual test scope.
+Use `docs/ACCEPTANCE.md` for new real-client/visual evidence. Do not describe
+synthetic scripted input as a successful ordinary terminal workflow.
+
+## Merge reconciliation (2026-09-29)
+
+The 2026-09-29 documentation series (d8d7fd5–b2bdf86) was written against a
+checkout that predated the 2026-09-28 implementation commits
+(d3411e2–a615f18). Both are kept. Facts established while merging:
+
+- `meson compile -C build && meson test -C build --print-errorlogs` on the
+  merged tree: 25/25 tests pass (source unchanged by the merge; container
+  `mansion-dev`). This is a regression run, not new capability evidence.
+- The X11 host window no longer exists in source. Statements about X11 in
+  ARCHITECTURE.md, ACCEPTANCE.md and DEVELOPMENT.md were corrected; older
+  handoffs keep their historical wording. `meson.build` still declares
+  `x11 = dependency('x11')` although no target uses it.
+- `docs/handoffs/05.md` (Wayland client window work) was renamed to
+  `docs/handoffs/04-host-window.md`; handoff 05 is reserved for Project 5.
+- The nested P5-T01/P5-T02 sub-tasks ticked on 2026-09-28 are recorded as
+  historical evidence under P5-T00 in TASKS.md; the revised column-zero
+  P5-T01/P5-T02 remain unchecked and blocked on P4-T28.
+
+## Session history (2026-09-28, second turn; commits d4f8551–a615f18)
 
 - **X11 → Wayland client migration (flickering fix attempt).** Replaced X11
   host window with a native Wayland client presentation (`xdg_wm_base` +
@@ -36,9 +78,9 @@ popup is owned by a parent xdg_surface (passed as the `parent` argument).
     evdev FD globals and live camera state globals properly defined.
   - `main.cpp`: replaced `input_process_x11(display)` with
     `input_process_wayland_client(display)`.
-  - `meson.build`: removed x11 from deps; added wayland_client; added
-    xdg_shell_client_h to mansion_exe sources.
-  - **Build and tests:** all 25/25 tests pass (verified).
+  - `meson.build`: removed x11 from `mansion_exe` deps; added wayland_client;
+    added xdg_shell_client_h to mansion_exe sources.
+  - **Build and tests:** all 25/25 tests pass (reported 2026-09-28).
 
 - **Wayland seat input for host window (P5-T02 follow-up).** Added keyboard and
   pointer input handling to the host Wayland client window so the user can
@@ -55,74 +97,58 @@ popup is owned by a parent xdg_surface (passed as the `parent` argument).
     `input_wayland_pointer_motion()` to update live camera state variables.
   - `meson.build`: generated relative-pointer protocol header + code added
     to mansion_exe.
-  - **Build and tests:** all 25/25 tests pass (verified).
+  - a615f18 then added a `wl_seat.capabilities` handler and fixed listener
+    crashes; runtime effect not observed.
   - **Not verified:** flickering is "terrible" (worse than X11) and no mouse or
     keyboard input received from the host compositor (KWin). The root cause is
     likely Mesa's Wayland EGL backend creating its own internal `wl_display`
     connection for buffer management, conflicting with our `wl_client_display`
-    connection. Investigation ongoing.
+    connection. Investigation ongoing; see
+    [handoffs/04-host-window.md](handoffs/04-host-window.md).
+
+## Session history (2026-09-28, first turn; superseded by the migration above)
 
 - **X11 reconnect mechanism.** Extracted window+EGL creation into
-  `create_egl_and_window()` helper. `input_process_x11()` now detects broken
-  X11 connection (`XConnectionNumber < 0`) and attempts full reconnect
+  `create_egl_and_window()` helper. `input_process_x11()` detected a broken
+  X11 connection (`XConnectionNumber < 0`) and attempted a full reconnect
   (reopen display, recreate window+EGL/renderer). XIO error handler changed
-  from `_Exit(0)` to warning-only — compositor survives Xwayland disconnects.
-  Verified: compositor ran 30s+ without X11 crash (previously died within
-  seconds).
+  from `_Exit(0)` to warning-only. Reported: compositor ran 30s+ without X11
+  crash. This code was removed in d4f8551; the record is historical only.
 - **Mouse X-axis invert.** Mouse left now looks left (same convention as
   Y-axis: mouse up → look up).
 - **Frame count fix.** `frame_count` in `main.cpp` was declared but never
   incremented; now incremented after each `swap_buffers`. Exit log shows
   accurate frame count.
-- **Rendering pipeline verified.** `glReadPixels` before `eglSwapBuffers`
-  confirms clear color (0.15, 0.15, 0.2) and room geometry are correctly
-  present in the back buffer. All 24 tests pass.
-- **Known limitation:** Xwayland remains unstable in this container.
-  The compositor no longer crashes on disconnect but may need manual restart
-  to re-establish the X11 connection. Windowed mode rendering has been
-  observed on the Wayland compositor side but the X11 window appearance
-  on the host desktop is unreliable in this environment.
-
-- **X11 reconnect mechanism.** Extracted window+EGL creation into
-  `create_egl_and_window()` helper. `input_process_x11()` now detects broken
-  X11 connection (`XConnectionNumber < 0`) and attempts full reconnect
-  (reopen display, recreate window+EGL/renderer). XIO error handler changed
-  from `_Exit(0)` to warning-only — compositor survives Xwayland disconnects.
-  Verified: compositor ran 30s+ without X11 crash (previously died within
-  seconds).
-- **Mouse X-axis invert.** Mouse left now looks left (same convention as
-  Y-axis: mouse up → look up).
-- **Frame count fix.** `frame_count` in `main.cpp` was declared but never
-  incremented; now incremented after each `swap_buffers`. Exit log shows
-  accurate frame count.
-- **Rendering pipeline verified.** `glReadPixels` before `eglSwapBuffers`
-  confirms clear color (0.15, 0.15, 0.2) and room geometry are correctly
-  present in the back buffer. All 24 tests pass.
-- **Known limitation:** Xwayland remains unstable in this container.
-  The compositor no longer crashes on disconnect but may need manual restart
-  to re-establish the X11 connection. Windowed mode rendering has been
-  observed on the Wayland compositor side but the X11 window appearance
-  on the host desktop is unreliable in this environment.
-
+- **Rendering pipeline check.** `glReadPixels` before `eglSwapBuffers`
+  confirmed the clear color (0.15, 0.15, 0.2) and room geometry in the back
+  buffer. All 24 tests passed at that time.
+- **Known limitation then:** Xwayland was unstable in this container; the X11
+  window appearance on the host desktop was unreliable. The X11 path has since
+  been removed rather than fixed.
 
 ## Verified by automated test
 
-- **P5-T01 Window registry.** `MansionCompositor` gains `toplevel_list` and
+- **Historical nested P5-T01 Window registry (superseded task text; revised
+  P5-T01 remains open).** `MansionCompositor` gains `toplevel_list` and
   `toplevel_count`. `MansionXdgSurface` gains `toplevel_link`. Registration
   occurs after `xdg_toplevel` creation; unregistration on both `xdg_surface`
   and `wl_surface` destroy. A crash was fixed: during client disconnect the
   wl_surface is destroyed before the xdg_surface, so `on_wl_surface_destroyed`
   calls `toplevel_unregister` first; the subsequent call from
   `xdg_surface_resource_destroyed` must check that `surface_resource` is still
-  valid. Acceptance: all 24 tests pass (including `lifecycle`). (2026-09-28)
+  valid. Acceptance: all 24 tests pass (including `lifecycle`). The
+  `toplevel-registry` test named by the old acceptance was never added.
+  (2026-09-28, bb8cd9d)
 
-- **P5-T02 Alt+Tab focus cycling.** `input.cpp` gains `g_tab_key` (default 23),
+- **Historical nested P5-T02 Alt+Tab focus cycling (superseded task text;
+  revised P5-T02 remains open).** `input.cpp` gains `g_tab_key` (default 23),
   `input_tab_key_set()`/`input_tab_key_get()`. `xdg-shell.cpp` gains
   `xdg_shell_cycle_focus()` which walks the toplevel list and calls
   `seat_set_keyboard_focus()` to cycle forward or backward. Input script gains
   `tab` and `shift_tab` commands that invoke focus cycling in World mode only;
   in Application mode tab passes through to the client. New test `focus-cycle`.
-  Acceptance: all 25 tests pass (including new `focus-cycle`). (2026-09-28)
+  Acceptance: all 25 tests pass (including new `focus-cycle`). Synthetic
+  scripted input only. (2026-09-28, bb8cd9d)
 
 - **P3-T06 Client exit during application mode.** When the application client
   exits while in Application mode, the compositor returns to World mode, clears
@@ -164,8 +190,9 @@ popup is owned by a parent xdg_surface (passed as the `parent` argument).
 
 - **P4-T05 Project 4 wrap-up.** Handoff 04 created with full architectural
   documentation (room geometry, collision, teleport, texture swizzle fix).
-  Decision gate A recorded in `docs/decisions/04-room-gate.md`: continue to
-  Project 5 (multi-room expansion). All 24 tests pass.
+  Historical Decision 04 approved continuation from synthetic evidence.
+  That approval is superseded by Decision 05; Project 5 is multiple windows,
+  not multiple rooms. The 24-test pass is a historical report.
 
 - `smoke-headless` (P1-T01): `mansion-desktop --headless --socket NAME
   --exit-after-ms N` starts without a display, prints `MANSION_SOCKET=NAME`,
@@ -197,12 +224,12 @@ popup is owned by a parent xdg_surface (passed as the `parent` argument).
   `meson test -C build render-shm` passes.
 - `input-routing` (P1-T06-F): scripted keyboard/pointer events drive a
   `--report-input` client; events arrive in order with correct serials.
-- **P1-T07 Host window input replaces evdev.** `input_init()`/`input_destroy()`
-  are no-ops; `input_process()` is a no-op. X11 event handling (`input_process_x11`)
-  processes KeyPress/KeyRelease/ButtonPress/ButtonRelease/MotionNotify/
-  ConfigureNotify/WM_DELETE_WINDOW in windowed mode. `grep -r "/dev/input" src`
-  finds nothing. All 6 tests still pass. Windowed mode — not observed (requires
-  DISPLAY).
+- **P1-T07 Host window input replaces evdev (historical; partly reversed).**
+  At the time, `input_init()`/`input_destroy()`/`input_process()` were no-ops
+  and X11 events drove windowed mode; `grep -r "/dev/input" src` found nothing.
+  Since d4f8551 the X11 path is gone and `input_init()` again opens `/dev/input`
+  devices in windowed mode (headless still opens none; `smoke-headless` passes).
+  Windowed mode — not observed.
 - **P1-T08 Launcher child lifecycle.** Children are reaped automatically via
   SIGCHLD using `signalfd` added to the Wayland event loop. `wl_display_add_client_created_listener`
   logs `client connected <pid>` and `client disconnected <pid>` with the client PID
@@ -255,7 +282,7 @@ popup is owned by a parent xdg_surface (passed as the `parent` argument).
   `[B,R,G,A]` rearrangement. `meson test -C build render-lifecycle` passes
   (three connect/draw/disconnect cycles, last screenshot valid, no GL errors).
   All 12 tests pass on `build`.
-- **P2-T05 Accelerated client experiment.** Test client `--egl` flag renders
+- **P2-T05 fallback experiment (feature reopened).** Test client `--egl` flag renders
   green to an EGL PBuffer, reads pixels via `glReadPixels`, exports as RGBA
   memfd-backed `wl_shm` buffer. Compositor `--egl` flag skips the ARGB→RGBA
   swizzle in `render_surface()` and `render_panel()`, uploading RGBA directly.
@@ -271,9 +298,10 @@ popup is owned by a parent xdg_surface (passed as the `parent` argument).
   `w × h × 4`). Every 60 frames the accumulated averages are printed to stderr
   as `fps` and `KiB uploaded`, then counters reset. `meson test -C build`
   passes unchanged. Measured numbers in `docs/handoffs/02.md`.
-- **P2-T08 Project 2 wrap-up.** All P2 tasks (T01–T07) ticked. Handoff updated
-  with gate A decision: continue with current renderer/compositor integration.
-  `meson test -C build` passes (14/14).
+- **P2-T08 historical Project 2 wrap-up.** The 2026-09-27 handoff reported all
+  P2 tasks ticked and 14/14 tests passing. P2-T05 is now reopened, and the old
+  continuation approval is superseded by Decision 05. Keep the fallback test
+  result within its actual scope.
 - **P3-T01 Explicit modes.** `enum class InputMode { World, Application }` with
   one owner. World mode: input drives the camera, clients get nothing.
   Application mode: input goes to the focused surface. `--input-script` gains
@@ -314,8 +342,10 @@ popup is owned by a parent xdg_surface (passed as the `parent` argument).
 
 ## Verified by a person
 
-Nothing yet. No real Wayland client has ever opened a window on this
-compositor. `weston-terminal` is not installed in the development container
+No personal observation is recorded in the supplied archive. The archive
+reports no successful ordinary Wayland application trial; synthetic clients
+have connected and rendered. This is a missing acceptance record, not a claim
+about later work in another checkout. `weston-terminal` is not installed in the development container
 (`sudo pacman -S weston` provides it). P1-T10 not observed (human task).
 
 ## Not verified / known broken
@@ -325,10 +355,11 @@ compositor. `weston-terminal` is not installed in the development container
   checked, `set_window_geometry`/title/app_id/min/max ignored, `xdg_positioner`
   accepted and ignored, `get_popup` posts a protocol error. No `ping` is sent.
   Resize configures on host window resize (P1-T09), popups in Project 5.
-- **Seat handles one client badly.** A second `get_keyboard` posts a protocol
-  error; `wl_seat` binds overwrite each other. Fixed in P1-T06-A (multi-seat
-  lists). Proper keymap (xkbcommon), repeat_info, modifiers, keyboard enter/leave,
-  pointer enter/leave/motion with hit testing in P1-T06-B through P1-T06-F.
+- **Seat verification boundary.** Multi-seat objects, keymap, modifiers, and
+  focus delivery have historical synthetic-test evidence. Their real-client
+  behavior, pointer coordinate mapping, held-button release, and concurrent
+  focus transitions must be checked in recovery; the older single-seat defect
+  is reported fixed, not a current failure claim.
 - **Launcher** works for simple commands (whitespace split, environment set,
   `DISPLAY` unset), children are reaped via SIGCHLD, and client connect/disconnect
   is logged. Exit status from `--launch` errors is still only logged (not
@@ -337,9 +368,11 @@ compositor. `weston-terminal` is not installed in the development container
 ## Environment facts (development container `mansion-dev`, Arch Linux)
 
 - meson 1.x, ninja 1.13, g++ (C++20), wayland 1.26, wayland-protocols 1.49,
-  libxkbcommon 1.13.2, mesa 26.2, libx11 1.8.13, node 26. `wayland-scanner`
-  present. `/dev/dri/renderD128` is world-accessible; `DISPLAY=:0` reaches the
-  host through XWayland.
+  wayland-egl, libxkbcommon 1.13.2, mesa 26.2, libx11 1.8.13 (still required by
+  `meson.build` line 13, no longer linked), node 26. `wayland-scanner` present.
+  `/dev/dri/renderD128` is world-accessible. The host `WAYLAND_DISPLAY` socket
+  in the shared `XDG_RUNTIME_DIR` is what the windowed host window connects to;
+  `DISPLAY=:0` (XWayland) is no longer used by the compositor.
 - Missing: wlroots, weston/weston-terminal, foot, Xvfb, eglinfo, wayland-info.
   Installing packages needs `sudo`, which autonomous sessions must not use.
   Ask a person: `sudo pacman -S weston`.
@@ -354,7 +387,7 @@ meson compile -C build
 meson test -C build --print-errorlogs
 ./build/mansion-desktop --help
 ./build/mansion-desktop --headless --exit-after-ms 1000
-./build/mansion-desktop --launch weston-terminal        # needs a host DISPLAY and weston
+./build/mansion-desktop --launch weston-terminal        # needs a host WAYLAND_DISPLAY and weston; unverified
 ```
 
 ## Files
@@ -363,8 +396,10 @@ meson test -C build --print-errorlogs
 - `src/compositor.cpp`, `compositor-private.h` — `wl_compositor`, `wl_surface` state
 - `src/xdg-shell.cpp` — `xdg_wm_base`, `xdg_surface`, `xdg_toplevel`
   (protocol code generated into `build/` by `wayland-scanner`)
-- `src/display.cpp` — X11 host window, EGL/GLES2 renderer, headless stub
-- `src/input.cpp` — `wl_seat`, X11 event processing (P1-T07), input script
+- `src/display.cpp` — Wayland client host window (`wl_egl_window`, seat and
+  relative-pointer listeners), EGL/GLES2 renderer, room rendering, headless stub
+- `src/input.cpp` — `wl_seat`, host-window event dispatch, evdev camera input
+  in windowed mode, input script and modes
 - `src/launch.cpp` — child process launcher
 - `tests/` — headless test client and shell tests ([tests/README.md](../tests/README.md))
 - `docs/TASKS.md` — task list; `docs/handoffs/` — per-project handoffs;

@@ -57,10 +57,16 @@ Protocol debugging: `WAYLAND_DEBUG=1 ./build/mansion-test-client --socket <name>
 
 ## Workflow
 
-1. Read `docs/STATUS.md` ("Next task") and `docs/TASKS.md`.
-2. Do one task. Build. Run `meson test`.
-3. Tick the task, update `docs/STATUS.md` and the current `docs/handoffs/NN.md`.
-4. Commit: `git add -A && git commit -q -m "<task id>: <summary>"`.
+1. Read AGENTS.md, STATUS/TASKS, ARCHITECTURE and Decision 05. Start at P4-T06.
+2. Take one eligible task within the authorized scope. Verify its acceptance;
+   use normal/sanitizer suites for code, and real-client/human trials where stated.
+3. Tick only satisfied tasks. Update STATUS and the applicable handoff with
+   date/revision/environment, commands, results, limits and next eligible task.
+4. Stage only task files (`git add -- <task files>`), then commit locally with
+   `<task id>: <summary>`. Never include unrelated user work or push automatically.
+
+Use docs/ACCEPTANCE.md for the current flat/room terminal trial. The native host
+backend investigation may change commands later; do not invent unsupported flags.
 
 The conventions (labels for verification, human-only tasks, no test
 weakening) are at the top of `docs/TASKS.md`.

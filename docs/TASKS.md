@@ -1,22 +1,48 @@
 # Task list
 
 This is the executable form of [PROJECT-ROADMAP.md](../PROJECT-ROADMAP.md).
-Autonomous sessions work from this file: take the first unchecked task whose
-prerequisites are checked, finish it, prove it, tick it, commit.
+Autonomous sessions work from this file: take the first eligible unchecked
+task in scope, prove its acceptance, record the evidence, and commit.
+
+## Current execution order (2026-09-29 review)
+
+1. Foundation recovery: P4-T06 through P4-T18.
+2. First presentable room: P4-T20 through P4-T28.
+3. Resume Projects 5–8, then the dependency-ordered roadmap.
+
+P4-T18 and P4-T28 are real product gates. Project 5 expansion already exists,
+but its feature tasks are blocked until both gates pass. Keep earlier automated
+work and checkmarks as historical records; the old P4-T05 decision does not
+authorize new development past these gates. P2-T05 is reopened for direct GPU
+buffer import and is investigated by P4-T13; a readback/shm test cannot tick it.
+
+Recovery/visual phases use numeric P4 IDs because the bundled continuation
+parser does not understand P4R/P4V. Keep executable checklist items at column
+zero; the current parser ignores indented tasks. Use explicit bounded ranges.
+Completion of a range is not acceptance of the product or a later gate.
 
 ## Conventions
 
 - One task per turn. A task is small enough to finish, build, and test in one
   sitting. If it is not, split it (add sub-tasks here) instead of doing half.
-- Every task has an **Acceptance** line. It is a command, or a short list of
-  commands, that must pass with no display attached. Run it before ticking.
+- Every task has an **Acceptance** line and explicit prerequisites for new
+  recovery tasks. Behavioral changes require appropriate automated checks;
+  graphical/product acceptance also requires observation where stated.
+  Documentation/research tasks accept reviewable evidence, not invented tests.
+- Distinguish implementation, automated checks, real-client integration, visual
+  observation, and product gate decisions. Record command, date, revision,
+  environment, expected/actual result, and remaining limits in STATUS/handoff.
+- A completed investigation with a blocker does not complete the feature it
+  investigated. Keep that feature unchecked and its compatibility limitation
+  visible. A gate must explicitly decide whether a constrained fallback is
+  sufficient for the next phase.
 - Tick a task by changing `- [ ]` to `- [x]` and appending the commit hash or
   date, for example `- [x] P1-T01 ... (a1b2c3d)`.
 - Tasks marked **(human)** need a person at the screen. Autonomous sessions do
   not perform them, do not tick them, and do not claim them. They write the
   procedure and leave the result as "not observed" in `docs/STATUS.md`.
-- Commit after each verified task: `git add -A && git commit -q -m "<id>: <summary>"`.
-  Never push. Never rewrite history.
+- Commit verified task changes only: `git add -- <task files>`, then
+  `git commit -q -m "<id>: <summary>"`. Never push or rewrite history.
 - Build and test commands are always:
 
   ```sh
@@ -247,7 +273,7 @@ Depends on Project 1 automated tasks (P1-T10 may still be unobserved).
   connect/draw/disconnect cycles, last screenshot valid, no GL error lines).
   (2026-09-27, fixed cyclic swizzle in `render_surface()`)
 
-- [x] **P2-T05 Accelerated client experiment (Decision gate A input).** Add a
+- [ ] **P2-T05 Accelerated client experiment (reopened 2026-09-29).** Add a
   test client mode `--egl` using `wayland-egl` that clears to a colour and
   swaps. Import its buffers with `EGL_WL_bind_wayland_display`
   (`eglBindWaylandDisplayWL`, `eglQueryWaylandBufferWL`, `eglCreateImageKHR`)
@@ -255,11 +281,15 @@ Depends on Project 1 automated tasks (P1-T10 may still be unobserved).
   the exact failure (extension list, error codes) in
   `docs/decisions/03-accelerated-buffers.md` and mark the task blocked, not
   done.
-  **Acceptance:** `meson test -C build render-egl` passes, or the decision
-  record exists with evidence and `docs/STATUS.md` lists the blocker.
-  (2026-09-27, `EGL_WL_bind_wayland_display` unavailable; test client uses
-  EGL PBuffer + `glReadPixels` + memfd/shm export; compositor skips swizzle
-  with `--egl`; full pipeline verified by `render-egl` test)
+  **Acceptance:** a direct accelerated-client import regression passes with
+  no client GPU-to-CPU readback/shm substitution; document buffer ownership and
+  synchronization and run the full suite. The existing `render-egl` fallback
+  test remains useful but cannot satisfy this acceptance by itself.
+  **Current requirement:** direct import of an accelerated client's buffer must
+  be demonstrated before ticking. P4-T13 owns the renewed investigation. The
+  2026-09-27 PBuffer + `glReadPixels` + shm experiment remains historical
+  fallback evidence; it does not demonstrate direct import. A negative research
+  outcome is recorded as a feature blocker, not completion of this task.
 
 - [x] **P2-T06 Camera movement.** WASD/arrow keys move, mouse look with the
   right button held (windowed mode). The same actions are available to
@@ -361,87 +391,356 @@ Depends on Project 1 automated tasks (P1-T10 may still be unobserved).
 
 ---
 
+## Project 4 recovery: foundation stabilization
+
+Goal: demonstrate a functioning nested graphical desktop and repair the
+evidence/architecture gaps before feature expansion. These tasks do not
+authorize a rewrite. If blocked, continue only independent eligible work.
+
+- [ ] **P4-T06 Reconcile implementation and evidence.** Prerequisites: none.
+  Inspect source, Meson registrations, tests, STATUS, decisions, and handoffs.
+  Establish a baseline; identify partial registry code, stale next-task claims,
+  contradictory swizzle explanations, orphaned-surface retention, and missing
+  real-client evidence. Attribute old results; do not re-label them as new runs.
+  **Acceptance:** reviewable evidence table and bounded follow-up list in
+  `docs/handoffs/04-recovery.md`; run existing checks where available and record
+  exact failures/missing prerequisites. No unchecked capability is called done.
+
+- [ ] **P4-T07 Repair automation verification.** Prerequisites: P4-T06.
+  Replace the plugin test's assumption that the live Projects 1–4 task list
+  always contains unfinished work with stable fixtures. Add coverage for
+  top-level task parsing and reopened gates; ensure Project 5 tasks are seen.
+  Align generated run instructions with safe staging and prerequisite checks.
+  Keep numeric IDs and explicit task scopes; fail closed for unrecognized scopes
+  in normal runs. Do not bypass a gate because human tasks are excluded from
+  the plugin's DONE check. This task authorizes a focused plugin/test change.
+  **Acceptance:** `node --test .opencode/tests/*.test.js` passes; parsing tests
+  show open P5 tasks, completed fixtures, blocked gate behavior, and unknown
+  scope rejection. Existing interruption, limit, persistence and takeover
+  behavior remains covered. Record a live run separately when available.
+
+- [ ] **P4-T08 Audit resource and list lifetimes.** Prerequisites: P4-T06.
+  Audit wl_surface, wl_buffer, xdg_surface, xdg_toplevel, listeners, registry
+  links, and GPU cleanup. Test xdg_surface destruction before role assignment,
+  legal role/surface teardown orders, abrupt disconnect during rendering,
+  repeated connections, and concurrent clients. Handle protocol-invalid orders
+  with specified errors rather than treating every order as valid. Bound test
+  snapshots; remove unbounded retention of disconnected resources.
+  **Acceptance:** add targeted lifecycle regressions, run the normal suite and
+  `meson setup build-asan --buildtype=debug -Db_sanitize=address,undefined`
+  (first time), `meson compile -C build-asan`, and
+  `meson test -C build-asan --print-errorlogs`. No sanitizer errors, corrupted
+  lists, double cleanup, or unbounded growth across repeated disconnects.
+
+- [ ] **P4-T09 Correct pending/current surface state.** Prerequisites: P4-T08.
+  Separate no-new-attach from attach-null. Apply attachment/damage/frame state
+  on commit, preserve current content until then, and release each consumed
+  buffer only once access has ended. Respect stride and protect shm access.
+  Resource destruction invalidates pointers without inventing pixel ownership.
+  **Acceptance:** new tests cover attach-without-commit, replaced pending attach,
+  commit without attach, null attach/commit, repeated buffer reuse after release,
+  resource destruction after release, and disconnect while rendering. Verify
+  pixels/event order in normal and sanitizer builds against protocol semantics.
+
+- [ ] **P4-T10 Verify formats and coordinates.** Prerequisites: P4-T09.
+  Replace driver-specific color guesses with a tested format/stride/alpha path.
+  Test unequal R/G/B values, XRGB and premultiplied ARGB, nontrivial stride,
+  scaling, transforms, logical dimensions, letterboxing, and pointer mapping.
+  Implement requirements for advertised versions; document unsupported protocols.
+  **Acceptance:** format tests assert expected pixels in flat, panel, and
+  application modes; coordinate tests hit corners/center after resize and scale
+  changes. No globally selected --egl flag changes interpretation of ordinary
+  clients' declared shm formats. All existing tests remain valid or their
+  previous incorrect fixtures are corrected with a documented protocol reason.
+
+- [ ] **P4-T11 Validate xdg-shell handshake and metadata.**
+  Prerequisites: P4-T08, P4-T09.
+  Check initial configure/ack/commit ordering, valid outstanding serials,
+  unmap/remap, resize, title/app_id and window geometry. Audit advertised versions
+  and mandatory requests; add minimal output/decoration support only where a
+  chosen real client requires it. Do not claim broad toolkit support from this.
+  **Acceptance:** protocol regressions cover valid repeated configure sequences
+  and specified invalid cases without crashes, in normal and sanitizer builds.
+  Metadata reaches runtime presentation; supported-version claims are accurate.
+
+- [ ] **P4-T12 Native nested Wayland host experiment.** Prerequisites: P4-T06.
+  Investigate a host Wayland window with EGL, input/focus, resize, and close.
+  State at the 2026-09-29 merge: commits d4f8551 through a615f18 already removed
+  the X11 host window and present through a `wl_egl_window` client connection
+  (`src/display.cpp`), with seat/relative-pointer listeners; the same change
+  reintroduced direct `/dev/input` evdev reading in windowed mode
+  (`input_init()` in `src/input.cpp`). Handoff 04-host-window reports severe
+  flicker and no host input; nothing about this path is verified. Preserve the
+  headless path. Keep the host connection distinct from Mansion's private client
+  socket and launcher environment. Diagnose the flicker and missing host events
+  with logs (`WAYLAND_DEBUG=1`) rather than adding further workarounds, and
+  decide whether host input must come from the host seat only.
+  **Acceptance:** a bounded prototype plus reproducible commands/logs demonstrates
+  rendering and host events, or a precise blocker/capability report explains why
+  it cannot. Record required versions and what remains unobserved; a report alone
+  does not mark a native Wayland backend implemented. P4-T16 needs a usable host.
+
+- [ ] **P4-T13 Accelerated buffer import investigation.** Prerequisites: P4-T09.
+  Recheck EGL client/display extension strings and extension entry points with
+  eglGetProcAddress. Compare EGL Wayland binding and linux-dmabuf import,
+  including advertised protocol, formats/modifiers, ownership and synchronization.
+  Record Mesa/driver/GPU, errors and copy points; keep wl_shm functioning.
+  **Acceptance:** a real accelerated Wayland client submits a buffer that Mansion
+  directly imports and displays, or Decision 03 documents an exact reproducible
+  blocker and the changes needed. Report research completion separately from
+  P2-T05 feature completion. PBuffer/readback/shm remains a fallback experiment.
+
+- [ ] **P4-T14 Bounded wlroots suitability experiment.**
+  Prerequisites: P4-T06; use P4-T12/P4-T13 findings when available.
+  In an isolated experiment, evaluate nested/headless backends, buffer import,
+  surface trees and seat input while retaining custom C++ spatial rendering.
+  Compare integration burden with the implemented libwayland-server path.
+  Pin the evaluated version; record dependency proposals before adding them.
+  **Acceptance:** a small demonstrator or exact dependency/environment blocker,
+  and an ADR comparing measured integration work, ownership, risk, and next steps.
+  No production stack replacement or bulk rewrite is part of this task.
+
+- [ ] **P4-T15 Introduce one architecture boundary.**
+  Prerequisites: P4-T08, P4-T10, P4-T11, P4-T14.
+  Map current code to ARCHITECTURE.md. Extract the smallest useful runtime
+  presentation/world boundary from display.cpp, documenting ownership, logical
+  dimensions, damage, invalidation and input coordinates. Use existing math.
+  **Acceptance:** existing demonstrations/tests pass, plus one lifetime regression
+  through the new boundary. World data has no persistent Wayland/GL/PID identity.
+  Document actual changes and deferred boundaries; no new general engine/ECS.
+
+- [ ] **P4-T16 Prepare a reproducible real-terminal trial.**
+  Prerequisites: P4-T10, P4-T11, P4-T12, P4-T15.
+  Launch an installed native Wayland terminal via Mansion's launcher on a usable
+  host backend; log its connection/mapping and updates. Fix the smallest blocking
+  protocol/host issue; record missing packages for a person to install. Publish
+  exact flat and room commands and diagnostics in ACCEPTANCE.md. Log assertions
+  supplement the visual trial; they do not establish usability.
+  **Acceptance:** reproducible launch evidence from a real terminal and a complete
+  manual procedure. If the terminal or host window is unavailable, leave this
+  task blocked; do not replace it with the synthetic test client.
+
+- [ ] **P4-T17 (human) Foundation desktop demonstration.**
+  Prerequisites: P4-T16. Follow ACCEPTANCE.md in flat and room modes: readable
+  text, typing, pointer selection, scrolling, resize, repeated enter/return,
+  host focus loss, terminal close/reopen, and safe Mansion exit. Record actual
+  screenshots, application/backend versions, observations and limitations.
+  **Acceptance:** a person's recorded successful checks with date and source
+  revision. The same evidence may also satisfy P1-T10 and P4-T04 if it covers
+  their full procedures. Never tick those automatically from synthetic tests.
+
+- [ ] **P4-T18 Foundation decision gate.**
+  Prerequisites: P4-T06 through P4-T17, including human evidence.
+  Review failures, sanitizers, real terminal behavior, backend/stack experiments,
+  and architecture boundaries. Record accepted/deferred/blocked in Decision 05.
+  A bounded shm-only next phase may be accepted explicitly for the tested client
+  and hardware; GPU-import capability remains blocked and P2-T05 stays open.
+  A required stack migration needs its own bounded plan before proceeding.
+  **Acceptance:** no required foundation check is missing or failing; ADR names
+  the accepted backend/client/configuration and limits. Only an accepted gate
+  enables P4-T20. Research reports alone cannot satisfy the real-terminal gate.
+
+---
+
+## Project 4 visual slice: the first presentable room
+
+Goal: one coherent textured study with a live application, ordinary focus mode,
+and a working door. This is an integrated desktop milestone, not a detached
+scene viewer. Detailed PBR, shadows and creature animation remain later work.
+
+- [ ] **P4-T20 Minimal scene entities and transforms.** Prerequisites: P4-T18.
+  Introduce data-driven entity/parent IDs and mesh/material instances using the
+  established architecture boundary. Keep runtime application bindings separate.
+  **Acceptance:** transform/hierarchy and invalid-parent tests plus the existing
+  room/terminal checks pass. Parent movement changes child world transforms.
+
+- [ ] **P4-T21 glTF/GLB asset loading.** Prerequisites: P4-T20.
+  Choose a small loader with a dependency ADR; document the supported static mesh,
+  node, UV/index/normal and texture subset. Import one Blender-exported fixture;
+  handle missing/malformed/unsupported assets without corrupting the desktop.
+  **Acceptance:** load/render the fixture with tested transforms and index types;
+  invalid asset tests fail with useful diagnostics; provenance/license recorded.
+
+- [ ] **P4-T22 Textures and basic materials.** Prerequisites: P4-T21.
+  Implement UVs, base color textures/factors, sampler behavior and a documented
+  color-space/alpha policy. Separate scene material sampling from client pixels.
+  **Acceptance:** asymmetric texture/UV fixtures match expected locations/colors,
+  missing textures have a clear fallback, and real app text colors are preserved.
+
+- [ ] **P4-T23 Ambient and directional lighting.** Prerequisites: P4-T22.
+  Use normals and simple predictable lighting; retain an unlit application path.
+  Measure GLES2 compatibility. Consider GLES3 only through a bounded ADR-backed
+  capability experiment, retaining the baseline if unsupported.
+  **Acceptance:** controlled normal/light fixtures and application pixel checks
+  pass. Record frame times on the named hardware; no required PBR/shadow engine.
+
+- [ ] **P4-T24 Furnish one coherent study.** Prerequisites: P4-T23.
+  Assemble textured walls/floor, desk, shelf, monitor and door from licensed assets.
+  Document scale, collision bounds and placement slots; avoid decorative geometry
+  that obstructs navigation or app readability. Use a modest reproducible workload.
+  **Acceptance:** scene reload is deterministic; camera collision/teleport tests
+  pass; record screenshots for later human assessment, asset license and budgets.
+
+- [ ] **P4-T25 Object targeting and placement.** Prerequisites: P4-T24.
+  Ray-pick supported furniture/objects, show selection feedback, and move one
+  object between valid slots. Keep world actions out of application input.
+  **Acceptance:** deterministic ray/occlusion and valid/invalid slot tests pass;
+  the artifact/entity keeps its ID while moved. Restart persistence waits for P6.
+
+- [ ] **P4-T26 Interactive door.** Prerequisites: P4-T24, P4-T25.
+  Add a door hinge transform and bounded opening/closing animation, updated
+  collision, and a reduced-motion alternative. A door need not lead to a second
+  room yet; maintain the player's valid position when closing it.
+  **Acceptance:** scripted targeting/toggle updates door transform and collision;
+  repeated toggles and occupied doorway cases do not trap the camera.
+
+- [ ] **P4-T27 (human) Live terminal in the furnished study.**
+  Prerequisites: P4-T24 through P4-T26.
+  Bind the real terminal to the scene monitor. Follow ACCEPTANCE.md for walking/
+  teleport, selection, readable full-size typing/click/scroll, return to world,
+  object move, door interaction and close/reopen. Assess comfort and appearance.
+  **Acceptance:** a person's recorded results and screenshots; the same live
+  client survives mode transitions and furniture does not hide important UI.
+
+- [ ] **P4-T28 Presentable-room gate and handoff.**
+  Prerequisites: P4-T20 through P4-T27 and continued P4-T18 acceptance.
+  **Acceptance:** relevant automated checks and human furnished-room criteria
+  pass; document exact scene/client/backend, frame-time/copy measurements and
+  limitations in handoff 04-visual. Record the gate decision before resuming P5.
+
+---
+
 ## Projects 5–8: useful persistent workspace
 
 Each project starts with an expansion task. Autonomous sessions perform the
 expansion task, then work the resulting list.
 
-- [x] **P5-T00 Expand Project 5.** Sub-tasks below. (2026-09-28)
+- [x] **P5-T00 Expand Project 5.** Existing expansion revised below; feature
+  tasks require P4-T18 and P4-T28 accepted. Historical completion: 2026-09-28.
 
-  - [x] **P5-T01 Window registry.** Maintain a doubly-linked list of
-    all toplevel surfaces across all clients in `MansionCompositor`.
-    Register a surface when its xdg_toplevel is created; unregister on
-    surface or toplevel destroy. Expose `compositor_toplevel_list` and
-    `compositor_toplevel_count`. No focus change yet — just the data
-    structure and registration.
-    **Acceptance:** `meson test -C build` still passes (regression
-    guard). New test `toplevel-registry`: two clients connect, each
-    creates a toplevel; the compositor logs the count as 2. (P1-T10
-    remains human.) (bb8cd9d)
+  Historical 2026-09-28 expansion (superseded, kept as evidence): the earlier
+  nested sub-tasks "P5-T01 Window registry" and "P5-T02 Alt+Tab focus cycling"
+  were implemented in bb8cd9d (`toplevel_list`/`toplevel_count` in
+  `MansionCompositor`, `xdg_shell_cycle_focus()`, `--tab-key`, input-script
+  `tab`/`shift_tab`) and are covered only by the synthetic `focus-cycle` test;
+  the `toplevel-registry` test named in that old acceptance was never added.
+  This partial code is the "partial registry code" the revised P5-T01 must
+  inspect. It does not tick the revised P5-T01/P5-T02 below, whose acceptance
+  (same-client windows, unmapped windows, teardown orders, sanitizers, held-input
+  release) has not been demonstrated.
 
-  - [x] **P5-T02 Alt+Tab focus cycling.** Add `--tab-key` option
-    (default `Tab`, evdev 23). In World mode, pressing the tab key
-    (possibly with Shift) cycles keyboard focus through the window
-    registry, sending leave/enter events. Shift+Tab cycles backwards.
-    In Application mode, tab passes through to the client.
-    **Acceptance:** `meson test -C build mode-routing` still passes
-    (regression guard). New test `focus-cycle`: two clients connect
-    and map; after mapping, a second client becomes focused (not the
-    first); pressing tab switches back to the first client. (bb8cd9d)
+- [ ] **P5-T01 Window registry and surface trees.** Prerequisites: P4-T28.
+  Inspect partial registry code before adding another registry. Track runtime
+  toplevel handles, mapped state, metadata and related surfaces across clients.
+  Registration/unregistration is idempotent for role teardown and disconnect;
+  invalidate every focus/render reference safely. No persistent resource pointers.
+  **Acceptance:** new registry tests cover multiple clients, multiple windows
+  from one client, unmapped windows, legal teardown, and abrupt disconnect.
+  Counts and lifetime assertions pass under sanitizers and the normal suite.
 
-  - [ ] **P5-T03 xdg_popup support.** Implement `get_popup` for
-    xdg_surface. The popup is owned by a parent xdg_surface (passed
-    as the `parent` argument). The compositor must handle
-    `xdg_popup` requests by sending an immediate synchronous
-    configure, then tracking the popup for rendering. Popups are
-    always rendered above their parent. Implement `grab` request
-    (pointer grab on the parent's surface).
-    **Acceptance:** `meson test -C build client-globals` passes.
-    New test `popup-basic`: client creates a popup on an existing
-    toplevel; the compositor accepts the configure without error.
+- [ ] **P5-T02 Focus cycling and input policy.** Prerequisites: P5-T01.
+  Define keyboard-only world-mode next/previous-window actions and one reserved
+  application-mode escape. Make defaults and modifier requirements unambiguous;
+  ordinary application Tab and typing reach the app. World mode does not deliver
+  client keyboard input just because a candidate is selected. Release held
+  keys/buttons on activation/focus loss and restore surface-local pointer mapping.
+  **Acceptance:** two clients and two same-client windows cycle correctly; world
+  selection emits no app typing, activation delivers input to only the chosen
+  window, focus loss/exit releases held input, and destroyed candidates are skipped.
 
-  - [ ] **P5-T04 Transient and parent-child tracking.** Add
-    `parent_toplevel` and `is_transient` fields to `MansionXdgToplevel`.
-    Handle `xdg_toplevel.set_parent` (store the parent pointer).
-    When a surface is destroyed, clear parent references. In focus
-    cycling, skip transients unless they are the focused surface.
-    **Acceptance:** `meson test -C build lifecycle` passes. New
-    test `transient-parent`: two toplevels where one is set as the
-    parent of the other; when the parent is destroyed, the child
-    loses its parent reference.
+- [ ] **P5-T03 Positioners and xdg_popup.** Prerequisites: P5-T01, P5-T02.
+  Implement required positioner state, validation, parent-relative placement,
+  configure/ack/commit ordering, popup stacking, hit testing, and dismissal.
+  Validate grab seat/serial/topmost rules; do not invent a synchronous protocol
+  handshake or grab only the parent's rectangle. Compose popups with their parent
+  in application mode and world preview. Advertise only implemented versions.
+  **Acceptance:** tests exercise configure and actual rendered popup pixels/input,
+  constrained placement, nested popups, dismissal, invalid grab/parent sequences,
+  and parent disconnect. A real client's menu is tested separately in P5-T10.
 
-  - [ ] **P5-T05 Alt+F4 close focused surface.** Intercept the
-    configured close key (default `F4`, evdev 55, with Alt) in
-    World mode. Find the focused surface and destroy its xdg_surface
-    (and thereby its wl_surface and buffer). The compositor should
-    handle the client's subsequent disconnect cleanly.
-    **Acceptance:** `meson test -C build app-exit` still passes.
-    New test `close-focused`: client maps a toplevel, another client
-    triggers Alt+F4, the first client disconnects, the compositor
-    returns to a clean state.
+- [ ] **P5-T04 Transient/dialog associations.** Prerequisites: P5-T01.
+  Handle set_parent with protocol validation, cycles, changing parents, and
+  destruction. Define activation/grouping policy without hiding necessary dialogs
+  from the user. App IDs and PIDs may assist grouping but are not window identity.
+  **Acceptance:** tests cover same-process multiple windows, parent removal,
+  dialog focus/visibility and invalid parent cases, with no dangling references.
 
-  - [ ] **P5-T06 Window list in world mode.** In world mode, render
-    a simple text window list on the 3D panel showing the focused
-    surface's title/app-id and a count of all toplevels. Use a
-    simple bitmap font or existing 2D rendering. This provides a
-    visible indication of multi-window state without complex 3D
-    layout.
-    **Acceptance:** `meson test -C build render-panel` still passes
-    (regression guard). The panel still shows the focused surface
-    content; the window list is visible as an overlay or title bar.
+- [ ] **P5-T05 Request focused-window close.** Prerequisites: P5-T01, P5-T02.
+  A documented compositor close shortcut sends xdg_toplevel.close to the target.
+  Do not destroy its xdg_surface/wl_surface/buffer, kill the client process, or
+  assume disconnect. The client may prompt, defer, or decline. Shortcut handling
+  must not confuse closing a window with shutting down launcher-owned children.
+  **Acceptance:** accepting client closes cleanly; declining/deferred client stays
+  mapped and interactive; two windows in one process show only the selected
+  window requested to close. Unrelated clients survive. Test under sanitizers.
 
-  - [ ] **P5-T07 Project 5 wrap-up.** Handoff, status update.
-    Verify all tests pass. Document the multi-window architecture.
-    **Acceptance:** `meson test -C build` passes all tests (including
-    new ones). All P5 sub-tasks ticked or marked as not observed.
+- [ ] **P5-T06 Window list and manual assignment.**
+  Prerequisites: P5-T01, P5-T02, P5-T04.
+  Show a searchable/selectable world overlay with title/app ID and active state.
+  Support explicitly assigning an ambiguous live window to an artifact/monitor.
+  Keep overlay UI outside application pixels, preserve accessible keyboard use,
+  and avoid duplicating a fake application list inside the surface texture.
+  **Acceptance:** automated selection/assignment and teardown tests plus a manual
+  overlay readability trial; title/app ID changes appear without misbinding.
 
-- [ ] **P6-T00 Expand Project 6** (durable artifact model, SQLite schema,
-  slot-based movement, restart persistence, migration and interrupted-write
-  tests). Adding SQLite requires a decision record.
-- [ ] **P7-T00 Expand Project 7** (launch recipes, controlled restoration,
-  failure and duplicate handling).
-- [ ] **P8-T00 Expand Project 8** (search, keyboard selection, teleportation,
-  usability trial notes).
+- [ ] **P5-T07 Subsurface composition.** Prerequisites: P5-T01, P5-T03.
+  Implement or integrate the surface-tree behavior required by the chosen clients:
+  parent-relative position, stacking, synchronized/desynchronized commits, input
+  regions and lifecycle. Split into bounded tasks before implementation as needed.
+  **Acceptance:** test synchronized/desynchronized updates, overlapping content,
+  correct input targets and parent destruction; real-client coverage in P5-T10.
 
-Projects 9 and later are defined in the roadmap only; expand them when their
-dependencies are ticked.
+- [ ] **P5-T08 Real multi-application integration harness.**
+  Prerequisites: P5-T03 through P5-T07.
+  Prepare native terminal/browser/editor launch commands with isolated test data
+  and backend flags where needed. Report unsupported protocols and accelerated
+  paths precisely. Do not fall back silently to the host X server or claim that
+  startup logs prove visible usability.
+  **Acceptance:** reproducible launch/mapping logs and ACCEPTANCE.md procedures
+  for three named app versions, menus/dialogs and independent close. Missing
+  applications/backend capabilities remain blockers.
+
+- [ ] **P5-T10 (human) Multiple applications acceptance.**
+  Prerequisites: P5-T08. Verify terminal, browser and editor coexist, focus/input
+  remain correct, menus/dialogs appear at the correct parent, declined close is
+  honored, and closing one window leaves the others working.
+  **Acceptance:** dated observations, screenshots, exact versions and limitations
+  in ACCEPTANCE/STATUS. This evidence must exist before P5-T09 wrap-up.
+
+- [ ] **P5-T09 Project 5 product gate and wrap-up.**
+  Prerequisites: P5-T01 through P5-T08 and P5-T10.
+  **Acceptance:** normal/sanitizer suites and human multi-application criteria
+  pass; record tested scope, surface-tree ownership and remaining compatibility
+  limits in handoff 05. A task marked blocked/not observed is not a passing gate.
+
+- [ ] **P6-T00 Expand durable placement tasks.** Prerequisites: P5-T09.
+  Plan a versioned SQLite schema and migrations, resource/artifact/world-entity
+  separation, stable UUIDs, room/parent-relative transforms, slot-based movement,
+  transactions, export/reset and interrupted-write recovery. Runtime handles,
+  Wayland resources, PIDs and GPU IDs are excluded from persisted identity.
+  Closing an app preserves its inactive artifact; moving a file artifact does
+  not implicitly move the underlying file. Add tests for parent movement,
+  deleted resources, stale runtime bindings, duplicate names, restarts and failed
+  writes. Record SQLite dependency/version choice before adding it.
+  **Acceptance:** bounded dependency-ordered tasks and migration/identity ADR;
+  each task has commands, failure cases and a product restart demonstration.
+
+- [ ] **P7-T00 Expand launch and restoration tasks.** Prerequisites: Project 6
+  product gate (to be added by P6-T00).
+  Plan argv-safe launch recipes, explicit restore choices, reused-process and
+  multiple-window ambiguity, manual assignment, failed launches, duplicate
+  suppression, and shutdown ownership. Restoration reopens resources; it does
+  not recover arbitrary unsaved application memory.
+  **Acceptance:** bounded tests and a manual launch/restart sequence, including
+  ambiguous window binding and failure without duplicate artifacts.
+
+- [ ] **P8-T00 Expand useful-workspace tasks.** Prerequisites: Project 7 gate
+  (to be added by P7-T00).
+  Plan search, inactive artifacts, keyboard selection, list/teleport access,
+  reduced-motion options and a real usability trial. Searching must not populate
+  the room with every indexed file. Path illumination is the later 8N track.
+  **Acceptance:** bounded tasks and a demonstration finding/reopening a placed
+  item after restart, with ordinary files remaining accessible from the host.
+
+Projects 9 and later, including the 8N/14R/15I spatial feature tracks, are
+defined in the roadmap. Expand them only after their stated prerequisites.

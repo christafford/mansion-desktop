@@ -1,4 +1,11 @@
-# Handoff 05 — Wayland Client Window + Seat Input (2026-09-28)
+# Handoff 04-host-window — Wayland Client Window + Seat Input (2026-09-28)
+
+Renamed from `05.md` on 2026-09-29 so that handoff 05 stays reserved for
+Project 5. Content below is the 2026-09-28 author's record; a615f18 later added
+the `wl_seat.capabilities` handler discussed under "Input not working" and fixed
+listener crashes. No runtime observation of this host window exists. The same
+change reintroduced direct `/dev/input` evdev reading in windowed mode
+(`input_init()`); P4-T12 owns the follow-up.
 
 ## Context
 

@@ -2,8 +2,10 @@
 
 Mansion Desktop is a 3D spatial desktop environment for Linux: a nested Wayland
 compositor whose shell is a first-person mansion. This repository is at the
-very beginning (Project 1 of the roadmap: a nested compositor that can show
-one real terminal).
+foundation-recovery stage: the archive contains a basic room, input modes and
+synthetic-client tests, while real-application usability remains unaccepted.
+The next target is a real terminal on a monitor in one presentable study.
+See Decision 05; no new capability is implied by the documentation update.
 
 ## Start here
 
@@ -14,6 +16,8 @@ one real terminal).
 | pick up the next piece of work | [docs/TASKS.md](docs/TASKS.md), then [docs/STATUS.md](docs/STATUS.md) |
 | know what actually works today | [docs/STATUS.md](docs/STATUS.md) |
 | build and run | [GETTING_STARTED.md](GETTING_STARTED.md), [DEVELOPMENT.md](DEVELOPMENT.md) |
+| understand target architecture and ownership | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
+| perform real-client and visual acceptance | [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md) |
 | understand recorded decisions | [docs/decisions/](docs/decisions/) |
 | read per-project handoffs | [docs/handoffs/](docs/handoffs/) |
 | run OpenCode unattended on this repo | [docs/OPENCODE-AUTOCONTINUE.md](docs/OPENCODE-AUTOCONTINUE.md) |
@@ -45,4 +49,6 @@ terminal such as `weston-terminal`):
 
 Agents (OpenCode with the bundled auto-continue plugin, or any other) follow
 [AGENTS.md](AGENTS.md) and work through `docs/TASKS.md` one task at a time,
-proving each task with `meson test` before ticking and committing it.
+proving the task's actual acceptance before ticking and committing it. Start at
+P4-T06; distinguish automated checks, real-client evidence and human product
+gates. Follow the recovery ranges in docs/OPENCODE-AUTOCONTINUE.md.

@@ -3,7 +3,25 @@
 Date: 2026-09-27
 Related tasks: P2-T05 (Accelerated client experiment)
 
-## Question
+## Review amendment (2026-09-29): import remains unresolved
+
+The following findings are historical probe reports. They do not establish
+that the runtime lacks EGL image support: failure to resolve an extension
+symbol with dlsym is insufficient. Re-probe using eglGetProcAddress and the
+corresponding initialized-display/client extension strings; a non-null function
+pointer alone also does not establish runtime support. Export support does not
+prove client-to-compositor import support.
+
+P4-T13 records the actual host platform, EGL/GL versions, driver/GPU, advertised
+Wayland globals, supported formats/modifiers, function lookup results, API error
+codes, ownership/synchronization, and where copying occurs. Preserve raw logs.
+P2-T05 is reopened until a directly imported accelerated client buffer renders.
+The PBuffer → glReadPixels → memfd/wl_shm → texture path remains a useful
+fallback test, not zero-copy import or accelerated-client compatibility proof.
+
+Reference: [Khronos eglGetProcAddress](https://registry.khronos.org/EGL/sdk/docs/man/html/eglGetProcAddress.xhtml).
+
+## Question (historical probe)
 
 Can the compositor import a client's EGL-rendered buffer directly using
 `EGL_WL_bind_wayland_display` or `zwp_linux_dmabuf_v1`?
@@ -54,7 +72,7 @@ The GPU renders correctly to the PBuffer, but reading back requires
 Mesa radeonsi (vangogh) on Steam Deck — `/dev/dri/renderD128` is
 world-accessible.
 
-## Conclusion
+## Historical conclusion (superseded by the review amendment)
 
 **`EGL_WL_bind_wayland_display` is not available in this environment.**
 The Mesa EGL driver does not provide the Wayland buffer-binding
