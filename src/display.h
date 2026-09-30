@@ -37,10 +37,10 @@ struct MansionDisplay {
     struct MansionRenderer* renderer;
 
     /* Wayland client connection for the host window (P5: native presentation).
-     * All pointers default to null; only set in windowed mode. */
+     * Uses surfaceless Mesa + EGL PBuffer + wl_shm buffer export. */
     struct wl_display* wl_client_display = nullptr;
     struct wl_surface* wl_surface = nullptr;
-    struct wl_egl_window* wl_egl_window = nullptr;
+    EGLSurface egl_pbuffer_surface = EGL_NO_SURFACE;
 
     /* P2-T02: 3D panel rendering state */
     Camera camera;

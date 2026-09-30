@@ -5,6 +5,10 @@
 #include <string>
 #include <vector>
 
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <unistd.h>
+
 #include <wayland-client.h>
 #include <wayland-egl.h>
 #include <wayland-server-protocol.h>
@@ -134,21 +138,23 @@ static GLuint create_program(const char* vertex_shader_source,
 
 struct host_window_state {
     struct wl_display *wl_client;       /* Wayland client display */
+    struct wl_registry *registry;       /* registry for global enumeration */
     struct xdg_wm_base *wm_base;        /* xdg_wm_base global */
     struct wl_compositor *compositor;   /* wl_compositor global */
+    struct wl_shm *shm;                 /* wl_shm for buffer export */
     struct wl_seat *seat;               /* wl_seat for input */
     struct wl_keyboard *keyboard;       /* wl_keyboard resource */
     struct wl_pointer *pointer;         /* wl_pointer resource */
     struct zwp_relative_pointer_manager_v1 *rel_ptr_mgr;
     struct zwp_relative_pointer_v1 *rel_ptr;
     struct wl_surface *surface;         /* Wayland surface */
-    struct wl_egl_window *egl_win;      /* EGL window wrapper */
     struct xdg_surface *xdg_surface;    /* xdg_surface */
     struct xdg_toplevel *toplevel;      /* xdg_toplevel */
     uint32_t configure_serial;          /* serial for ack_configure */
     int width;
     int height;
     bool configured;
+    struct MansionDisplay *display;     /* back-pointer for size sync */
 };
 
 /* ─── wl_registry global ───────────────────────────────────────────────────── */
@@ -160,28 +166,35 @@ static void registry_global(void *data, struct wl_registry *registry,
                             uint32_t version)
 {
     (void)registry;
-    if (strcmp(interface, "xdg_wm_base") == 0 && g_hws && !g_hws->wm_base) {
-        g_hws->wm_base =
+    struct host_window_state *hws = (struct host_window_state *)data;
+    if (!hws) return;
+    if (strcmp(interface, "xdg_wm_base") == 0 && !hws->wm_base) {
+        hws->wm_base =
             (struct xdg_wm_base *)wl_registry_bind(registry, id,
                                                    &xdg_wm_base_interface,
                                                    1);
     }
     if (strcmp(interface, "wl_compositor") == 0 && g_hws &&
-        !g_hws->compositor) {
-        g_hws->compositor =
+        !hws->compositor) {
+        hws->compositor =
             (struct wl_compositor *)wl_registry_bind(registry, id,
                                                      &wl_compositor_interface,
                                                      1);
     }
-    if (strcmp(interface, "wl_seat") == 0 && g_hws && !g_hws->seat &&
+    if (strcmp(interface, "wl_shm") == 0 && !hws->shm) {
+        hws->shm =
+            (struct wl_shm *)wl_registry_bind(registry, id,
+                                               &wl_shm_interface, 1);
+    }
+    if (strcmp(interface, "wl_seat") == 0 && !hws->seat &&
         version >= 7) {
-        g_hws->seat =
+        hws->seat =
             (struct wl_seat *)wl_registry_bind(registry, id,
                                                 &wl_seat_interface, 7);
     }
     if (strcmp(interface, "zwp_relative_pointer_manager_v1") == 0 &&
-        g_hws && !g_hws->rel_ptr_mgr) {
-        g_hws->rel_ptr_mgr =
+        !hws->rel_ptr_mgr) {
+        hws->rel_ptr_mgr =
             (struct zwp_relative_pointer_manager_v1 *)
                 wl_registry_bind(registry, id,
                                  &zwp_relative_pointer_manager_v1_interface,
@@ -221,6 +234,18 @@ static void xdg_surface_configure(void *data, struct xdg_surface *surface,
     g_hws->configured = true;
 }
 
+static void toplevel_configure_bounds(void *data, struct xdg_toplevel *toplevel,
+                                       int32_t width, int32_t height)
+{
+    (void)data; (void)toplevel; (void)width; (void)height;
+}
+
+static void toplevel_wm_capabilities(void *data, struct xdg_toplevel *toplevel,
+                                      struct wl_array *capabilities)
+{
+    (void)data; (void)toplevel; (void)capabilities;
+}
+
 static constexpr struct xdg_surface_listener xdg_surface_listener = {
     .configure = xdg_surface_configure,
 };
@@ -239,16 +264,47 @@ static void toplevel_configure(void *data, struct xdg_toplevel *toplevel,
     (void)toplevel; (void)states;
     struct host_window_state *hws = (struct host_window_state *)data;
     if (width <= 0 || height <= 0) return;
+
     hws->width  = width;
     hws->height = height;
+
+    /* Sync the MansionDisplay dimensions so the renderer uses the
+     * compositor-reported size instead of the startup default. */
+    if (hws->display) {
+        hws->display->window_width  = width;
+        hws->display->window_height = height;
+    }
 }
 
 static constexpr struct xdg_toplevel_listener toplevel_listener = {
-    .configure = toplevel_configure,
-    .close     = toplevel_close,
+    .configure          = toplevel_configure,
+    .close              = toplevel_close,
+    .configure_bounds   = toplevel_configure_bounds,
+    .wm_capabilities    = toplevel_wm_capabilities,
 };
 
 /* ─── wl_keyboard event listener ──────────────────────────────────────────── */
+
+static void keyboard_keymap(void *data, struct wl_keyboard *keyboard,
+                            uint32_t format, int32_t fd, uint32_t size)
+{
+    (void)data; (void)keyboard; (void)format; (void)fd; (void)size;
+    /* No XKB keymap parsing — Mansion Desktop maps WASD manually. */
+}
+
+static void keyboard_enter(void *data, struct wl_keyboard *keyboard,
+                           uint32_t serial, struct wl_surface *surface,
+                           struct wl_array *keys)
+{
+    (void)data; (void)keyboard; (void)serial; (void)surface;
+    (void)keys;
+}
+
+static void keyboard_leave(void *data, struct wl_keyboard *keyboard,
+                           uint32_t serial, struct wl_surface *surface)
+{
+    (void)data; (void)keyboard; (void)serial; (void)surface;
+}
 
 static void keyboard_key(void *data, struct wl_keyboard *keyboard,
                          uint32_t serial, uint32_t time, uint32_t key,
@@ -281,15 +337,25 @@ static void keyboard_repeat_info(void *data, struct wl_keyboard *keyboard,
 }
 
 static constexpr struct wl_keyboard_listener keyboard_listener = {
-    .keymap        = nullptr,
-    .enter         = nullptr,
-    .leave         = nullptr,
+    .keymap        = keyboard_keymap,
+    .enter         = keyboard_enter,
+    .leave         = keyboard_leave,
     .key           = keyboard_key,
     .modifiers     = keyboard_modifiers,
     .repeat_info   = keyboard_repeat_info,
 };
 
 /* ─── wl_pointer event listener ─────────────────────────────────────────────── */
+
+static void pointer_enter(void *data, struct wl_pointer *pointer,
+                          uint32_t serial, struct wl_surface *surface,
+                          wl_fixed_t surface_x, wl_fixed_t surface_y)
+{ (void)data; (void)pointer; (void)serial; (void)surface;
+  (void)surface_x; (void)surface_y; }
+
+static void pointer_leave(void *data, struct wl_pointer *pointer,
+                          uint32_t serial, struct wl_surface *surface)
+{ (void)data; (void)pointer; (void)serial; (void)surface; }
 
 static void pointer_motion(void *data, struct wl_pointer *pointer,
                            uint32_t time, wl_fixed_t surface_x,
@@ -298,12 +364,15 @@ static void pointer_motion(void *data, struct wl_pointer *pointer,
     (void)pointer; (void)time; (void)surface_x; (void)surface_y;
 }
 
-/* Generic placeholder for pointer events the camera doesn't handle. */
-#define POINTER_PLACEHOLDER(name) \
-    static void name(void *data, struct wl_pointer *p, \
-                     uint32_t serial, struct wl_surface *s, \
-                     void *reserved) \
-    { (void)data; (void)p; (void)serial; (void)s; (void)reserved; }
+static void pointer_button(void *data, struct wl_pointer *pointer,
+                           uint32_t serial, uint32_t time, uint32_t button,
+                           uint32_t state)
+{ (void)data; (void)pointer; (void)serial; (void)time;
+  (void)button; (void)state; }
+
+static void pointer_axis(void *data, struct wl_pointer *pointer,
+                         uint32_t time, uint32_t axis, wl_fixed_t value)
+{ (void)data; (void)pointer; (void)time; (void)axis; (void)value; }
 
 static void pointer_frame(void *data, struct wl_pointer *pointer)
 { (void)data; (void)pointer; }
@@ -330,11 +399,11 @@ static void pointer_axis_relative_direction(
 { (void)data; (void)pointer; (void)axis; (void)wl_pointer_axis_relative_direction; }
 
 static constexpr struct wl_pointer_listener pointer_listener = {
-    .enter                   = nullptr,
-    .leave                   = nullptr,
+    .enter                   = pointer_enter,
+    .leave                   = pointer_leave,
     .motion                  = pointer_motion,
-    .button                  = nullptr,
-    .axis                    = nullptr,
+    .button                  = pointer_button,
+    .axis                    = pointer_axis,
     .frame                   = pointer_frame,
     .axis_source             = pointer_axis_source,
     .axis_stop               = pointer_axis_stop,
@@ -421,11 +490,10 @@ static void seat_capabilities(void *data, struct wl_seat *seat,
  *     Our EGL → X11 window → Xwayland → KWin → Screen
  *
  *   After (smooth):
- *     Our EGL → wl_egl_window → KWin (compositor) → Screen
+ *     Our EGL (PBuffer) → wl_shm buffer → KWin (compositor) → Screen
  *
- * Both paths use the same EGL context and same KWin compositor; the
- * difference is that we now present through the compositor's native
- * interface instead of an X11 translation layer.
+ * Uses surfaceless Mesa for EGL rendering and wl_shm buffer export
+ * for frame presentation to the compositor.
  */
 
 bool setup_wayland_client_window(struct MansionDisplay* display)
@@ -440,13 +508,14 @@ bool setup_wayland_client_window(struct MansionDisplay* display)
     /* Allocate state for this display. */
     struct host_window_state *hws = new host_window_state{};
     hws->wl_client  = wl_client;
+    hws->display    = display;
     hws->width      = display->window_width;
     hws->height     = display->window_height;
 
-    /* Register to receive the xdg_wm_base global. */
+    /* Register to receive Wayland globals (compositor, shm, seat, etc). */
     g_hws = hws;
-    wl_registry_add_listener(wl_display_get_registry(wl_client),
-                             &registry_listener, nullptr);
+    hws->registry = wl_display_get_registry(wl_client);
+    wl_registry_add_listener(hws->registry, &registry_listener, hws);
     wl_display_roundtrip(wl_client);
 
     if (!hws->wm_base) {
@@ -480,25 +549,13 @@ bool setup_wayland_client_window(struct MansionDisplay* display)
     xdg_toplevel_set_title(hws->toplevel, "Mansion Desktop");
     xdg_toplevel_set_app_id(hws->toplevel, "mansion-desktop");
 
-    /* Create the wl_egl_window (EGL rendering target). */
-    hws->egl_win = wl_egl_window_create(hws->surface,
-                                        display->window_width,
-                                        display->window_height);
-    if (!hws->egl_win) {
-        std::cerr << "Failed to create wl_egl_window" << std::endl;
-        /* Clean up partially-created objects. */
-        wl_surface_destroy(hws->surface);
-        wl_proxy_destroy((struct wl_proxy *)hws->xdg_surface);
-        wl_proxy_destroy((struct wl_proxy *)hws->toplevel);
-        wl_proxy_destroy((struct wl_proxy *)hws->wm_base);
-        wl_display_disconnect(wl_client);
-        delete hws;
-        return false;
-    }
-
     /* Commit the surface so the compositor schedules a configure. */
+    fprintf(stderr, "[mansion] wl_surface_commit (size %dx%d)\n",
+            display->window_width, display->window_height);
     wl_surface_commit(hws->surface);
     wl_display_roundtrip(wl_client);
+    fprintf(stderr, "[mansion] roundtrip done, configured=%d, size=%dx%d\n",
+            hws->configured, hws->width, hws->height);
 
     /* ─── Set up seat / keyboard / pointer input ──────────────────── */
     /*
@@ -573,7 +630,6 @@ bool setup_wayland_client_window(struct MansionDisplay* display)
     /* Store in display struct. */
     display->wl_client_display = wl_client;
     display->wl_surface        = hws->surface;
-    display->wl_egl_window     = hws->egl_win;
 
     return true;
 }
@@ -582,10 +638,6 @@ void destroy_wayland_client_window(struct MansionDisplay* display)
 {
     if (!display) return;
 
-    if (display->wl_egl_window) {
-        wl_egl_window_destroy(display->wl_egl_window);
-        display->wl_egl_window = nullptr;
-    }
     if (display->wl_surface) {
         wl_surface_destroy(display->wl_surface);
         display->wl_surface = nullptr;
@@ -605,32 +657,64 @@ void destroy_wayland_client_window(struct MansionDisplay* display)
     }
 }
 
-/* ─── EGL setup for Wayland client display ─────────────────────────────────── */
+/* ─── EGL setup for Wayland client display (surfaceless Mesa + PBuffer) ──────
+ *
+ * wl_egl_window + EGL_PLATFORM_WAYLAND_EXT is incompatible in Mesa —
+ * eglCreateWindowSurface fails with EGL_BAD_NATIVE_WINDOW.
+ *
+ * Solution: use EGL_MESA_platform_surfaceless with a PBuffer surface for
+ * GPU rendering, then read pixels via glReadPixels and export them via
+ * wl_shm buffers to the host compositor.  This is the same approach the
+ * test client uses and is known to work reliably.
+ */
 
 static bool create_egl_for_wayland(struct MansionDisplay* display)
 {
-    struct wl_display *wl_client = display->wl_client_display;
-    if (!wl_client || !display->wl_egl_window) return false;
+    if (!display->wl_client_display) return false;
 
-    /* Initialize EGL on the Wayland platform. */
-    EGLint egl_major, egl_minor;
-    EGLDisplay egl_dpy = eglGetPlatformDisplay(EGL_PLATFORM_WAYLAND_EXT,
-                                                wl_client, nullptr);
-    if (egl_dpy == EGL_NO_DISPLAY) {
-        std::cerr << "Wayland EGL: failed to get display" << std::endl;
+    /* Check for surfaceless Mesa support. */
+    const char* ext_str = eglQueryString(EGL_NO_DISPLAY, EGL_EXTENSIONS);
+    bool has_surfaceless = ext_str && strstr(ext_str, "EGL_MESA_platform_surfaceless");
+    if (!has_surfaceless) {
+        std::cerr << "Wayland EGL: EGL_MESA_platform_surfaceless not available"
+                  << std::endl;
         return false;
     }
+
+    EGLDisplay egl_dpy = eglGetPlatformDisplay(EGL_PLATFORM_SURFACELESS_MESA,
+                                                nullptr, nullptr);
+    if (egl_dpy == EGL_NO_DISPLAY) {
+        std::cerr << "Wayland EGL: failed to get surfaceless display" << std::endl;
+        return false;
+    }
+
+    EGLint egl_major, egl_minor;
     if (!eglInitialize(egl_dpy, &egl_major, &egl_minor)) {
-        std::cerr << "Wayland EGL: init failed" << std::endl;
+        std::cerr << "Wayland EGL: init failed, eglGetError="
+                  << eglGetError() << std::endl;
         eglTerminate(egl_dpy);
         return false;
     }
+    fprintf(stderr, "[mansion] EGL (surfaceless): v%d.%d\n", egl_major, egl_minor);
+
+    /* PBuffer requires EGL_PBUFFER_BIT in the config. */
+    EGLint pbuffer_config_attr[] = {
+        EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
+        EGL_RED_SIZE, 8,
+        EGL_GREEN_SIZE, 8,
+        EGL_BLUE_SIZE, 8,
+        EGL_ALPHA_SIZE, 8,
+        EGL_DEPTH_SIZE, 0,
+        EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
+        EGL_NONE
+    };
 
     EGLConfig egl_config;
     EGLint egl_config_count;
-    if (!eglChooseConfig(egl_dpy, config_attr, &egl_config, 1,
-                         &egl_config_count)) {
-        std::cerr << "Wayland EGL: failed to choose config" << std::endl;
+    if (!eglChooseConfig(egl_dpy, pbuffer_config_attr, &egl_config, 1,
+                         &egl_config_count) || egl_config_count == 0) {
+        std::cerr << "Wayland EGL: choose config failed, eglGetError="
+                  << eglGetError() << std::endl;
         eglTerminate(egl_dpy);
         return false;
     }
@@ -638,34 +722,47 @@ static bool create_egl_for_wayland(struct MansionDisplay* display)
     EGLContext egl_ctx = eglCreateContext(egl_dpy, egl_config,
                                           EGL_NO_CONTEXT, context_attr);
     if (egl_ctx == EGL_NO_CONTEXT) {
-        std::cerr << "Wayland EGL: context creation failed" << std::endl;
+        std::cerr << "Wayland EGL: context creation failed, eglGetError="
+                  << eglGetError() << std::endl;
         eglTerminate(egl_dpy);
         return false;
     }
 
-    /* Create the EGL surface from the wl_egl_window. */
-    EGLSurface egl_surf = eglCreateWindowSurface(egl_dpy, egl_config,
-        (EGLNativeWindowType)display->wl_egl_window, nullptr);
+    /* Create a PBuffer surface with the window dimensions. */
+    EGLint pbuffer_attr[] = {
+        EGL_WIDTH, display->window_width,
+        EGL_HEIGHT, display->window_height,
+        EGL_NONE
+    };
+
+    EGLSurface egl_surf = eglCreatePbufferSurface(egl_dpy, egl_config, pbuffer_attr);
     if (egl_surf == EGL_NO_SURFACE) {
-        std::cerr << "Wayland EGL: surface creation failed" << std::endl;
+        std::cerr << "Wayland EGL: pbuffer creation failed, eglGetError="
+                  << eglGetError() << std::endl;
+        eglDestroyContext(egl_dpy, egl_ctx);
         eglTerminate(egl_dpy);
         return false;
     }
+    fprintf(stderr, "[mansion] EGL: pbuffer surface created (%dx%d)\n",
+            display->window_width, display->window_height);
 
     if (eglMakeCurrent(egl_dpy, egl_surf, egl_surf, egl_ctx) == EGL_FALSE) {
-        std::cerr << "Wayland EGL: make current failed" << std::endl;
+        std::cerr << "Wayland EGL: make current failed, eglGetError="
+                  << eglGetError() << std::endl;
         eglDestroySurface(egl_dpy, egl_surf);
         eglDestroyContext(egl_dpy, egl_ctx);
         eglTerminate(egl_dpy);
         return false;
     }
+    fprintf(stderr, "[mansion] EGL: make current OK\n");
 
-    /* Enable vsync to prevent flickering. */
+    /* Enable vsync. */
     eglSwapInterval(egl_dpy, 1);
 
     display->egl_display = egl_dpy;
     display->egl_context = egl_ctx;
     display->egl_surface = egl_surf;
+    display->egl_pbuffer_surface = egl_surf;
     display->egl_config  = egl_config;
     display->egl_config_count = egl_config_count;
 
@@ -720,7 +817,6 @@ struct MansionDisplay* create_display(struct MansionCompositor* compositor,
     mansion_display->egl_surface = EGLSurface(nullptr);
     mansion_display->wl_client_display = nullptr;
     mansion_display->wl_surface = nullptr;
-    mansion_display->wl_egl_window = nullptr;
 
     /* Create the host window using native Wayland client + EGL. */
     if (!create_egl_and_window(mansion_display)) {
@@ -879,7 +975,7 @@ void destroy_display(struct MansionDisplay* display) {
     destroy_renderer(display);
 
     /* Clean up Wayland client window. */
-    if (display->wl_client_display || display->wl_egl_window || display->wl_surface) {
+    if (display->wl_client_display || display->wl_surface) {
         destroy_wayland_client_window(display);
     }
 
@@ -1187,6 +1283,9 @@ void render(struct MansionDisplay* display) {
     if (!display) return;
 
     /* P2-T07: track frame timing when --stats is enabled. */
+    fprintf(stderr, "[mansion] render frame (size %dx%d, flat=%d, room=%d)\n",
+            display->window_width, display->window_height,
+            display->flat_mode, display->room_mode);
     auto frame_start = std::chrono::steady_clock::now();
 
     // Fire frame callbacks on every render tick (needed even in headless mode).
@@ -1629,10 +1728,99 @@ void render_surface_from_data(struct MansionDisplay* display, struct MansionSurf
     }
 }
 
+/* ─── wl_shm buffer creation helper ────────────────────────────────────────── */
+
+static struct wl_buffer* create_shm_buffer(struct MansionDisplay* display,
+                                            struct wl_shm* shm)
+{
+    if (!shm) return nullptr;
+
+    int w = display->window_width;
+    int h = display->window_height;
+    int32_t stride = w * 4;  /* ARGB8888 = 4 bytes per pixel */
+    int32_t size = stride * h;
+
+    /* Create an anonymous memory file. */
+    int fd = memfd_create("mansion-shm", 0);
+    if (fd < 0) {
+        std::cerr << "shm: memfd_create failed" << std::endl;
+        return nullptr;
+    }
+    if (ftruncate(fd, size) < 0) {
+        std::cerr << "shm: ftruncate failed" << std::endl;
+        close(fd);
+        return nullptr;
+    }
+
+    void* ptr = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    if (ptr == MAP_FAILED) {
+        std::cerr << "shm: mmap failed" << std::endl;
+        close(fd);
+        return nullptr;
+    }
+
+    /* Make sure the EGL context is current so glReadPixels works. */
+    EGLDisplay egl_dpy = display->egl_display;
+    EGLSurface egl_surf = display->egl_surface;
+    EGLContext egl_ctx = display->egl_context;
+    if (eglMakeCurrent(egl_dpy, egl_surf, egl_surf, egl_ctx) == EGL_FALSE) {
+        std::cerr << "shm: eglMakeCurrent failed" << std::endl;
+        munmap(ptr, size);
+        close(fd);
+        return nullptr;
+    }
+
+    /* Read pixels from the PBuffer surface.
+     * glReadPixels reads GL_RGBA; we convert to ARGB8888 for the display. */
+    std::vector<uint8_t> rgba(w * h * 4);
+    glPixelStorei(GL_PACK_ALIGNMENT, 4);
+    glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, rgba.data());
+
+    /* Convert GL_RGBA [R,G,B,A] to ARGB8888 [A,R,G,B] on little-endian. */
+    uint32_t* pixels = (uint32_t*)ptr;
+    for (int i = 0; i < w * h; i++) {
+        pixels[i] = (rgba[i * 4 + 3] & 0xff)                   /* A */
+                    | ((rgba[i * 4 + 0] & 0xff) << 16)          /* R */
+                    | ((rgba[i * 4 + 1] & 0xff) << 8)           /* G */
+                    | ((rgba[i * 4 + 2] & 0xff));               /* B */
+    }
+
+    munmap(ptr, size);
+
+    /* Create wl_shm buffer. */
+    struct wl_shm_pool* pool = wl_shm_create_pool(shm, fd, size);
+    struct wl_buffer* buffer = wl_shm_pool_create_buffer(
+        pool, 0, w, h, stride, WL_SHM_FORMAT_ARGB8888);
+    wl_shm_pool_destroy(pool);
+    close(fd);
+
+    return buffer;
+}
+
 void swap_buffers(struct MansionDisplay* display) {
-    if (display && display->egl_display != EGL_NO_DISPLAY &&
-        display->egl_surface != EGL_NO_SURFACE) {
-        eglSwapBuffers(display->egl_display, display->egl_surface);
+    if (!display || !display->wl_surface) return;
+
+    /* Get wl_shm from the host_window_state. */
+    struct host_window_state* hws = g_hws;
+    struct wl_shm* shm = hws ? hws->shm : nullptr;
+
+    if (shm) {
+        /* Create a wl_shm buffer with the rendered pixels. */
+        struct wl_buffer* buf = create_shm_buffer(display, shm);
+        if (buf) {
+            /* Attach, damage, and commit. */
+            wl_surface_attach(display->wl_surface, buf, 0, 0);
+            wl_surface_damage(display->wl_surface, 0, 0,
+                              display->window_width, display->window_height);
+            wl_surface_commit(display->wl_surface);
+            /* Destroy buffer immediately — compositor will release it. */
+            wl_buffer_destroy(buf);
+        }
+    }
+
+    /* Flush the Wayland client display. */
+    if (display->wl_client_display) {
+        wl_display_flush(display->wl_client_display);
     }
 }
 
