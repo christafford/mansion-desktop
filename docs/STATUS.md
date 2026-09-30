@@ -10,11 +10,13 @@ running the check that proves it.
 
 ## Next task
 
-**P4-T08 Audit resource and list lifetimes**. Prerequisites: P4-T06 (completed
-2026-09-29, see docs/handoffs/04-recovery.md). P4-T07 completed 2026-09-29:
-54/54 plugin tests pass (+5 new stable-fixture and gate tests), 25/25 C++ tests
-pass. P4-T08–P4-T12 follow; Project 5 feature work is blocked until the
-foundation and presentable-room gates pass.
+**P4-T09 Audit wl_surface / wl_buffer / wl_shm resource lifetimes**. P4-T08
+completed 2026-09-29: tracked xdg_surface/xdg_toplevel in shell lists, freed
+on disconnect, orphaned surface cap at 10, fixed client listener + SIGCHLD
+event source leaks — all 25 tests pass in normal and ASan+UBSan builds.
+P4-T07 completed 2026-09-29: 54/54 plugin tests pass, 25/25 C++ tests pass.
+P4-T09–P4-T12 follow; Project 5 feature work is blocked until the foundation
+and presentable-room gates pass.
 
 ## Review boundaries and open gates
 
@@ -24,10 +26,10 @@ foundation and presentable-room gates pass.
 | GPU client import | Not verified; PBuffer/readback/shm is fallback evidence | P4-T13; direct import proof before ticking P2-T05 |
 | Native Wayland host | Implemented in source (d4f8551–a615f18, `wl_egl_window` host window replacing X11) but not verified; handoff 04-host-window reports severe flicker and no host input | P4-T12 diagnosis with logs and separate host-window observation |
 | Host input path | Windowed mode again scans `/dev/input` directly (`input_init()`), contradicting the P1-T07 record; headless opens no devices | P4-T06 records it; P4-T12 decides host-seat-only vs evdev |
-| Lifetimes and surface commits | Review found paths needing audit; no new runtime conclusion | P4-T08–P4-T11 regressions and sanitizer evidence |
+| Lifetimes and surface commits | xdg_surface/xdg_toplevel tracked and freed on disconnect; orphaned surface cap at 10 — P4-T08 done | P4-T09–P4-T11 regressions and sanitizer evidence |
 | Automation | P4-T07 fixed: stable fixtures replace live TASKS.md dependency; P5 tasks,
-  gate blocking, and unknown scope rejection covered by 5 new tests | P4-T08
-  audit lifetimes next; plugin test suite stable at 54/54 |
+  gate blocking, and unknown scope rejection covered by 5 new tests | P4-T09
+  audit wl_surface / wl_buffer lifetimes next; plugin test suite stable at 54/54 |
 | First presentable room | Not implemented/accepted | P4-T20–P4-T28 after the foundation gate |
 
 Potential source issues are audit leads, not claims of a reproduced crash.
@@ -91,12 +93,12 @@ Full reconciliation completed. Handoff at
   documented in handoff 04-host-window.md. Root cause hypothesis (Mesa Wayland
   EGL backend conflict) is plausible but unverified.
 - **Orphaned surface retention:** Surfaces persist after disconnect until
-  compositor shutdown. No bounded size limit or age-based eviction.
+  compositor shutdown. Bounded to 10 entries with age-based eviction
+  (oldest evicted, GL texture freed) — P4-T08.
 
 ### Audit leads for follow-up
 
-- P4-T07: plugin test fixture repair (stable fixtures for completed projects)
-- P4-T08: resource/lifetime audit + sanitizer build verification
+- P4-T09: wl_surface / wl_buffer / wl_shm resource lifetimes
 - P4-T12: native Wayland host experiment (bounded prototype)
 - P4-T13: accelerated buffer import reinvestigation
 - P4-T11: xdg-shell handshake validation
@@ -184,6 +186,22 @@ Full reconciliation completed. Handoff at
   been removed rather than fixed.
 
 ## Verified by automated test
+
+- **P4-T08 Resource and list lifetimes.** `MansionXdgShell` gains
+  `toplevel_list` and `xdg_surface_list` tracking lists;
+  `MansionXdgSurface` gains `shell` back-pointer, `xdg_surface_link` and
+  `toplevel_link` (for `MansionXdgToplevel`). Surfaces and toplevels are
+  registered in these lists at construction and freed in `destroy_xdg_shell`
+  (fixes leak on compositor shutdown and client disconnect). Orphaned
+  `MansionSurface` entries are capped at 10 via age-based eviction with GL
+  texture deletion. Fixed two pre-existing leaks: `on_client_destroyed` now
+  deletes the listener after removal, and the SIGCHLD event source is stored
+  and removed in the cleanup path. Bug fix:
+  `shell_from_wm_base(resource)` was called with the xdg_surface resource in
+  `xdg_surface_get_toplevel` (wrong); the shell back-pointer resolves this.
+  All 25 tests pass in both `build` and `build-asan` (AddressSanitizer +
+  UndefinedBehaviorSanitizer, zero leaks, zero sanitizer errors).
+  (2026-09-29, this session)
 
 - **Historical nested P5-T01 Window registry (superseded task text; revised
   P5-T01 remains open).** `MansionCompositor` gains `toplevel_list` and
