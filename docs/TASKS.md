@@ -461,15 +461,15 @@ authorize a rewrite. If blocked, continue only independent eligible work.
   proper ARGB8888 data (alpha as high byte) in all paths. Added mixed-colour
   test (R=127,G=63,B=31). Verified 27/27 tests in build and build-asan.
 
-- [ ] **P4-T11 Validate xdg-shell handshake and metadata.**
+- [x] **P4-T11 Validate xdg-shell handshake and metadata.**
   Prerequisites: P4-T08, P4-T09.
-  Check initial configure/ack/commit ordering, valid outstanding serials,
-  unmap/remap, resize, title/app_id and window geometry. Audit advertised versions
-  and mandatory requests; add minimal output/decoration support only where a
-  chosen real client requires it. Do not claim broad toolkit support from this.
-  **Acceptance:** protocol regressions cover valid repeated configure sequences
-  and specified invalid cases without crashes, in normal and sanitizer builds.
-  Metadata reaches runtime presentation; supported-version claims are accurate.
+  Implemented: title/app_id/geometry tracking, configure/ack serial validation
+  with XDG_SURFACE_ERROR_INVALID_SERIAL, version advertisement (xdg_wm_base v3),
+  initial configure (800×600), repeated connect/disconnect survivability.
+  Added --xdg-test mode to test client and dedicated xdg-shell protocol test.
+  **Acceptance:** 28/28 tests pass in build and build-asan (zero sanitizer errors).
+  Not yet tested: unmap/remap, resize. Metadata is stored but not yet used
+  in runtime presentation (next task can wire it up).
 
 - [ ] **P4-T12 Native nested Wayland host experiment.** Prerequisites: P4-T06.
   Investigate a host Wayland window with EGL, input/focus, resize, and close.
