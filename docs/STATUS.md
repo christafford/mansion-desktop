@@ -34,7 +34,7 @@ until the foundation and presentable-room gates pass.
 | --- | --- | --- |
 | Foundation gate | Reopened; old Decision 04 approval superseded | P4-T06–P4-T18 and a real terminal observed by a person |
 | GPU client import | Not verified; PBuffer/readback/shm is fallback evidence | P4-T13; direct import proof before ticking P2-T05 |
-| Native Wayland host | Implemented in source (d4f8551–a615f18, `wl_egl_window` host window replacing X11) but not verified; handoff 04-host-window reports severe flicker and no host input | P4-T12 diagnosis with logs and separate host-window observation |
+| Native Wayland host | Switched from `wl_egl_window` to surfaceless Mesa + EGL PBuffer + wl_shm buffer export (cd2da8a); not yet verified on a real Wayland session | P4-T12 observation on real Wayland session; verify rendered content appears without flicker |
 | Host input path | Windowed mode again scans `/dev/input` directly (`input_init()`), contradicting the P1-T07 record; headless opens no devices | P4-T06 records it; P4-T12 decides host-seat-only vs evdev |
 | Lifetimes and surface commits | xdg_surface/xdg_toplevel tracked and freed on disconnect; orphaned surface cap at 10 — P4-T08 done | P4-T09–P4-T11 regressions and sanitizer evidence |
 | Automation | P4-T07 fixed: stable fixtures replace live TASKS.md dependency; P5 tasks,

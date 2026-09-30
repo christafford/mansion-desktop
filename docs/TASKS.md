@@ -473,16 +473,15 @@ authorize a rewrite. If blocked, continue only independent eligible work.
 
 - [ ] **P4-T12 Native nested Wayland host experiment.** Prerequisites: P4-T06.
   Investigate a host Wayland window with EGL, input/focus, resize, and close.
-  State at the 2026-09-29 merge: commits d4f8551 through a615f18 already removed
-  the X11 host window and present through a `wl_egl_window` client connection
-  (`src/display.cpp`), with seat/relative-pointer listeners; the same change
-  reintroduced direct `/dev/input` evdev reading in windowed mode
-  (`input_init()` in `src/input.cpp`). Handoff 04-host-window reports severe
-  flicker and no host input; nothing about this path is verified. Preserve the
-  headless path. Keep the host connection distinct from Mansion's private client
-  socket and launcher environment. Diagnose the flicker and missing host events
-  with logs (`WAYLAND_DEBUG=1`) rather than adding further workarounds, and
-  decide whether host input must come from the host seat only.
+  State at the 2026-09-29 merge: commits d4f8551 through a615f18 replaced X11
+  with a `wl_egl_window` client connection, but this approach is incompatible
+  with `EGL_PLATFORM_WAYLAND_EXT` in Mesa (eglCreateWindowSurface returns
+  EGL_BAD_NATIVE_WINDOW). As of commit cd2da8a the windowed mode path uses
+  `EGL_MESA_platform_surfaceless` with an EGL PBuffer for rendering,
+  `glReadPixels` + `wl_shm` buffer export for presentation, and the host seat
+  for keyboard/pointer input. Diagnose remaining issues (if any) with logs
+  (`WAYLAND_DEBUG=1`) rather than adding further workarounds, and decide
+  whether host input must come from the host seat only.
   **Acceptance:** a bounded prototype plus reproducible commands/logs demonstrates
   rendering and host events, or a precise blocker/capability report explains why
   it cannot. Record required versions and what remains unobserved; a report alone
