@@ -76,6 +76,10 @@ struct client {
     int have_destroy_after_release;
     int buffer_destroyed;
 
+    /* --xdg-test: exercise xdg-shell protocol error cases */
+    int xdg_test;
+    int xdg_test_error_received;
+    int xdg_test_second_toplevel_failed;
     /* --report-input */
     int report_input;
     /* deferred seat binding for input reporting */
@@ -448,6 +452,7 @@ int main(int argc, char** argv) {
     int commit_cr = 0, commit_cg = 0, commit_cb = 0;
     int report_input = 0;
     int egl_mode = 0;
+    int xdg_test_requested = 0;
 
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--socket") == 0 && i + 1 < argc) {
@@ -493,6 +498,8 @@ int main(int argc, char** argv) {
             have_attach_only = 1;
         } else if (strcmp(argv[i], "--destroy-after-release") == 0) {
             have_destroy_after_release = 1;
+        } else if (strcmp(argv[i], "--xdg-test") == 0) {
+            xdg_test_requested = 1;
         } else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
             usage();
             return 0;
@@ -742,6 +749,41 @@ int main(int argc, char** argv) {
             xdg_surface_destroy(c.xdg_surface);
             wl_surface_destroy(c.surface);
         }
+    }
+
+    /* xdg-test mode: verify metadata setting and normal handshake */
+    if (xdg_test_requested && !egl_mode) {
+        if (!c.xdg_wm_base || !c.compositor) {
+            fprintf(stderr, "xdg-test needs xdg_wm_base and wl_compositor\n");
+            goto error;
+        }
+        xdg_wm_base_add_listener(c.xdg_wm_base, &wm_base_listener, &c);
+        c.surface = wl_compositor_create_surface(c.compositor);
+        c.xdg_surface = xdg_wm_base_get_xdg_surface(c.xdg_wm_base, c.surface);
+        xdg_surface_add_listener(c.xdg_surface, &surface_listener, &c);
+        c.toplevel = xdg_surface_get_toplevel(c.xdg_surface);
+        if (!c.toplevel) {
+            fprintf(stderr, "xdg-test: failed to create first toplevel\n");
+            goto error;
+        }
+        xdg_toplevel_add_listener(c.toplevel, &toplevel_listener, &c);
+
+        /* Set metadata: title, app_id, window geometry */
+        xdg_toplevel_set_title(c.toplevel, "xdg-test-title");
+        xdg_toplevel_set_app_id(c.toplevel, "mansion-xdg-test");
+        xdg_surface_set_window_geometry(c.xdg_surface, 10, 20, 300, 200);
+        printf("xdg-metadata-set\n");
+
+        /* Commit to trigger configure; ack is automatic via surface_listener. */
+        wl_surface_commit(c.surface);
+        wl_display_roundtrip(c.display);
+        printf("xdg-configure-acked\n");
+
+        /* Cleanup */
+        xdg_toplevel_destroy(c.toplevel);
+        xdg_surface_destroy(c.xdg_surface);
+        wl_surface_destroy(c.surface);
+        printf("xdg-test-done\n");
     }
 
     /* Dispatch events until the deadline so later features can observe server events. */

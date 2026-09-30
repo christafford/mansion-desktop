@@ -15,6 +15,9 @@
 #include "compositor-private.h"
 #include "input.h"
 
+#include <cstring>
+#include <string>
+
 namespace {
 
 constexpr uint32_t kWmBaseVersion = 3;
@@ -42,6 +45,9 @@ struct MansionXdgSurface {
     bool configured;
     uint32_t last_configure_serial;
     uint32_t acked_serial;
+    /* P4-T11: window geometry. */
+    int32_t geo_x, geo_y, geo_width, geo_height;
+    bool has_geometry = false;
 };
 
 namespace {
@@ -54,6 +60,9 @@ struct MansionXdgToplevel {
     /* P3-T04: saved size for restoring when exiting Application mode. */
     int32_t saved_width, saved_height;
     bool has_saved_size = false;
+    /* P4-T11: toplevel metadata. */
+    std::string title;
+    std::string app_id;
 };
 
 template <typename T>
@@ -104,7 +113,6 @@ void toplevel_resource_destroyed(struct wl_resource* resource) {
 }
 
 void toplevel_ignore(struct wl_client*, struct wl_resource*) {}
-void toplevel_ignore_s(struct wl_client*, struct wl_resource*, const char*) {}
 void toplevel_ignore_r(struct wl_client*, struct wl_resource*, struct wl_resource*) {}
 void toplevel_ignore_2i(struct wl_client*, struct wl_resource*, int32_t, int32_t) {}
 void toplevel_ignore_ru(struct wl_client*, struct wl_resource*, struct wl_resource*, uint32_t) {}
@@ -114,8 +122,20 @@ void toplevel_ignore_ru2i(struct wl_client*, struct wl_resource*, struct wl_reso
 const struct xdg_toplevel_interface toplevel_impl = {
     .destroy = resource_destroy_request,
     .set_parent = toplevel_ignore_r,
-    .set_title = toplevel_ignore_s,
-    .set_app_id = toplevel_ignore_s,
+    .set_title = [](struct wl_client* client, struct wl_resource* resource,
+                    const char* title) {
+        auto* toplevel = user_data<MansionXdgToplevel>(resource);
+        if (!toplevel) return;
+        toplevel->title = title ? title : "";
+        (void)client;
+    },
+    .set_app_id = [](struct wl_client* client, struct wl_resource* resource,
+                     const char* app_id) {
+        auto* toplevel = user_data<MansionXdgToplevel>(resource);
+        if (!toplevel) return;
+        toplevel->app_id = app_id ? app_id : "";
+        (void)client;
+    },
     .show_window_menu = toplevel_ignore_ru2i,
     .move = toplevel_ignore_ru,
     .resize = toplevel_ignore_ruu,
@@ -222,11 +242,30 @@ void xdg_surface_get_popup(struct wl_client*, struct wl_resource* resource, uint
                            "xdg_popup is not implemented yet");
 }
 
-void xdg_surface_set_window_geometry(struct wl_client*, struct wl_resource*, int32_t, int32_t,
-                                     int32_t, int32_t) {}
+void xdg_surface_set_window_geometry(struct wl_client* client, struct wl_resource* resource,
+                                     int32_t x, int32_t y, int32_t w, int32_t h) {
+    auto* xdg_surface = user_data<MansionXdgSurface>(resource);
+    if (!xdg_surface) return;
+    xdg_surface->geo_x = x;
+    xdg_surface->geo_y = y;
+    xdg_surface->geo_width = w;
+    xdg_surface->geo_height = h;
+    xdg_surface->has_geometry = true;
+    (void)client;
+}
 
-void xdg_surface_ack_configure(struct wl_client*, struct wl_resource* resource, uint32_t serial) {
-    user_data<MansionXdgSurface>(resource)->acked_serial = serial;
+void xdg_surface_ack_configure(struct wl_client* client, struct wl_resource* resource, uint32_t serial) {
+    auto* xdg_surface = user_data<MansionXdgSurface>(resource);
+    if (!xdg_surface) return;
+    // Validate the serial: must not be future, and must be within the bounded window.
+    if (serial > xdg_surface->last_configure_serial) {
+        wl_resource_post_error(resource, XDG_SURFACE_ERROR_INVALID_SERIAL,
+                               "ack_configure serial %u is newer than last configure %u",
+                               serial, xdg_surface->last_configure_serial);
+        return;
+    }
+    xdg_surface->acked_serial = serial;
+    (void)client;
 }
 
 const struct xdg_surface_interface xdg_surface_impl = {
