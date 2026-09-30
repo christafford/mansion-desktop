@@ -13,6 +13,8 @@
 
 /* ---------- surface ---------- */
 
+static constexpr int kMaxOrphanedSurfaces = 10;
+
 static void surface_destroy_callback(struct wl_resource* resource) {
     auto* surface = static_cast<MansionSurface*>(wl_resource_get_user_data(resource));
     if (!surface) return;
@@ -27,9 +29,6 @@ static void surface_destroy_callback(struct wl_resource* resource) {
         wl_resource_destroy(cb);
     }
 
-    /* Keep MansionSurface alive for screenshot; move to orphaned list.
-     * The GL texture and buffer_resource are kept until compositor destruction. */
-
     /* Clear keyboard focus if this surface was the focused one —
      * otherwise focused_surface_resource becomes a dangling pointer. */
     if (surface->compositor->focused_surface_resource == surface->resource) {
@@ -42,6 +41,27 @@ static void surface_destroy_callback(struct wl_resource* resource) {
          * is simultaneously processing the client's resource destruction. */
         if (input_mode_get() == InputMode::Application) {
             input_mode_set(InputMode::World);
+        }
+    }
+
+    /* Insert at tail (newest last). If the list exceeds the max, evict
+     * the oldest surface (first in the list) and free its resources. */
+    if (surface->compositor->orphaned_surfaces.next != &surface->compositor->orphaned_surfaces) {
+        int count = 0;
+        MansionSurface *s;
+        wl_list_for_each(s, &surface->compositor->orphaned_surfaces, link) {
+            (void)s;
+            count++;
+        }
+        if (count >= kMaxOrphanedSurfaces) {
+            MansionSurface* oldest = wl_container_of(
+                surface->compositor->orphaned_surfaces.next, oldest, link);
+            wl_list_remove(&oldest->link);
+            if (oldest->gl_texture) {
+                (void)glDeleteTextures(1, &oldest->gl_texture);
+                oldest->gl_texture = 0;
+            }
+            delete oldest;
         }
     }
 

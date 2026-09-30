@@ -192,10 +192,8 @@ static void on_client_destroyed(struct wl_listener* listener, void* data) {
     pid_t pid = 0;
     wl_client_get_credentials(client, &pid, nullptr, nullptr);
     std::cerr << "client disconnected " << pid << std::endl;
-    /* Do NOT delete listener — defer to avoid UAF during wl_client_destroy.
-     * The wl_listener memory is leaked; this is intentional to avoid
-     * use-after-free during libwayland's teardown sequence. */
     wl_list_remove(&listener->link);
+    delete listener;
 }
 
 static void on_client_created(struct wl_listener* listener, void* data) {
@@ -214,6 +212,7 @@ static void on_client_created(struct wl_listener* listener, void* data) {
 // ── SIGCHLD reaping ───────────────────────────────────────────────────────
 
 static int g_sigchld_fd = -1;
+static struct wl_event_source* g_sigchld_source = nullptr;
 
 static int sigchld_handler(int fd, uint32_t /*mask*/, void* /*data*/) {
     struct signalfd_siginfo si;
@@ -243,8 +242,8 @@ static void setup_sigchld(struct wl_event_loop* event_loop) {
 
     g_sigchld_fd = signalfd(-1, &mask, SFD_NONBLOCK | SFD_CLOEXEC);
     if (g_sigchld_fd >= 0) {
-        wl_event_loop_add_fd(event_loop, g_sigchld_fd, WL_EVENT_READABLE,
-                             sigchld_handler, nullptr);
+        g_sigchld_source = wl_event_loop_add_fd(event_loop, g_sigchld_fd, WL_EVENT_READABLE,
+                                                sigchld_handler, nullptr);
     }
 }
 
@@ -351,6 +350,10 @@ int main(int argc, char** argv) {
         if (g_sigchld_fd >= 0) {
             close(g_sigchld_fd);
             g_sigchld_fd = -1;
+        }
+        if (g_sigchld_source) {
+            wl_event_source_remove(g_sigchld_source);
+            g_sigchld_source = nullptr;
         }
         if (input_started) input_destroy();
         destroy_seat(seat);

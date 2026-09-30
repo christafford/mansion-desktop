@@ -27,6 +27,8 @@ struct MansionXdgToplevel;
 
 struct MansionXdgShell {
     struct wl_global* global;
+    struct wl_list toplevel_list;   /* list of MansionXdgToplevel* via toplevel_link */
+    struct wl_list xdg_surface_list; /* list of MansionXdgSurface* via xdg_surface_link */
 };
 
 struct MansionXdgSurface {
@@ -34,7 +36,9 @@ struct MansionXdgSurface {
     struct wl_resource* surface_resource;   // nullptr once the wl_surface is gone
     MansionXdgToplevel* toplevel;           // nullptr until get_toplevel / after destroy
     struct wl_listener surface_destroy;
-    struct wl_list toplevel_link;           // P5-T01: link in compositor toplevel_list
+    struct MansionXdgShell* shell;          // back-pointer for registration
+    struct wl_list toplevel_link;           // link in compositor toplevel_list
+    struct wl_list xdg_surface_link;        // link in shell xdg_surface_list
     bool configured;
     uint32_t last_configure_serial;
     uint32_t acked_serial;
@@ -45,6 +49,7 @@ namespace {
 struct MansionXdgToplevel {
     struct wl_resource* resource;
     MansionXdgSurface* xdg_surface;         // nullptr once the xdg_surface is gone
+    struct wl_list toplevel_link;           // link in MansionXdgShell toplevel_list
     int32_t width, height;                  // size sent in the initial configure
     /* P3-T04: saved size for restoring when exiting Application mode. */
     int32_t saved_width, saved_height;
@@ -54,6 +59,11 @@ struct MansionXdgToplevel {
 template <typename T>
 T* user_data(struct wl_resource* resource) {
     return static_cast<T*>(wl_resource_get_user_data(resource));
+}
+
+// Get the MansionXdgShell from a wm_base resource's user data.
+MansionXdgShell* shell_from_wm_base(struct wl_resource* resource) {
+    return static_cast<MansionXdgShell*>(wl_resource_get_user_data(resource));
 }
 
 // Every `destroy` request just drops the resource; the destructor does the work.
@@ -198,6 +208,10 @@ void xdg_surface_get_toplevel(struct wl_client* client, struct wl_resource* reso
     wl_resource_set_implementation(toplevel->resource, &toplevel_impl, toplevel,
                                    toplevel_resource_destroyed);
     xdg_surface->toplevel = toplevel;
+    // Register in the shell's tracking list for cleanup.
+    wl_list_init(&toplevel->toplevel_link);
+    if (xdg_surface->shell)
+        wl_list_insert(&xdg_surface->shell->toplevel_list, &toplevel->toplevel_link);
     /* P5-T01: register in the window registry. */
     toplevel_register(xdg_surface);
 }
@@ -259,9 +273,14 @@ void wm_base_get_xdg_surface(struct wl_client* client, struct wl_resource* resou
     xdg_surface->surface_resource = surface_resource;
     xdg_surface->surface_destroy.notify = on_wl_surface_destroyed;
     wl_resource_add_destroy_listener(surface_resource, &xdg_surface->surface_destroy);
+    xdg_surface->shell = shell_from_wm_base(resource);
     surface->xdg_surface = xdg_surface;
     wl_resource_set_implementation(xdg_surface->resource, &xdg_surface_impl, xdg_surface,
                                    xdg_surface_resource_destroyed);
+    // Register in the shell's tracking list for cleanup.
+    wl_list_init(&xdg_surface->xdg_surface_link);
+    if (xdg_surface->shell)
+        wl_list_insert(&xdg_surface->shell->xdg_surface_list, &xdg_surface->xdg_surface_link);
 }
 
 void wm_base_pong(struct wl_client*, struct wl_resource*, uint32_t) {}
@@ -440,6 +459,8 @@ void xdg_shell_cycle_focus(struct MansionSeat* seat,
 
 struct MansionXdgShell* create_xdg_shell(struct MansionCompositor*, struct wl_display* display) {
     auto* shell = new MansionXdgShell{};
+    wl_list_init(&shell->toplevel_list);
+    wl_list_init(&shell->xdg_surface_list);
     shell->global = wl_global_create(display, &xdg_wm_base_interface, kWmBaseVersion,
                                      shell, wm_base_bind);
     if (!shell->global) {
@@ -451,8 +472,18 @@ struct MansionXdgShell* create_xdg_shell(struct MansionCompositor*, struct wl_di
 
 void destroy_xdg_shell(struct MansionXdgShell* shell) {
     if (!shell) return;
-    // Client resources are torn down by wl_display_destroy (their destructors
-    // free the Mansion* structs); only the global belongs to us.
+    // Free all xdg_toplevel objects.
+    MansionXdgToplevel *toplevel, *toplevel_next;
+    wl_list_for_each_safe(toplevel, toplevel_next, &shell->toplevel_list, toplevel_link) {
+        wl_list_remove(&toplevel->toplevel_link);
+        delete toplevel;
+    }
+    // Free all xdg_surface objects.
+    MansionXdgSurface *xdg_surf, *xdg_surf_next;
+    wl_list_for_each_safe(xdg_surf, xdg_surf_next, &shell->xdg_surface_list, xdg_surface_link) {
+        wl_list_remove(&xdg_surf->xdg_surface_link);
+        delete xdg_surf;
+    }
     wl_global_destroy(shell->global);
     delete shell;
 }
