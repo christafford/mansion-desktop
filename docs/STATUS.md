@@ -10,11 +10,13 @@ running the check that proves it.
 
 ## Next task
 
-**P4-T06 Reconcile implementation and evidence**, then the bounded foundation
-recovery tasks through P4-T18 in TASKS.md. Project 5 feature work is blocked
-until the foundation and presentable-room gates pass. P5-T00 was already
-expanded; do not run that expansion again. The old "P5-T03 xdg_popup" next-task
-pointer from 2026-09-28 is withdrawn.
+**P4-T07 Repair automation verification**. Prerequisites: P4-T06 (completed
+2026-09-29, see docs/handoffs/04-recovery.md). P4-T08 (audit lifetimes) and
+P4-T12 (native host experiment) are also eligible after P4-T06 but P4-T07 is
+more self-contained. Project 5 feature work is blocked until the foundation
+and presentable-room gates pass. P5-T00 was already expanded; do not run that
+expansion again. The old "P5-T03 xdg_popup" next-task pointer from
+2026-09-28 is withdrawn.
 
 ## Review boundaries and open gates
 
@@ -51,6 +53,61 @@ checkout that predated the 2026-09-28 implementation commits
 - The nested P5-T01/P5-T02 sub-tasks ticked on 2026-09-28 are recorded as
   historical evidence under P5-T00 in TASKS.md; the revised column-zero
   P5-T01/P5-T02 remain unchecked and blocked on P4-T28.
+
+## P4-T06 Reconciliation (2026-09-29, this session)
+
+Full reconciliation completed. Handoff at
+`docs/handoffs/04-recovery.md`.
+
+### Baseline (all commands run in this session)
+
+| Check | Result |
+| --- | --- |
+| `meson compile -C build` | Up to date |
+| `meson test -C build --print-errorlogs` | **25/25 pass, 0 fail** |
+| `meson test -C build-asan --print-errorlogs` | **25/25 pass, 0 fail, no sanitizer errors** |
+| `node --test .opencode/tests/*.test.js` | **49/49 pass** |
+
+### Contradictions found (documentation vs source)
+
+- **C1. Dead X11 dependency:** `meson.build` line 13 declares `x11 = dependency('x11')`
+  but no source file in `src/` references X11 and no target links against it.
+  Confirmed: `grep -rn "x11" src/` returns zero matches.
+- **C2. P1-T07 evdev claim:** STATUS.md states "input_init() no-ops and /dev/input
+  not found" but `src/input.cpp` lines 130–188 clearly open and scan `/dev/input`
+  for evdev devices. The historical claim was correct for the pre-migration state
+  but contradicts current source after d4f8551.
+
+### Partial implementations confirmed
+
+- **P5-T01/P5-T02 (window registry, focus cycling):** Code exists
+  (`toplevel_list`, `toplevel_count`, `xdg_shell_cycle_focus()`, input-script
+  `tab`/`shift_tab`) but the synthetic `focus-cycle` test only verifies that
+  the compositor does not crash with two clients and tab/shift_tab in World mode.
+  Revised acceptance (multiple windows, unmapped windows, teardown order,
+  sanitizer, held-input release) is NOT met.
+- **Native Wayland host window:** Implemented in display.cpp + input.cpp
+  (d4f8551–a615f18) but unverified at runtime. Severe flicker + no host input
+  documented in handoff 04-host-window.md. Root cause hypothesis (Mesa Wayland
+  EGL backend conflict) is plausible but unverified.
+- **Orphaned surface retention:** Surfaces persist after disconnect until
+  compositor shutdown. No bounded size limit or age-based eviction.
+
+### Audit leads for follow-up
+
+- P4-T07: plugin test fixture repair (stable fixtures for completed projects)
+- P4-T08: resource/lifetime audit + sanitizer build verification
+- P4-T12: native Wayland host experiment (bounded prototype)
+- P4-T13: accelerated buffer import reinvestigation
+- P4-T11: xdg-shell handshake validation
+- P5-T01/P5-T02: new tests for revised acceptance (blocked on P4-T28)
+
+### Limitations
+
+- No real-application terminal trial (human tasks P1-T10, P4-T04, P4-T17)
+- No `WAYLAND_DEBUG=1` host window logs captured
+- No visual pixel evidence collected
+- Plugin tests are self-contained; no live OpenCode server exercised
 
 ## Session history (2026-09-28, second turn; commits d4f8551–a615f18)
 

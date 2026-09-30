@@ -397,7 +397,7 @@ Goal: demonstrate a functioning nested graphical desktop and repair the
 evidence/architecture gaps before feature expansion. These tasks do not
 authorize a rewrite. If blocked, continue only independent eligible work.
 
-- [ ] **P4-T06 Reconcile implementation and evidence.** Prerequisites: none.
+- [x] **P4-T06 Reconcile implementation and evidence.** Prerequisites: none.
   Inspect source, Meson registrations, tests, STATUS, decisions, and handoffs.
   Establish a baseline; identify partial registry code, stale next-task claims,
   contradictory swizzle explanations, orphaned-surface retention, and missing
@@ -405,6 +405,9 @@ authorize a rewrite. If blocked, continue only independent eligible work.
   **Acceptance:** reviewable evidence table and bounded follow-up list in
   `docs/handoffs/04-recovery.md`; run existing checks where available and record
   exact failures/missing prerequisites. No unchecked capability is called done.
+  (2026-09-29: 25/25 normal tests pass, 25/25 ASan tests pass, 49/49 plugin
+  tests pass. Two contradictions found: dead X11 dependency in meson.build,
+  P1-T07 evdev claim. Partial P5-T01/P5-T02 confirmed. Handoff at 04-recovery.md.)
 
 - [ ] **P4-T07 Repair automation verification.** Prerequisites: P4-T06.
   Replace the plugin test's assumption that the live Projects 1–4 task list
