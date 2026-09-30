@@ -1070,33 +1070,38 @@ static void render_panel(struct MansionDisplay* display) {
                 GLuint tex = 0;
                 glGenTextures(1, &tex);
                 glBindTexture(GL_TEXTURE_2D, tex);
-                if (display->egl_mode) {
-                    /* Swizzle to compensate for Mesa EGL surfaceless
-                     * renderer's R↔G rearrangement of GL_RGBA data. */
+                /* Format-aware texture upload: query the wl_shm buffer format
+                 * and swizzle on the CPU to GL_RGBA so results are correct
+                 * regardless of Mesa driver internals.  */
+                int format = wl_shm_buffer_get_format(shm_buf);
+                if (format == WL_SHM_FORMAT_ABGR8888 ||
+                    format == WL_SHM_FORMAT_XBGR8888) {
+                    /* ABGR8888 on little-endian: bytes are [R, G, B, A].
+                     * GL_RGBA expects [R, G, B, A], so no swizzle needed. */
+                    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
+                                 GL_RGBA, GL_UNSIGNED_BYTE, data);
+                } else {
+                    /* Default: ARGB8888 / XRGB8888 on little-endian have
+                     * bytes [B, G, R, A].  Swizzle to GL_RGBA [R, G, B, A]. */
                     std::vector<uint8_t> rgba(w * h * 4);
                     for (int y = 0; y < h; ++y) {
                         for (int x = 0; x < w; ++x) {
                             int idx = (y * w + x) * 4;
                             rgba[idx + 0] =
-                                ((const uint8_t*)data)[idx + 1];
+                                ((const uint8_t*)data)[idx + 2];  // R
                             rgba[idx + 1] =
-                                ((const uint8_t*)data)[idx + 0];
+                                ((const uint8_t*)data)[idx + 1];  // G
                             rgba[idx + 2] =
-                                ((const uint8_t*)data)[idx + 2];
+                                ((const uint8_t*)data)[idx + 0];  // B
                             rgba[idx + 3] =
-                                ((const uint8_t*)data)[idx + 3];
+                                ((const uint8_t*)data)[idx + 3];  // A
                         }
                     }
                     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
                                  GL_RGBA, GL_UNSIGNED_BYTE, rgba.data());
-                    renderer->bytes_uploaded +=
-                        static_cast<long long>(w) * h * 4;
-                } else {
-                    /* Non-EGL: no rearrangement, upload RGBA directly. */
-                    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
-                                 GL_RGBA, GL_UNSIGNED_BYTE, data);
-                    renderer->bytes_uploaded += static_cast<long long>(w) * h * 4;
                 }
+                renderer->bytes_uploaded +=
+                    static_cast<long long>(w) * h * 4;
                 glTexParameteri(GL_TEXTURE_2D,
                                 GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D,
@@ -1369,29 +1374,34 @@ void render_surface(struct MansionDisplay* display, struct wl_resource* surface,
                 glGenTextures(1, &tex);
                 glBindTexture(GL_TEXTURE_2D, tex);
 
-                if (display->egl_mode) {
-                    /* Swizzle to compensate for Mesa EGL surfaceless
-                     * renderer's R↔G rearrangement of GL_RGBA data. */
+                /* Format-aware texture upload: query the wl_shm buffer format
+                 * and swizzle on the CPU to GL_RGBA so results are correct
+                 * regardless of Mesa driver internals.  */
+                int format = wl_shm_buffer_get_format(shm_buf);
+                if (format == WL_SHM_FORMAT_ABGR8888 ||
+                    format == WL_SHM_FORMAT_XBGR8888) {
+                    /* ABGR8888 on little-endian: bytes are [R, G, B, A].
+                     * GL_RGBA expects [R, G, B, A], so no swizzle needed. */
+                    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA,
+                                 GL_UNSIGNED_BYTE, data);
+                } else {
+                    /* Default: ARGB8888 / XRGB8888 on little-endian have
+                     * bytes [B, G, R, A].  Swizzle to GL_RGBA [R, G, B, A]. */
                     std::vector<uint8_t> rgba(w * h * 4);
                     for (int y = 0; y < h; y++) {
                         for (int x = 0; x < w; x++) {
                             int idx = (y * w + x) * 4;
-                            rgba[idx + 0] = ((const uint8_t*)data)[idx + 1];
-                            rgba[idx + 1] = ((const uint8_t*)data)[idx + 0];
-                            rgba[idx + 2] = ((const uint8_t*)data)[idx + 2];
-                            rgba[idx + 3] = ((const uint8_t*)data)[idx + 3];
+                            rgba[idx + 0] = ((const uint8_t*)data)[idx + 2];  // R
+                            rgba[idx + 1] = ((const uint8_t*)data)[idx + 1];  // G
+                            rgba[idx + 2] = ((const uint8_t*)data)[idx + 0];  // B
+                            rgba[idx + 3] = ((const uint8_t*)data)[idx + 3];  // A
                         }
                     }
                     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA,
                                  GL_UNSIGNED_BYTE, rgba.data());
-                    renderer->bytes_uploaded +=
-                        static_cast<long long>(w) * h * 4;
-                } else {
-                    /* Non-EGL: no rearrangement, upload RGBA directly. */
-                    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA,
-                                 GL_UNSIGNED_BYTE, data);
-                    renderer->bytes_uploaded += static_cast<long long>(w) * h * 4;
                 }
+                renderer->bytes_uploaded +=
+                    static_cast<long long>(w) * h * 4;
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
                 surface_data->gl_texture = tex;
@@ -1475,34 +1485,38 @@ static void render_application_fullscreen(struct MansionDisplay* display) {
                 GLuint tex = 0;
                 glGenTextures(1, &tex);
                 glBindTexture(GL_TEXTURE_2D, tex);
-                if (display->egl_mode) {
-                    /* Swizzle to compensate for Mesa EGL surfaceless
-                     * renderer's R↔G rearrangement of GL_RGBA data. */
+                /* Format-aware texture upload: query the wl_shm buffer format
+                 * and swizzle on the CPU to GL_RGBA so results are correct
+                 * regardless of Mesa driver internals.  */
+                int format = wl_shm_buffer_get_format(shm_buf);
+                if (format == WL_SHM_FORMAT_ABGR8888 ||
+                    format == WL_SHM_FORMAT_XBGR8888) {
+                    /* ABGR8888 on little-endian: bytes are [R, G, B, A].
+                     * GL_RGBA expects [R, G, B, A], so no swizzle needed. */
+                    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
+                                 GL_RGBA, GL_UNSIGNED_BYTE, data);
+                } else {
+                    /* Default: ARGB8888 / XRGB8888 on little-endian have
+                     * bytes [B, G, R, A].  Swizzle to GL_RGBA [R, G, B, A]. */
                     std::vector<uint8_t> rgba(w * h * 4);
                     for (int y = 0; y < h; ++y) {
                         for (int x = 0; x < w; ++x) {
                             int idx = (y * w + x) * 4;
                             rgba[idx + 0] =
-                                ((const uint8_t*)data)[idx + 1];
+                                ((const uint8_t*)data)[idx + 2];  // R
                             rgba[idx + 1] =
-                                ((const uint8_t*)data)[idx + 0];
+                                ((const uint8_t*)data)[idx + 1];  // G
                             rgba[idx + 2] =
-                                ((const uint8_t*)data)[idx + 2];
+                                ((const uint8_t*)data)[idx + 0];  // B
                             rgba[idx + 3] =
-                                ((const uint8_t*)data)[idx + 3];
+                                ((const uint8_t*)data)[idx + 3];  // A
                         }
                     }
                     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
                                  GL_RGBA, GL_UNSIGNED_BYTE, rgba.data());
-                    renderer->bytes_uploaded +=
-                        static_cast<long long>(w) * h * 4;
-                } else {
-                    /* Non-EGL: no rearrangement, upload RGBA directly. */
-                    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0,
-                                 GL_RGBA, GL_UNSIGNED_BYTE, data);
-                    renderer->bytes_uploaded +=
-                        static_cast<long long>(w) * h * 4;
                 }
+                renderer->bytes_uploaded +=
+                    static_cast<long long>(w) * h * 4;
                 glTexParameteri(GL_TEXTURE_2D,
                                 GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D,

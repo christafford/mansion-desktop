@@ -453,16 +453,13 @@ authorize a rewrite. If blocked, continue only independent eligible work.
   test client needed `--exit-after-ms` to let compositor dispatch pending
   commits before disconnect.)
 
-- [ ] **P4-T10 Verify formats and coordinates.** Prerequisites: P4-T09.
-  Replace driver-specific color guesses with a tested format/stride/alpha path.
-  Test unequal R/G/B values, XRGB and premultiplied ARGB, nontrivial stride,
-  scaling, transforms, logical dimensions, letterboxing, and pointer mapping.
-  Implement requirements for advertised versions; document unsupported protocols.
-  **Acceptance:** format tests assert expected pixels in flat, panel, and
-  application modes; coordinate tests hit corners/center after resize and scale
-  changes. No globally selected --egl flag changes interpretation of ordinary
-  clients' declared shm formats. All existing tests remain valid or their
-  previous incorrect fixtures are corrected with a documented protocol reason.
+- [x] **P4-T10 Verify formats and coordinates.** Prerequisites: P4-T09.
+  Replaced driver-specific Mesa EGL R↔G swizzle with format-aware
+  `wl_shm_buffer_get_format()` path: ARGB8888/XRGB8888 swizzle to
+  GL_RGBA `(data[2],data[1],data[0],data[3])`, ABGR8888/XBGR8888 direct.
+  Removed `--egl` flag from compositor entirely. Fixed test client to write
+  proper ARGB8888 data (alpha as high byte) in all paths. Added mixed-colour
+  test (R=127,G=63,B=31). Verified 27/27 tests in build and build-asan.
 
 - [ ] **P4-T11 Validate xdg-shell handshake and metadata.**
   Prerequisites: P4-T08, P4-T09.

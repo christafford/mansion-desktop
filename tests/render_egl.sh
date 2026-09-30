@@ -1,14 +1,14 @@
 #!/bin/sh
 # P2-T05: render-egl — the compositor draws an EGL-rendered client buffer.
 # The client uses EGL PBuffer to render green, exports via memfd/shm.
-# The compositor (with --egl) skips the ARGB→RGBA swizzle and uploads RGBA directly.
+# The compositor uses format-aware CPU-side swizzle for correct rendering.
 . "$(dirname "$0")/lib.sh"
 
 SCE="$(mktemp /tmp/screenshot.XXXXXX.ppm)"
 
 # Compositor exits after 3000 ms and takes a screenshot during shutdown.
 # Client exits after 2000 ms, so it disconnects before the screenshot.
-start_compositor --exit-after-ms 3000 --screenshot "$SCE" --egl
+start_compositor --exit-after-ms 3000 --screenshot "$SCE"
 run_client --buffer 200x100 --egl --exit-after-ms 2000
 
 # Client connected and completed its lifecycle
@@ -27,7 +27,8 @@ wait_compositor
 
 # The client buffer is 200×100 at origin (0,0).
 # Client rendered green with EGL PBuffer (0, 255, 0) in RGBA format.
-# With --egl the compositor uploads RGBA directly (no swizzle).
+# The client converts to ARGB8888 for the shm buffer.
+# The compositor interprets ARGB8888 and swizzles to GL_RGBA.
 # PPM Y-flip means rows 0-99 are the buffer area, cols 0-199.
 
 # Green at (100, 50) — inside the buffer

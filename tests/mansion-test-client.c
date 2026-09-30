@@ -199,8 +199,10 @@ static void frame_done(void* data, struct wl_callback* cb, uint32_t time_ms) {
                 if (ptr != MAP_FAILED) {
                     uint32_t* pixels = (uint32_t*)ptr;
                     for (int i = 0; i < c->buffer_width * c->buffer_height; i++)
-                        pixels[i] = (255u << 24) | ((c->commit_color_b & 0xff) << 16)
-                                     | ((c->commit_color_g & 0xff) << 8) | (c->commit_color_r & 0xff);
+                        pixels[i] = (c->commit_color_b & 0xff)
+                                    | ((c->commit_color_g & 0xff) << 8)
+                                    | ((c->commit_color_r & 0xff) << 16)
+                                    | (255u << 24);
                     struct wl_shm_pool* pool = wl_shm_create_pool(c->shm, fd, size);
                     struct wl_buffer* buf = wl_shm_pool_create_buffer(pool, 0,
                         c->buffer_width, c->buffer_height, stride, WL_SHM_FORMAT_ARGB8888);
@@ -371,10 +373,12 @@ static struct wl_buffer* create_buffer_only(struct client* c, int w, int h, int 
         return NULL;
     }
 
-    /* Fill with color (ARGB8888: alpha=255). */
+    /* Fill with color (proper ARGB8888: alpha is the high byte).
+     * On little-endian the bytes in memory are [B, G, R, A]. */
     uint32_t* pixels = (uint32_t*)ptr;
     for (int i = 0; i < w * h; i++) {
-        pixels[i] = (255u << 24) | ((b & 0xff) << 16) | ((g & 0xff) << 8) | (r & 0xff);
+        pixels[i] = (b & 0xff) | ((g & 0xff) << 8)
+                    | ((r & 0xff) << 16) | (255u << 24);
     }
 
     struct wl_shm_pool* pool = wl_shm_create_pool(c->shm, fd, size);
@@ -564,12 +568,13 @@ int main(int argc, char** argv) {
                                 glClearColor(0.0f, 1.0f, 0.0f, 1.0f);
                                 glClear(GL_COLOR_BUFFER_BIT);
 
-                                /* Read pixels (RGBA format) */
+                                /* Read pixels (RGBA format from EGL)
+                                 * and convert to ARGB8888 memory layout [B, G, R, A]. */
                                 uint8_t* rgba = (uint8_t*)malloc(bw * bh * 4);
                                 if (rgba) {
                                     glReadPixels(0, 0, bw, bh, GL_RGBA, GL_UNSIGNED_BYTE, rgba);
 
-                                    /* Create memfd-backed shm buffer with RGBA data */
+                                    /* Create memfd-backed shm buffer with ARGB8888 data */
                                     int32_t stride = bw * 4;
                                     int32_t size = stride * bh;
                                     int fd = memfd_create("mansion-egl", 0);
@@ -577,7 +582,13 @@ int main(int argc, char** argv) {
                                         if (ftruncate(fd, size) == 0) {
                                             void* ptr = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
                                             if (ptr != MAP_FAILED) {
-                                                memcpy(ptr, rgba, size);
+                                                /* GL_RGBA [R, G, B, A] → ARGB8888 [B, G, R, A] */
+                                                for (int i = 0; i < size; i += 4) {
+                                                    ((uint8_t*)ptr)[i + 0] = rgba[i + 2];  // B
+                                                    ((uint8_t*)ptr)[i + 1] = rgba[i + 1];  // G
+                                                    ((uint8_t*)ptr)[i + 2] = rgba[i + 0];  // R
+                                                    ((uint8_t*)ptr)[i + 3] = rgba[i + 3];  // A
+                                                }
                                             munmap(ptr, size);
 
                                             struct wl_shm_pool* pool = wl_shm_create_pool(c.shm, fd, size);
@@ -656,7 +667,7 @@ int main(int argc, char** argv) {
     }
     if (buffer_mode) toplevel_mode = 1;
 
-    if (toplevel_mode) {
+    if (toplevel_mode && !egl_mode) {
         if (!c.xdg_wm_base) {
             fprintf(stderr, "xdg_wm_base not advertised\n");
             wl_display_disconnect(c.display);

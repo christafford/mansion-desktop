@@ -29,7 +29,6 @@ struct Options {
     std::string screenshot;  // if set, write a PPM screenshot after the loop
     std::string input_script; // if set, execute scripted input events
     bool flat = false;       // P2-T02: 2D rendering instead of 3D panel
-    bool egl_mode = false;   // P2-T05: client buffers are RGBA (no swizzle)
     bool stats = false;      // P2-T07: print frame timing / bytes uploaded
     int world_key = 88;      // P3-T02: evdev keycode for world-key (default F12=88)
     int tab_key = 23;        // P5-T02: evdev keycode for tab key (default Tab=23)
@@ -46,7 +45,6 @@ void print_help() {
         "  --socket NAME        Wayland socket name (default: mansion-<pid>)\n"
         "  --headless           no host window or input; for automated tests\n"
         "  --flat               2D rendering (disable 3D perspective panel, P2-T02)\n"
-        "  --egl                client buffers use RGBA format (no swizzle, P2-T05)\n"
         "  --camera X,Y,Z,YAW,PITCH  camera position + orientation for 3D panel (P2-T02)\n"
         "  --exit-after-ms N    exit with status 0 after N milliseconds\n"
         "  --screenshot FILE    write a binary PPM screenshot after the loop\n"
@@ -103,8 +101,6 @@ bool parse_args(int argc, char** argv, Options& opts) {
             opts.headless = true;
         } else if (name == "--flat") {
             opts.flat = true;
-        } else if (name == "--egl") {
-            opts.egl_mode = true;
         } else if (name == "--camera") {
             if (!take_value()) return false;
             if (value.empty()) {
@@ -384,8 +380,6 @@ int main(int argc, char** argv) {
     /* P2-T02: configure 3D panel rendering.
      * Default to 2D mode for backward compatibility; 3D only when --camera given. */
     display->flat_mode = opts.flat || !opts.camera_specified;
-    /* P2-T05: EGL mode — buffers from client are RGBA, no swizzle */
-    display->egl_mode = opts.egl_mode;
     /* P2-T07: frame timing stats */
     display->stats_enabled = opts.stats;
     if (opts.room_camera) {

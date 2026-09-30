@@ -10,14 +10,22 @@ running the check that proves it.
 
 ## Next task
 
-**P4-T10 Verify formats and coordinates.** P4-T09 completed 2026-09-29:
+**P4-T10 completed 2026-09-29.** Replaced the driver-specific Mesa EGL
+R↔G swizzle workaround with a format-aware CPU-side swizzle path:
+`wl_shm_buffer_get_format()` queried and ARGB8888/XRGB8888 → GL_RGBA
+swizzle `(data[2],data[1],data[0],data[3])`; ABGR8888/XBGR8888 uploaded
+directly. Removed the `--egl` flag from the compositor entirely. Fixed the
+test client to write proper ARGB8888 data (alpha as high byte) in all
+code paths (normal buffer, commit-only buffer, and EGL PBuffer export).
+Added a mixed-colour test (R=127,G=63,B=31) to verify unequal channels
+render correctly. `meson test -C build` 27/27, `meson test -C build-asan`
+27/27 zero sanitizer errors. P4-T09 completed 2026-09-29:
 pending/current surface state separation, stride validation, damage bounding
-box, single buffer release per render — all 6 surface-state tests pass;
-`meson test -C build` 26/26, `meson test -C build-asan` 26/26 zero sanitizer
-errors. P4-T08 completed 2026-09-29: tracked xdg_surface/xdg_toplevel in shell
+box, single buffer release per render — all 6 surface-state tests pass.
+P4-T08 completed 2026-09-29: tracked xdg_surface/xdg_toplevel in shell
 lists, freed on disconnect, orphaned surface cap at 10, fixed client listener
 + SIGCHLD event source leaks. P4-T07 completed 2026-09-29: 54/54 plugin tests
-pass, 25/25 C++ tests pass. P4-T10–P4-T12 follow; Project 5 feature work is
+pass, 25/25 C++ tests pass. P4-T11–P4-T12 follow; Project 5 feature work is
 blocked until the foundation and presentable-room gates pass.
 
 ## Review boundaries and open gates

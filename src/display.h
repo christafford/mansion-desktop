@@ -47,9 +47,6 @@ struct MansionDisplay {
     Panel panel;
     bool flat_mode = false;  /* true = 2D rendering, false = 3D panel */
 
-    /* P2-T05: EGL mode — buffers are RGBA (no swizzle needed) */
-    bool egl_mode = false;
-
     /* P4-T01: Room/world mode — when true the room geometry is drawn
      * as background before the 3D panel. */
     bool room_mode = false;
