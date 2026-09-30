@@ -11,6 +11,7 @@
 #include <sys/signalfd.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <wayland-client.h>
 #include <wayland-server.h>
 
 #include "compositor.h"
@@ -20,6 +21,25 @@
 #include "xdg-shell.h"
 
 namespace {
+
+/* Client Wayland display — events from the real compositor must be
+ * dispatched from the event loop so input and configure events are
+ * processed. */
+static struct wl_display* g_client_display = nullptr;
+static struct wl_event_source* g_client_display_source = nullptr;
+
+static int client_display_fd_handler(int /*fd*/, uint32_t /*mask*/, void* data) {
+    struct wl_display* dpy = (struct wl_display*)data;
+    if (wl_display_read_events(dpy) < 0) {
+        if (errno != EAGAIN && errno != EINTR) {
+            /* Connection error — remove the source and let the loop
+             * continue so we can shut down gracefully. */
+            return 1;
+        }
+    }
+    wl_display_dispatch_pending(dpy);
+    return 0;
+}
 
 struct Options {
     std::vector<std::string> launch;
@@ -351,6 +371,10 @@ int main(int argc, char** argv) {
             wl_event_source_remove(g_sigchld_source);
             g_sigchld_source = nullptr;
         }
+        if (g_client_display_source) {
+            wl_event_source_remove(g_client_display_source);
+            g_client_display_source = nullptr;
+        }
         if (input_started) input_destroy();
         destroy_seat(seat);
         destroy_xdg_shell(xdg_shell);
@@ -375,6 +399,16 @@ int main(int argc, char** argv) {
         std::cerr << "Failed to create " << (opts.headless ? "headless" : "EGL") << " display" << std::endl;
         cleanup();
         return 1;
+    }
+
+    /* P3-T01: register the real Wayland client display FD so that
+     * input events, configure events, and buffer-release events from
+     * the host compositor are dispatched each frame. */
+    if (!opts.headless && display->wl_client_display) {
+        g_client_display = display->wl_client_display;
+        int fd = wl_display_get_fd(g_client_display);
+        g_client_display_source = wl_event_loop_add_fd(event_loop, fd,
+                        WL_EVENT_READABLE, client_display_fd_handler, g_client_display);
     }
 
     /* P2-T02: configure 3D panel rendering.
