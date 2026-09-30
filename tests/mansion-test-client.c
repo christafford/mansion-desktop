@@ -60,6 +60,22 @@ struct client {
     int commit_color_r, commit_color_g, commit_color_b;
     int second_frame_done;
 
+    /* --null-attach: attach null buffer and commit after first frame */
+    int have_null_attach;
+    int null_attach_done;
+
+    /* --commit-only: commit without attaching after first frame */
+    int have_commit_only;
+    int commit_only_done;
+
+    /* --attach-only: attach buffer but do NOT commit */
+    int have_attach_only;
+    int attach_only_done;
+
+    /* --destroy-after-release: destroy buffer proxy after release */
+    int have_destroy_after_release;
+    int buffer_destroyed;
+
     /* --report-input */
     int report_input;
     /* deferred seat binding for input reporting */
@@ -138,6 +154,7 @@ static const struct xdg_toplevel_listener toplevel_listener = {
 };
 
 /* Forward declarations. */
+static struct wl_buffer* create_buffer_only(struct client* c, int w, int h, int r, int g, int b);
 static void setup_buffer(struct client* c, int w, int h, int r, int g, int b);
 
 /* ---------- frame callback ---------- */
@@ -155,6 +172,49 @@ static void frame_done(void* data, struct wl_callback* cb, uint32_t time_ms) {
         setup_buffer(c, c->buffer_width, c->buffer_height,
                      c->commit_color_r, c->commit_color_g, c->commit_color_b);
     }
+
+    /* If --null-attach, attach null buffer and commit after first frame. */
+    if (c->have_null_attach && !c->null_attach_done) {
+        c->null_attach_done = 1;
+        wl_surface_attach(c->surface, NULL, 0, 0);
+        wl_surface_damage(c->surface, 0, 0, 0, 0);
+        wl_surface_commit(c->surface);
+    }
+
+    /* If --commit-only, commit without attaching after first frame. */
+    if (c->have_commit_only && !c->commit_only_done) {
+        c->commit_only_done = 1;
+        wl_surface_commit(c->surface);
+    }
+
+    /* If --attach-only, attach another buffer but do NOT commit, then exit. */
+    if (c->have_attach_only && !c->attach_only_done) {
+        c->attach_only_done = 1;
+        int32_t stride = c->buffer_width * 4;
+        int32_t size = stride * c->buffer_height;
+        int fd = memfd_create("attach-only-shm", 0);
+        if (fd >= 0) {
+            if (ftruncate(fd, size) == 0) {
+                void* ptr = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+                if (ptr != MAP_FAILED) {
+                    uint32_t* pixels = (uint32_t*)ptr;
+                    for (int i = 0; i < c->buffer_width * c->buffer_height; i++)
+                        pixels[i] = (255u << 24) | ((c->commit_color_b & 0xff) << 16)
+                                     | ((c->commit_color_g & 0xff) << 8) | (c->commit_color_r & 0xff);
+                    struct wl_shm_pool* pool = wl_shm_create_pool(c->shm, fd, size);
+                    struct wl_buffer* buf = wl_shm_pool_create_buffer(pool, 0,
+                        c->buffer_width, c->buffer_height, stride, WL_SHM_FORMAT_ARGB8888);
+                    wl_shm_pool_destroy(pool);
+                    close(fd);
+                    munmap(ptr, size);
+                    wl_surface_attach(c->surface, buf, 0, 0);
+                    wl_surface_damage(c->surface, 0, 0, c->buffer_width, c->buffer_height);
+                    /* Do NOT commit — tests attach-without-commit semantics. */
+                }
+            }
+        }
+        _exit(0);
+    }
 }
 
 static const struct wl_callback_listener callback_listener = {
@@ -168,6 +228,14 @@ static void buffer_release(void* data, struct wl_buffer* buffer) {
     c->got_release = 1;
     printf("release\n");
     fflush(stdout);
+
+    /* If --destroy-after-release, destroy the buffer proxy now. */
+    if (c->have_destroy_after_release) {
+        wl_buffer_destroy(buffer);
+        c->buffer_destroyed = 1;
+        printf("buffer_destroyed\n");
+        fflush(stdout);
+    }
 }
 
 static const struct wl_buffer_listener buffer_listener = {
@@ -280,26 +348,27 @@ static void usage(void) {
 }
 
 /* Create a shm pool, map it, fill with color, create buffer, attach to surface. */
-static void setup_buffer(struct client* c, int w, int h, int r, int g, int b) {
+/* Helper: create a buffer but don't attach/commit (for attach-only test). */
+static struct wl_buffer* create_buffer_only(struct client* c, int w, int h, int r, int g, int b) {
     int32_t stride = w * 4;
     int32_t size = stride * h;
 
     int fd = memfd_create("mansion-shm", 0);
     if (fd < 0) {
         perror("memfd_create");
-        return;
+        return NULL;
     }
     if (ftruncate(fd, size) < 0) {
         perror("ftruncate");
         close(fd);
-        return;
+        return NULL;
     }
 
     void* ptr = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     if (ptr == MAP_FAILED) {
         perror("mmap");
         close(fd);
-        return;
+        return NULL;
     }
 
     /* Fill with color (ARGB8888: alpha=255). */
@@ -319,15 +388,22 @@ static void setup_buffer(struct client* c, int w, int h, int r, int g, int b) {
 
     c->buffer_width = w;
     c->buffer_height = h;
-    wl_surface_attach(c->surface, buffer, 0, 0);
-    wl_surface_damage(c->surface, 0, 0, w, h);
-    wl_surface_commit(c->surface);
 
     /* Request a frame callback so the client can verify rendering timing. */
     struct wl_callback* cb = wl_surface_frame(c->surface);
     wl_callback_add_listener(cb, &callback_listener, c);
 
     c->have_buffer = 1;
+    return buffer;
+}
+
+static void setup_buffer(struct client* c, int w, int h, int r, int g, int b) {
+    struct wl_buffer* buffer = create_buffer_only(c, w, h, r, g, b);
+    if (!buffer) return;
+
+    wl_surface_attach(c->surface, buffer, 0, 0);
+    wl_surface_damage(c->surface, 0, 0, w, h);
+    wl_surface_commit(c->surface);
 }
 
 /* Dispatch events with a timeout, returning 0 on success, -1 on disconnect. */
@@ -361,6 +437,10 @@ int main(int argc, char** argv) {
     int bw = 200, bh = 100;
     int cr = 0xff, cg = 0x00, cb = 0x00; /* default red */
     int have_commit_color = 0;
+    int have_null_attach = 0;
+    int have_commit_only = 0;
+    int have_attach_only = 0;
+    int have_destroy_after_release = 0;
     int commit_cr = 0, commit_cg = 0, commit_cb = 0;
     int report_input = 0;
     int egl_mode = 0;
@@ -401,6 +481,14 @@ int main(int argc, char** argv) {
             report_input = 1;
         } else if (strcmp(argv[i], "--egl") == 0) {
             egl_mode = 1;
+        } else if (strcmp(argv[i], "--null-attach") == 0) {
+            have_null_attach = 1;
+        } else if (strcmp(argv[i], "--commit-only") == 0) {
+            have_commit_only = 1;
+        } else if (strcmp(argv[i], "--attach-only") == 0) {
+            have_attach_only = 1;
+        } else if (strcmp(argv[i], "--destroy-after-release") == 0) {
+            have_destroy_after_release = 1;
         } else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
             usage();
             return 0;
@@ -414,6 +502,10 @@ int main(int argc, char** argv) {
     struct client c = {0};
     c.report_input = report_input;
     c.have_commit_color = have_commit_color;
+    c.have_null_attach = have_null_attach;
+    c.have_commit_only = have_commit_only;
+    c.have_attach_only = have_attach_only;
+    c.have_destroy_after_release = have_destroy_after_release;
     c.commit_color_r = commit_cr;
     c.commit_color_g = commit_cg;
     c.commit_color_b = commit_cb;

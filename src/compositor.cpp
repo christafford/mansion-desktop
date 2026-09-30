@@ -93,39 +93,71 @@ static void surface_attach(struct wl_client* client, struct wl_resource* resourc
     (void)client; (void)x; (void)y;
     auto* surface = static_cast<MansionSurface*>(wl_resource_get_user_data(resource));
 
-    if (buffer_resource == nullptr) {
-        surface->buffer_resource = nullptr;
-        surface->buffer_destroyed = false;
-        /* Clean up the GL texture — no more buffer to render. */
-        if (surface->gl_texture) {
-            (void)glDeleteTextures(1, &surface->gl_texture);
-            surface->gl_texture = 0;
-        }
-        /* Clear keyboard focus if this surface was focused. */
-        if (surface->compositor->focused_surface_resource == surface->resource) {
-            seat_set_keyboard_focus(surface->compositor->seat, nullptr, surface->compositor);
-        }
-        /* Remove any previously registered destroy listener. */
-        if (!wl_list_empty(&surface->buffer_destroy_listener.link))
-            wl_list_remove(&surface->buffer_destroy_listener.link);
-        return;
+    /* Always remove the listener — it may be registered for the current
+     * buffer from a previous commit. We will re-register it for the new
+     * pending buffer below (or not at all if the new buffer is null). */
+    if (!wl_list_empty(&surface->buffer_destroy_listener.link)) {
+        wl_list_remove(&surface->buffer_destroy_listener.link);
     }
 
-    /* Remove any previously registered destroy listener. */
-    if (!wl_list_empty(&surface->buffer_destroy_listener.link))
-        wl_list_remove(&surface->buffer_destroy_listener.link);
+    surface->pending_buffer_resource = buffer_resource;
+    surface->has_pending_position = true;
+    surface->pending_x = x;
+    surface->pending_y = y;
 
-    surface->buffer_resource = buffer_resource;
-    surface->buffer_destroyed = false;
+    if (buffer_resource != nullptr) {
+        /* Validate stride for shm buffers. */
+        auto* shm_buf = wl_shm_buffer_get(buffer_resource);
+        if (shm_buf) {
+            int32_t stride = wl_shm_buffer_get_stride(shm_buf);
+            int32_t fmt_w = wl_shm_buffer_get_width(shm_buf);
+            /* Stride must be at least enough for one pixel row of the given format. */
+            int32_t min_stride = fmt_w * 4;  /* ARGB8888 = 4 bytes/pixel */
+            if (stride < min_stride || stride % 4 != 0) {
+                wl_resource_post_error(buffer_resource, WL_SHM_ERROR_INVALID_STRIDE,
+                    "invalid stride %d for width %d (min %d)",
+                    stride, fmt_w, min_stride);
+                surface->pending_buffer_resource = nullptr;
+                return;
+            }
+        }
 
-    /* Listen for buffer destruction. */
-    surface->buffer_destroy_listener.notify = buffer_destroy_notify;
-    wl_resource_add_destroy_listener(buffer_resource, &surface->buffer_destroy_listener);
+        surface->buffer_destroyed = false;
+        /* Listen for pending buffer destruction. */
+        surface->buffer_destroy_listener.notify = buffer_destroy_notify;
+        wl_resource_add_destroy_listener(buffer_resource, &surface->buffer_destroy_listener);
+    } else {
+        surface->buffer_destroyed = false;
+    }
 }
 
 static void surface_damage(struct wl_client* client, struct wl_resource* resource,
                            int32_t x, int32_t y, int32_t width, int32_t height) {
-    (void)client; (void)resource; (void)x; (void)y; (void)width; (void)height;
+    (void)client;
+    auto* surface = static_cast<MansionSurface*>(wl_resource_get_user_data(resource));
+    (void)surface; (void)x; (void)y; (void)width; (void)height;
+    /* Accumulate damage into a single bounding box. */
+    if (surface->damage_count == 0) {
+        surface->pending_x_damage = x;
+        surface->pending_y_damage = y;
+        surface->pending_w_damage = width;
+        surface->pending_h_damage = height;
+    } else {
+        /* Expand bounding box to include new damage. */
+        if (x < surface->pending_x_damage)
+            surface->pending_x_damage = x;
+        if (y < surface->pending_y_damage)
+            surface->pending_y_damage = y;
+        int32_t right = x + width;
+        int32_t bottom = y + height;
+        int32_t cur_right = surface->pending_x_damage + surface->pending_w_damage;
+        int32_t cur_bottom = surface->pending_y_damage + surface->pending_h_damage;
+        if (right > cur_right)
+            surface->pending_w_damage = right - surface->pending_x_damage;
+        if (bottom > cur_bottom)
+            surface->pending_h_damage = bottom - surface->pending_y_damage;
+    }
+    surface->damage_count++;
 }
 
 static void surface_commit(struct wl_client* client, struct wl_resource* resource) {
@@ -140,26 +172,43 @@ static void surface_commit(struct wl_client* client, struct wl_resource* resourc
         surface->has_pending_position = false;
     }
 
-    /* Read buffer size on commit. */
-    if (surface->buffer_resource) {
-        auto* shm_buf = wl_shm_buffer_get(surface->buffer_resource);
+    /* Apply pending buffer: promote pending to current.
+     * The old buffer is released in render_surface() after being
+     * rendered. This matches the simple headless compositor model. */
+
+    if (surface->pending_buffer_resource) {
+        auto* shm_buf = wl_shm_buffer_get(surface->pending_buffer_resource);
         if (shm_buf) {
             surface->width = wl_shm_buffer_get_width(shm_buf);
             surface->height = wl_shm_buffer_get_height(shm_buf);
         }
 
-        /* Mark texture for re-upload on next render. */
+        /* Unregister destroy listener from old pending buffer (now becoming current). */
+        if (!wl_list_empty(&surface->buffer_destroy_listener.link)) {
+            wl_list_remove(&surface->buffer_destroy_listener.link);
+        }
+
+        /* Promote pending buffer to current. */
+        surface->buffer_resource = surface->pending_buffer_resource;
+        surface->buffer_destroyed = false;
         surface->needs_upload = true;
 
-        /* Give keyboard focus to the most recently mapped toplevel. */
+        /* Listen for current buffer destruction. */
+        surface->buffer_destroy_listener.notify = buffer_destroy_notify;
+        wl_resource_add_destroy_listener(surface->pending_buffer_resource,
+                                         &surface->buffer_destroy_listener);
+    }
+    /* Clear pending — committed (whether null or a buffer). */
+    surface->pending_buffer_resource = nullptr;
+
+    /* Give keyboard focus to the most recently mapped toplevel. */
+    if (surface->buffer_resource) {
         seat_set_keyboard_focus(surface->compositor->seat,
-                                 surface->resource, surface->compositor);
+                                  surface->resource, surface->compositor);
     }
 
-    /* For a simple headless compositor: release the buffer after it has
-     * been rendered. We keep buffer_resource set and release in
-     * render_surface(). */
-    surface->buffer_destroyed = false;
+    /* Clear pending damage. */
+    surface->damage_count = 0;
 
     /* Notify xdg-shell of commit (triggers configure). */
     if (surface->xdg_surface) xdg_shell_on_surface_commit(surface->xdg_surface);
@@ -264,6 +313,7 @@ static void compositor_create_surface(struct wl_client* client, struct wl_resour
 
     surface->xdg_surface = nullptr;
     surface->buffer_resource = nullptr;
+    surface->pending_buffer_resource = nullptr;
     wl_list_init(&surface->buffer_destroy_listener.link);
     surface->buffer_destroyed = false;
     surface->gl_texture = 0;
@@ -272,6 +322,11 @@ static void compositor_create_surface(struct wl_client* client, struct wl_resour
     surface->width = 0;
     surface->height = 0;
     surface->needs_upload = false;
+    surface->damage_count = 0;
+    surface->pending_x_damage = 0;
+    surface->pending_y_damage = 0;
+    surface->pending_w_damage = 0;
+    surface->pending_h_damage = 0;
     wl_list_init(&surface->frame_callback_list);
 }
 

@@ -27,8 +27,9 @@ struct MansionSurface {
     struct MansionXdgSurface* xdg_surface;
 
     /* Buffer tracking */
-    struct wl_resource* buffer_resource;
-    struct wl_listener buffer_destroy_listener; /* notified when buffer_resource is destroyed */
+    struct wl_resource* buffer_resource;              /* current (applied) buffer */
+    struct wl_resource* pending_buffer_resource;       /* buffer set by attach, applied on commit */
+    struct wl_listener buffer_destroy_listener;        /* notified when pending_buffer is destroyed */
     bool buffer_destroyed;
 
     /* GL texture for the current buffer (0 = no texture) */
@@ -38,6 +39,11 @@ struct MansionSurface {
     bool has_pending_position;
     int32_t current_x, current_y;
     bool has_current_position;
+
+    /* Pending damage (accumulated bounding box since last commit) */
+    int pending_x_damage, pending_y_damage;
+    int pending_w_damage, pending_h_damage;
+    int damage_count;
 
     /* Surface dimensions (from buffer) */
     int32_t width;

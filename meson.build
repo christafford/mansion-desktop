@@ -93,6 +93,8 @@ test('render-panel', find_program('tests/render_panel.sh'),
     args: [mansion_exe, test_client], env: test_env, suite: 'p2', timeout: 30)
 test('render-update', find_program('tests/render-update.sh'),
     args: [mansion_exe, test_client], env: test_env, suite: 'p2', timeout: 45)
+test('p4-surface-state', find_program('tests/p4_surface_state.sh'),
+    args: [mansion_exe, test_client], env: test_env, suite: 'p4', timeout: 60)
 test('render-lifecycle', find_program('tests/render_lifecycle.sh'),
     args: [mansion_exe, test_client], env: test_env, suite: 'p2', timeout: 45)
 

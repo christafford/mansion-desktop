@@ -10,13 +10,15 @@ running the check that proves it.
 
 ## Next task
 
-**P4-T09 Audit wl_surface / wl_buffer / wl_shm resource lifetimes**. P4-T08
-completed 2026-09-29: tracked xdg_surface/xdg_toplevel in shell lists, freed
-on disconnect, orphaned surface cap at 10, fixed client listener + SIGCHLD
-event source leaks — all 25 tests pass in normal and ASan+UBSan builds.
-P4-T07 completed 2026-09-29: 54/54 plugin tests pass, 25/25 C++ tests pass.
-P4-T09–P4-T12 follow; Project 5 feature work is blocked until the foundation
-and presentable-room gates pass.
+**P4-T10 Verify formats and coordinates.** P4-T09 completed 2026-09-29:
+pending/current surface state separation, stride validation, damage bounding
+box, single buffer release per render — all 6 surface-state tests pass;
+`meson test -C build` 26/26, `meson test -C build-asan` 26/26 zero sanitizer
+errors. P4-T08 completed 2026-09-29: tracked xdg_surface/xdg_toplevel in shell
+lists, freed on disconnect, orphaned surface cap at 10, fixed client listener
++ SIGCHLD event source leaks. P4-T07 completed 2026-09-29: 54/54 plugin tests
+pass, 25/25 C++ tests pass. P4-T10–P4-T12 follow; Project 5 feature work is
+blocked until the foundation and presentable-room gates pass.
 
 ## Review boundaries and open gates
 
@@ -28,8 +30,9 @@ and presentable-room gates pass.
 | Host input path | Windowed mode again scans `/dev/input` directly (`input_init()`), contradicting the P1-T07 record; headless opens no devices | P4-T06 records it; P4-T12 decides host-seat-only vs evdev |
 | Lifetimes and surface commits | xdg_surface/xdg_toplevel tracked and freed on disconnect; orphaned surface cap at 10 — P4-T08 done | P4-T09–P4-T11 regressions and sanitizer evidence |
 | Automation | P4-T07 fixed: stable fixtures replace live TASKS.md dependency; P5 tasks,
-  gate blocking, and unknown scope rejection covered by 5 new tests | P4-T09
-  audit wl_surface / wl_buffer lifetimes next; plugin test suite stable at 54/54 |
+  gate blocking, and unknown scope rejection covered by 5 new tests.
+  P4-T09 added: 6 surface-state tests cover pending/current separation. | P4-T10
+  verify formats and coordinates next; plugin test suite stable at 54/54 |
 | First presentable room | Not implemented/accepted | P4-T20–P4-T28 after the foundation gate |
 
 Potential source issues are audit leads, not claims of a reproduced crash.
@@ -98,7 +101,7 @@ Full reconciliation completed. Handoff at
 
 ### Audit leads for follow-up
 
-- P4-T09: wl_surface / wl_buffer / wl_shm resource lifetimes
+- P4-T10: verify formats and coordinates (shm format/stride/alpha, scaling)
 - P4-T12: native Wayland host experiment (bounded prototype)
 - P4-T13: accelerated buffer import reinvestigation
 - P4-T11: xdg-shell handshake validation
@@ -201,6 +204,21 @@ Full reconciliation completed. Handoff at
   `xdg_surface_get_toplevel` (wrong); the shell back-pointer resolves this.
   All 25 tests pass in both `build` and `build-asan` (AddressSanitizer +
   UndefinedBehaviorSanitizer, zero leaks, zero sanitizer errors).
+  (2026-09-29, this session)
+
+- **P4-T09 Pending/current surface state.** `MansionSurface` gains
+  `pending_buffer_resource`, `pending_x`/`pending_y`, `pending_damage` bounding
+  box. `surface_attach` stores pending state; `surface_commit` promotes pending
+  to current (preserving current buffer until promoted). SHM stride validation
+  posts `WL_SURFACE_ERROR_BUFFER` on invalid stride. `wl_buffer::release` sent
+  only from `render_surface`/`render_panel` after rendering (not from
+  `surface_commit`), preventing double-release. Destroy listener removed and
+  re-registered correctly for each new pending buffer. `tests/p4_surface_state.sh`
+  adds 6 tests: attach-without-commit, commit-without-attach, replaced-pending-attach,
+  null-attach/commit, repeated buffer reuse after release, resource destruction after
+  release. Root issue: test client needed `--exit-after-ms` to let compositor
+  dispatch pending commits before disconnect (fix applied to test script).
+  All 26 tests pass in both `build` and `build-asan`.
   (2026-09-29, this session)
 
 - **Historical nested P5-T01 Window registry (superseded task text; revised

@@ -425,7 +425,7 @@ authorize a rewrite. If blocked, continue only independent eligible work.
   TASKS_ALL_P1_P4_DONE. Added tests: P5 visibility, reopened gate blocking,
   unknown scope rejection, numeric ID cross-project parsing.)
 
-- [ ] **P4-T08 Audit resource and list lifetimes.** Prerequisites: P4-T06.
+- [x] **P4-T08 Audit resource and list lifetimes.** Prerequisites: P4-T06.
   Audit wl_surface, wl_buffer, xdg_surface, xdg_toplevel, listeners, registry
   links, and GPU cleanup. Test xdg_surface destruction before role assignment,
   legal role/surface teardown orders, abrupt disconnect during rendering,
@@ -437,8 +437,9 @@ authorize a rewrite. If blocked, continue only independent eligible work.
   (first time), `meson compile -C build-asan`, and
   `meson test -C build-asan --print-errorlogs`. No sanitizer errors, corrupted
   lists, double cleanup, or unbounded growth across repeated disconnects.
+  (2026-09-29: all 25 tests pass in normal and ASan+UBSan builds, zero leaks)
 
-- [ ] **P4-T09 Correct pending/current surface state.** Prerequisites: P4-T08.
+- [x] **P4-T09 Correct pending/current surface state.** Prerequisites: P4-T08.
   Separate no-new-attach from attach-null. Apply attachment/damage/frame state
   on commit, preserve current content until then, and release each consumed
   buffer only once access has ended. Respect stride and protect shm access.
@@ -447,6 +448,10 @@ authorize a rewrite. If blocked, continue only independent eligible work.
   commit without attach, null attach/commit, repeated buffer reuse after release,
   resource destruction after release, and disconnect while rendering. Verify
   pixels/event order in normal and sanitizer builds against protocol semantics.
+  (2026-09-29: all 6 surface-state tests pass; `meson test -C build` 26/26;
+  `meson test -C build-asan` 26/26, zero sanitizer errors. Root issue fixed:
+  test client needed `--exit-after-ms` to let compositor dispatch pending
+  commits before disconnect.)
 
 - [ ] **P4-T10 Verify formats and coordinates.** Prerequisites: P4-T09.
   Replace driver-specific color guesses with a tested format/stride/alpha path.
