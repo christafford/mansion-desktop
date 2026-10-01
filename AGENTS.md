@@ -10,7 +10,20 @@ pointer input, resizing, return to world mode, and application close.
 Read docs/STATUS.md and docs/TASKS.md first, then docs/ARCHITECTURE.md and the
 relevant decisions. These project-specific rules take precedence over generic
 workflow advice below and older handoffs. Historical test passes do not satisfy
-a reopened gate. Current gate policy is decisions/05-foundation-recovery.md.
+a reopened gate. Current direction and gate policy are
+docs/decisions/06-godot-poly-haven.md and Project 21 in docs/TASKS.md.
+
+Read docs/GODOT-INTEGRATION.md, docs/ART-DIRECTION.md and docs/ASSET-PIPELINE.md
+for that work. Decision 06 authorizes the Godot world frontend, Poly Haven asset
+pipeline and repository-local pinned dependencies. It overrides older engine
+prohibitions, Meson-only verification and foundation-before-art scheduling.
+Build a furnished study and a live terminal; finish by demonstrated quality,
+not an arbitrary time budget. Continue independent eligible tasks if another
+track is blocked. Use rendered images for visual judgments and label evidence.
+Do not substitute planning documents, primitives or TODOs for implementation.
+One coherent task may span several turns; checkpoint and continue it until its
+acceptance passes. Split large tasks into unique numeric IDs with dependencies.
+No fixed deadline does not authorize endless retries or unchecked completion.
 
 1. Application content comes from real Wayland clients; clients need no
    Mansion-specific changes. Synthetic clients remain valuable test fixtures.
@@ -28,14 +41,13 @@ a reopened gate. Current gate policy is decisions/05-foundation-recovery.md.
 7. Missing tools/hardware are blockers, not passed checks. A research task can
    finish with an evidence-backed negative result; its missing feature remains
    unimplemented. Never turn a feature task into research to tick its box.
-8. No wholesale compositor rewrite, game-engine migration, new graphics API,
-   or native-session installation is authorized by the roadmap. A bounded
-   feasibility experiment is allowed where explicitly tasked; record its result
-   and the migration proposal before undertaking a migration.
+8. Godot frontend integration and its renderer are authorized by Decision 06.
+   Preserve and adapt the C++ compositor core; wholesale compositor replacement
+   and native-session installation remain outside the current scope.
 9. Preserve nested and headless development paths. Do not replace the user's
    host desktop or host services during development.
 10. Complete one useful interaction before accumulating disconnected features.
-    Use the dependency-ordered recovery tasks before Project 5.
+    Follow Project 21's dependencies; world art is independently eligible.
 
 For documentation-only work, validate links, task references, parser
 compatibility, and diffs; a C++ build is needed only if implementation changed.
@@ -666,16 +678,16 @@ in `docs/STATUS.md`. Every autonomous turn follows the same loop:
    Eligibility requires both checked prerequisites and their stated evidence;
    a historical checkmark cannot override a reopened gate. A stale "Next task"
    is a hint to reconcile, not permission to bypass dependencies.
-2. Implement only that task. If it turns out too large, split it into
-   sub-tasks in `docs/TASKS.md` and do the first one.
-3. Build and test:
-
-   ```sh
-   meson compile -C build
-   meson test -C build --print-errorlogs
-   ```
-
-   Then run the task's own acceptance check. Fix failures before anything else.
+2. Implement one coherent task at a time, continuing it across turns as needed.
+   If it needs several independent acceptance boundaries, split it into unique
+   numeric tasks in `docs/TASKS.md`; preserve prerequisites and scoped ordering.
+3. Run the task's acceptance checks and the relevant regression suite.
+   C++ changes require `meson compile -C build` and
+   `meson test -C build --print-errorlogs`; Godot changes require import/script
+   validation and the affected scene/bridge checks; visual work requires actual
+   rendered captures; plugin changes require its Node tests. Documentation-only
+   changes require links, task references and diff validation. A headless import
+   is not visual acceptance. Fix regressions in your changes before proceeding.
 4. Only when the acceptance check has actually passed: tick the task, update
    `docs/STATUS.md` (move items between "verified by automated test",
    "verified by a person", "not verified" truthfully) and the current
@@ -701,7 +713,8 @@ Hard rules:
   not prove readability, latency, or real-application usability.
 - Do not weaken, skip, or delete tests to get green. Record a blocker instead.
 - Do not add dependencies without a `docs/decisions/` record.
-- Do not use `sudo`, install packages, or touch files outside the repository.
+- Do not use sudo, install system packages or modify host services. Decision 06
+  permits pinned tools, dependencies and assets inside the repository.
 - Delete temporary debug output before committing.
 
 ---
@@ -738,4 +751,3 @@ The standard is not "the agent generated code."
 The standard is:
 
 **the agent performed competent software engineering without requiring supervision.**
-

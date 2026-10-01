@@ -3,6 +3,14 @@
 Date: 2026-09-29. Status: accepted documentation/work-order correction;
 foundation product acceptance remains pending P4-T18.
 
+## Superseded work order (2026-10-01)
+
+Decision 06 authorizes Godot integration and independently eligible visual
+work in Project 21. Its live-terminal gate replaces P4-T18/P4-T28 as the current
+development gate. This record does not prohibit that migration or require its
+old recovery schedule first. Evidence and lifetime obligations remain valid;
+unperformed checks remain unperformed.
+
 ## Context
 
 The archive has useful synthetic protocol/render/input tests and basic room

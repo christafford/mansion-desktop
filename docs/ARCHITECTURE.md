@@ -1,5 +1,18 @@
 # Architecture: current prototype and target boundaries
 
+## Current target: Decision 06
+
+Project 21 replaces the custom visible renderer with a Godot world frontend,
+while retaining the C++ libwayland-server core and headless protocol harness.
+Godot owns the nested host window and scene; a GDExtension pumps the compositor
+on its owning thread and provides owned CPU frame snapshots plus explicit seat
+and configure commands. See [GODOT-INTEGRATION.md](GODOT-INTEGRATION.md).
+The older snapshot choice in P4-T15 is superseded by P21-T11/T12. Subsequent
+sections describe still-useful ownership boundaries, not an alternate work order.
+No engine project or bridge is implemented by this documentation update.
+
+## Supplied prototype
+
 Status: target design for incremental changes, not a claim of implementation.
 Current source uses C++20, Meson, libwayland-server, a nested Wayland client
 host window (`wl_egl_window`; it replaced the X11 window on 2026-09-28 and is
