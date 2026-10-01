@@ -121,7 +121,7 @@ Suggested locations: `docs/decisions/`, `docs/handoffs/NN.md`, and `docs/STATUS.
 do not establish real terminal usability. Execute foundation recovery, including
 a person's terminal observations, before the first presentable room.
 
-### 4R. Foundation stabilization (numeric tasks P4-T06–P4-T18)
+### 4R. Historical foundation schedule (superseded by Project 21)
 
 Reconcile evidence, repair automation fixtures, audit protocol/resource lifetimes,
 pending/current commits, formats/input coordinates and configure sequencing.
@@ -134,7 +134,7 @@ remaining limits. An explicitly constrained shm-only next step may be accepted;
 unimplemented direct import stays blocked. The human gate cannot be waived by
 a negative experiment or synthetic pixel test.
 
-### 4V. First presentable room (numeric tasks P4-T20–P4-T28)
+### 4V. Historical custom-renderer room plan (superseded by Project 21)
 
 **Historical renderer plan (superseded by Project 21).** Introduce minimal scene entities/transforms,
 Blender glTF/GLB loading, textures/basic materials, ambient/directional lighting,
@@ -144,8 +144,9 @@ ordinary full-size application mode. Record licenses and target-device costs.
 
 **Done when:** the furnished-room interaction is both tested and observed by a
 person, with readable text, reliable input/lifetime, camera/door collision and
-comfortable fast access. P4-T28 records the product gate. Do not build a separate
-scene demo or require a general engine, PBR, skeletal animation or new graphics API.
+comfortable fast access. This historical P4-T28 gate and its custom-renderer
+exclusions are superseded: Decision 06 authorizes Godot, PBR assets and animation
+and requires the new furnished live-terminal demonstration at P21-T19.
 
 Visual maturity grows incrementally after this room; Project 15 now expands
 data-driven rooms/assets rather than introducing all scene capability at once.
@@ -400,9 +401,10 @@ claims with the implementation and verification evidence.
 
 Run an autonomous development sequence through Projects [FIRST]–[LAST].
 Take the first unchecked task in docs/TASKS.md within that range whose
-prerequisites are ticked. Implement its stated scope, run
-`meson compile -C build && meson test -C build --print-errorlogs`, and run the
-task's acceptance check. Respect recorded decisions, dependencies,
+prerequisites and their evidence are satisfied. Implement its stated scope and
+run its acceptance plus relevant regression checks. Use Meson for C++ changes,
+engine import/runtime checks for Godot, actual rendered image inspection for
+visuals and real clients for integration; follow Decision 06. Respect recorded decisions, dependencies,
 exclusions, and decision gates.
 
 After each verified task, tick it in docs/TASKS.md, update docs/STATUS.md and
@@ -422,4 +424,8 @@ I ask you to stop, or no eligible work remains that can be performed safely.
 On stopping, report verified results and any remaining blockers precisely.
 ```
 
-For this checkout, start with **P4-T06 foundation recovery** and the reopened gate, then the first presentable room. Projects 1–4 remain useful historical milestones. The first product target is **Project 8**, a useful persistent nested workspace; the complete native desktop is a substantially larger undertaking.
+For this checkout, start with **P21-T00** and the Project 21 launch command in
+docs/OPENCODE-AUTOCONTINUE.md. Godot art and compositor extraction are independently
+eligible; converge at P21-T19, then build the useful two-room workspace. The
+earlier projects are requirements/history, not a competing run scope. Final
+human review stays explicit; a complete native desktop is a later program.

@@ -7,17 +7,21 @@ delete anything that stops being true.
 
 ## Ground rules
 
-- Implemented stack: libwayland-server, C++20, Meson, EGL/GLES2 (Decision 02).
-  Decision 05 authorizes a bounded wlroots/host/import experiment, not migration.
-- ARCHITECTURE.md defines target boundaries; TASKS.md defines execution order.
-  Apply the recovery gate before advancing features.
+- Supplied implementation: libwayland-server, C++20, Meson and EGL/GLES2.
+  Decision 06 now authorizes a Godot frontend/GDExtension bridge with the retained
+  C++ core. See GODOT-INTEGRATION.md for its target contracts; the legacy GL
+  examples below are not instructions to keep rebuilding the custom scene.
+- ARCHITECTURE.md defines boundaries; Project 21 in TASKS.md is the active work
+  order. Art and core extraction are independently eligible; P21-T19 is their
+  furnished live-terminal convergence gate.
 - Protocol: `wl_compositor`, `wl_shm`, `wl_seat`, `xdg_wm_base` (+ popups
   later), `wl_output` when chosen clients require it. `wl_shell` was removed.
   Pin supported versions to implemented behavior, not generated-header versions.
 - The compositor is nested. Input comes from the host window, never from
   `/dev/input`.
-- Everything testable is tested headless. A person only confirms feel and real
-  applications.
+- Test logic/protocol ownership headless where practical. Engine runtime, visual
+  quality and real-client interaction require actual corresponding evidence.
+  Label agent GUI observations; only a person can tick final human acceptance.
 
 ## libwayland-server patterns
 

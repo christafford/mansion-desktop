@@ -97,3 +97,9 @@ Cargo.lock
 
 # Sanitizer and alternate build directories
 /build-*/
+
+# Project 21 generated engine/tool/asset caches; manifests and scene sources stay tracked.
+world/.godot/
+.tools/
+assets/.cache/
+assets/source/

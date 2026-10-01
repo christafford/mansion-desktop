@@ -3,6 +3,17 @@
 See [GETTING_STARTED.md](GETTING_STARTED.md) for dependencies and the basic
 build. This file covers the environment details that matter when things fail.
 
+## Current frontend work
+
+Decision 06 and Project 21 now authorize Godot's nested host window/scene with a
+C++ GDExtension core. See GODOT-INTEGRATION.md and the pinned TOOLCHAIN.md record.
+The environment notes below describe the supplied prototype. Preserve its
+headless tests during extraction, but do not wait for the old host-renderer
+recovery tasks to author the Godot room. Host input must come from the engine's
+focused window; global evdev scanning must not enter the new frontend.
+Record actual Distrobox host socket/driver access and terminal private-socket
+launch separately. No native session or host service changes are authorized.
+
 ## Environment used so far
 
 - Steam Deck (SteamOS, Wayland session) hosting a `distrobox` container named

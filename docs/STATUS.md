@@ -1,6 +1,6 @@
 # Project status
 
-Documentation direction updated 2026-09-29 from the supplied archive.
+Documentation direction updated 2026-10-01 against the latest supplied archive.
 This edit performs no new compositor verification. Older results below are
 attributed historical reports, not fresh executions. This file tracks evidence
 and limits; source inspection plus current acceptance determines what works.
@@ -50,16 +50,13 @@ until the foundation and presentable-room gates pass.
 
 | Item | Current evidence | What is required next |
 | --- | --- | --- |
-| Foundation gate | Reopened; old Decision 04 approval superseded | P4-T06–P4-T18 and a real terminal observed by a person |
-| GPU client import | Not verified; PBuffer/readback/shm is fallback evidence | P4-T13; direct import proof before ticking P2-T05 |
-| Native Wayland host | Switched from `wl_egl_window` to surfaceless Mesa + EGL PBuffer + wl_shm buffer export (cd2da8a); not yet verified on a real Wayland session | P4-T12 observation on real Wayland session; verify rendered content appears without flicker |
-| Host input path | Windowed mode again scans `/dev/input` directly (`input_init()`), contradicting the P1-T07 record; headless opens no devices | P4-T06 records it; P4-T12 decides host-seat-only vs evdev |
+| Legacy foundation gate | Unaccepted; superseded as current work order | Relevant regressions and live-terminal evidence now required by P21-T10–T19 |
+| GPU client import | Not verified; PBuffer/readback/shm is fallback evidence | Later direct-import scope; leave P2-T05 open, not a prerequisite for the CPU bridge |
+| Legacy native Wayland host | PBuffer/shm export (cd2da8a); real-session behavior unverified | Godot takes over the visible host window in P21-T01/T11; retain any needed core headless behavior |
+| Host input path | Supplied windowed code scans `/dev/input`; headless opens no devices | P21-T14/T15 use only focused Godot host input; global evdev is prohibited in the new frontend |
 | Lifetimes and surface commits | xdg_surface/xdg_toplevel tracked and freed on disconnect; orphaned surface cap at 10 — P4-T08 done | P4-T09–P4-T11 regressions and sanitizer evidence |
-| Automation | P4-T07 fixed: stable fixtures replace live TASKS.md dependency; P5 tasks,
-  gate blocking, and unknown scope rejection covered by 5 new tests.
-  P4-T09 added: 6 surface-state tests cover pending/current separation. | P4-T10
-  verify formats and coordinates next; plugin test suite stable at 54/54 |
-| First presentable room | Not implemented/accepted | P4-T20–P4-T28 after the foundation gate |
+| Automation | New count/time defaults are unlimited; invalid scopes/task lists rejected; 62 Node tests passed during patch preparation | Check actual OpenCode load locally; no new live Qwen/OpenCode run is claimed |
+| First furnished Godot study | Not implemented/accepted | P21-T01–T09 independently eligible; converges with bridge at P21-T19 |
 
 Potential source issues are audit leads, not claims of a reproduced crash.
 Preserve the dated automated results below within their actual test scope.

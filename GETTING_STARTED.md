@@ -1,5 +1,20 @@
 # Getting started
 
+## Current Godot/Poly Haven direction
+
+Project 21 and Decision 06 are the current implementation plan. The commands
+below build the supplied C++ prototype; they do not launch the new engine yet.
+P21-T00 pins repository-local Godot/godot-cpp/Blender tools in TOOLCHAIN.md and
+P21-T01/T11 add the actual frontend/extension commands. Preserve the existing
+core tests. Do not install host packages from an unattended agent; the system
+package examples below are for the owner. Official pinned repository-local
+tools/assets are permitted by Decision 06.
+
+For an autonomous Qwen run, apply the patch series and use
+[OPENCODE-AUTOCONTINUE.md](docs/OPENCODE-AUTOCONTINUE.md). Its Project 21 launch
+command sets the scope; zero count/time budgets mean no fixed run deadline.
+
+
 ## Dependencies
 
 Arch Linux (the development container used so far):
@@ -57,7 +72,7 @@ Protocol debugging: `WAYLAND_DEBUG=1 ./build/mansion-test-client --socket <name>
 
 ## Workflow
 
-1. Read AGENTS.md, STATUS/TASKS, ARCHITECTURE and Decision 05. Start at P4-T06.
+1. Read AGENTS.md, STATUS/TASKS, ARCHITECTURE and Decision 06. Start at P21-T00.
 2. Take one eligible task within the authorized scope. Verify its acceptance;
    use normal/sanitizer suites for code, and real-client/human trials where stated.
 3. Tick only satisfied tasks. Update STATUS and the applicable handoff with
