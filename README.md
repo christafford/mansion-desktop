@@ -1,11 +1,16 @@
 # mansion-desktop
 
-Mansion Desktop is a 3D spatial desktop environment for Linux: a nested Wayland
-compositor whose shell is a first-person mansion. This repository is at the
-foundation-recovery stage: the archive contains a basic room, input modes and
-synthetic-client tests, while real-application usability remains unaccepted.
-The next target is a real terminal on a monitor in one presentable study.
-See Decision 05; no new capability is implied by the documentation update.
+Mansion Desktop is a Linux spatial desktop: real Wayland applications inside a
+persistent first-person environment. Current work is Project 21: a Godot world
+frontend, the retained C++ compositor core, and a furnished Poly Haven study.
+The supplied code still has the basic custom polygon renderer; the Godot bridge
+and finished room are not implemented by the direction/automation patches.
+
+Read [Decision 06](docs/decisions/06-godot-poly-haven.md),
+[the art brief](docs/ART-DIRECTION.md) and [the executable tasks](docs/TASKS.md).
+For Qwen/OpenCode, use [the launch instructions](docs/OPENCODE-AUTOCONTINUE.md).
+The next target is an attractive furnished study with a genuinely live terminal,
+followed by a useful two-room workspace. No fixed run deadline applies.
 
 ## Start here
 

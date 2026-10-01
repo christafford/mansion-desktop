@@ -4,14 +4,21 @@ This plan accompanies [the concept](mansion-desktop-concept.md). It proposes an 
 
 **Working from this roadmap:** the numbered projects below are broken into small, individually testable tasks in [docs/TASKS.md](docs/TASKS.md). Autonomous sessions work from that file; this document defines each project's scope, acceptance boundary, dependencies, and decision gates. Current verified state lives in [docs/STATUS.md](docs/STATUS.md); binding technical decisions live in [docs/decisions/](docs/decisions/).
 
-**Current direction (2026-09-29, Decision 05):** preserve the prototype;
-recover its foundation and real-terminal proof, introduce small architecture
-boundaries, build one presentable room, then resume multiwindow/persistence.
-TASKS.md recovery P4-T06–P4-T18 and visual P4-T20–P4-T28 are the current work
-order. Old handoff approval does not bypass these gates. No wholesale rewrite
-or game-engine migration is authorized. See docs/ARCHITECTURE.md.
+**Current direction (2026-10-01, Decision 06):** implement a Godot frontend
+with a retained C++ Wayland compositor core and curated Poly Haven art. Project
+21 in TASKS.md is the executable priority: independently develop a furnished
+study and a CPU frame/input bridge, converge on a live terminal, then build the
+useful two-room workspace, persistence/search and reminder creature. Finish by
+quality and verified acceptance, without an arbitrary run deadline.
 
-**Corrections recorded after the first implementation attempt (decision 02):** the shell protocol is `xdg_shell`, not the deprecated `wl_shell`; nested input comes from the host window, not `/dev/input`; the compositor uses libwayland-server directly rather than wlroots or Smithay; and every task must carry an acceptance check that runs headless, because unattended sessions cannot look at a screen.
+Earlier numbered projects remain requirements/history and later programs. Their
+old recovery-before-art sequencing and engine prohibition are superseded by
+[Decision 06](docs/decisions/06-godot-poly-haven.md). P21-T19 is the active
+integration gate. GPU import and native desktop-session work are not prerequisites
+for this study and must not be claimed by its software-rendered terminal proof.
+Nested input comes from the Godot host window; no global input-device access.
+Headless checks cover logic, while actual rendered captures and real clients
+cover visuals/integration. Final personal usability remains a human task.
 
 ## Assessment
 
@@ -30,10 +37,9 @@ The first four projects answer the initial engineering question. Projects 5–8 
 
 - **Treat fullscreen as a presentation mode initially.** Show the client at full size inside Mansion's host window. Do not require direct scanout, changing the physical display mode, or a client fullscreen state transition just to focus it. Define client-requested fullscreen behavior separately.
 - **Make integration choices evidence-based.** Continue the implemented C++20,
-  Meson, EGL/GLES path. Evaluate native nested Wayland hosting, direct client
-  buffer import, and a bounded wlroots adapter in recovery. Smithay/Rust,
-  Vulkan/wgpu, and heavyweight engines are alternatives requiring a new scoped
-  decision, not instructions to replace this project. GPU readback/shm tests
+  Meson compositor core. Decision 06 now authorizes Godot's world renderer and
+  GDExtension bridge. Direct GPU buffer import and compositor-stack replacement
+  remain later separately scoped work. GPU readback/shm tests
   demonstrate the fallback path, not direct accelerated-client import.
 - **Separate resources, artifacts, and live windows.** A file or launch recipe is a resource; its representation in a room is an artifact; a connected client window is temporary runtime state. One application can have several windows, and one resource may eventually have several spatial references. Never persist Wayland object IDs or process IDs as durable identity.
 - **Avoid promising exact launch-to-window matching.** Application IDs and titles are hints, not unique instance identifiers. Applications may reuse existing processes. Use launch tracking and supported activation mechanisms, with an explicit manual assignment fallback.
@@ -44,7 +50,7 @@ The first four projects answer the initial engineering question. Projects 5–8 
 
 ## Working structure
 
-Use one repository and initially one executable, with internal boundaries for compositor, renderer/world, shell, and persistence. Separate projects here mean separately reviewable deliverables, not separate repositories or services.
+Use one repository and a Godot frontend with a reusable C++ core, with internal boundaries for compositor, renderer/world, shell, and persistence. Separate projects here mean separately reviewable deliverables, not separate repositories or services.
 
 Start with simple geometry, fixed placement slots, one host window, one supported machine/GPU configuration, and native Wayland clients. SQLite is a suitable starting point for placement metadata. Defer a physics engine until basic placement actually needs it.
 
@@ -130,7 +136,7 @@ a negative experiment or synthetic pixel test.
 
 ### 4V. First presentable room (numeric tasks P4-T20–P4-T28)
 
-**Depends on:** accepted P4-T18. Introduce minimal scene entities/transforms,
+**Historical renderer plan (superseded by Project 21).** Introduce minimal scene entities/transforms,
 Blender glTF/GLB loading, textures/basic materials, ambient/directional lighting,
 one furnished study, ray selection, slot movement, and a working animated door.
 Integrate a real terminal on the monitor with unlit readable app content and
@@ -148,7 +154,7 @@ data-driven rooms/assets rather than introducing all scene capability at once.
 
 ### 5. Multiple windows and application lifecycle
 
-**Depends on:** foundation gate P4-T18 and presentable-room gate P4-T28.
+**Depends on:** current furnished live-terminal integration gate P21-T19; implement/reuse in Project 21.
 
 **Deliver:** runtime window registry, several artifacts, launch/close/reassign actions, and policies for additional top-level windows, transient dialogs, popups, and subsurfaces. Compose related surfaces correctly in focused view and define their world-preview behavior. Include manual artifact assignment when automatic association is ambiguous.
 

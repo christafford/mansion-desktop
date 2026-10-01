@@ -10,6 +10,24 @@ running the check that proves it.
 
 ## Next task
 
+**P21-T00: baseline and pinned toolchain.** Then select the first eligible
+Project 21 task. Decision 06 authorizes the Godot world frontend and Poly Haven
+assets; world art and compositor extraction are independently eligible. No
+deadline or default continuation-count limit applies. P21-T19 is the furnished
+live-terminal gate; P21-T34 is the final personal review.
+
+**Not verified:** Godot project, GDExtension bridge, imported assets, furnished
+room, live-terminal integration, new performance goals and final usability.
+These patches change direction and automation; they implement none of those
+product features. Record actual checks under the correct evidence labels.
+
+Current work-order claims supersede older scheduling statements below. Legacy
+P4-T12–T28 and GPU import P2-T05 remain uncompleted; their missing features do
+not block independent art or the explicitly shm-only first bridge. Legacy
+multiwindow code must be audited before reuse, not credited from a task title.
+
+## Historical recovery report from the supplied archive
+
 **P4-T11 completed 2026-09-29.** Implemented xdg-shell handshake and metadata
 validation: title/app_id/geometry tracking in `MansionXdgToplevel`/`MansionXdgSurface`,
 configure/ack serial validation with `XDG_SURFACE_ERROR_INVALID_SERIAL` error
@@ -65,7 +83,7 @@ checkout that predated the 2026-09-28 implementation commits
   `docs/handoffs/04-host-window.md`; handoff 05 is reserved for Project 5.
 - The nested P5-T01/P5-T02 sub-tasks ticked on 2026-09-28 are recorded as
   historical evidence under P5-T00 in TASKS.md; the revised column-zero
-  P5-T01/P5-T02 remain unchecked and blocked on P4-T28.
+  P5-T01/P5-T02 remain unchecked; their requirements are reused in P21-T20 after P21-T19.
 
 ## P4-T06 Reconciliation (2026-09-29, this session)
 
@@ -113,7 +131,7 @@ Full reconciliation completed. Handoff at
 - P4-T12: native Wayland host experiment (bounded prototype)
 - P4-T13: accelerated buffer import reinvestigation
 - P4-T11: xdg-shell handshake validation
-- P5-T01/P5-T02: new tests for revised acceptance (blocked on P4-T28)
+- P5-T01/P5-T02: revised acceptance tests; reuse/audit in P21-T20 after P21-T19
 
 ### Limitations
 

@@ -4,27 +4,183 @@ This is the executable form of [PROJECT-ROADMAP.md](../PROJECT-ROADMAP.md).
 Autonomous sessions work from this file: take the first eligible unchecked
 task in scope, prove its acceptance, record the evidence, and commit.
 
-## Current execution order (2026-09-29 review)
+## Current execution order (2026-10-01, Decision 06)
 
-1. Foundation recovery: P4-T06 through P4-T18.
-2. First presentable room: P4-T20 through P4-T28.
-3. Resume Projects 5–8, then the dependency-ordered roadmap.
+1. Project 21 below: Godot/Poly Haven study and independent compositor bridge.
+2. Its furnished live-terminal gate, then the useful two-room workspace.
+3. Final personal review, then separately scoped future roadmap programs.
 
-P4-T18 and P4-T28 are real product gates. Project 5 expansion already exists,
-but its feature tasks are blocked until both gates pass. Keep earlier automated
-work and checkmarks as historical records; the old P4-T05 decision does not
-authorize new development past these gates. P2-T05 is reopened for direct GPU
-buffer import and is investigated by P4-T13; a readback/shm test cannot tick it.
+Decision 06 supersedes P4-T18/P4-T28 as prerequisites for this work. Historical
+checkmarks do not prove the new bridge works; incomplete old tasks remain open.
+Legacy Projects 5–8 are source requirements/reference work, not a competing
+autonomous scope while Project 21 is active. New integration gate P21-T19 permits
+the dependent useful-workspace features; P21-T33 prepares final owner review.
 
-Recovery/visual phases use numeric P4 IDs because the bundled continuation
-parser does not understand P4R/P4V. Keep executable checklist items at column
-zero; the current parser ignores indented tasks. Use explicit bounded ranges.
-Completion of a range is not acceptance of the product or a later gate.
+## Project 21: Godot and Poly Haven workspace
+
+Current priority, authorized by [Decision 06](decisions/06-godot-poly-haven.md).
+Implement these tasks; another planning-only pass does not satisfy them. Visual
+tasks T01–T09 and core tasks T10–T18 progress independently from T00. Choose the
+first eligible unchecked task; skip a recorded blocker to another eligible task
+in this scope. Human review is at the end. Prior P4-T12–T28 tasks are deferred
+or superseded as an execution schedule; they remain honest unchecked history.
+P2-T05 GPU import remains open and is not a prerequisite for this CPU bridge.
+
+Every Depends entry requires completed tasks AND their stated evidence. Several
+turns per coherent task are allowed; do not impose a one-turn time deadline.
+If a task needs splitting, add unused numeric IDs at column zero and update all
+dependent tasks. Do not use suffixed IDs or hide subtasks inside prose. The
+continuation plugin checks boxes, not the truth of evidence or dependencies.
+The agent must enforce both. Record blockers and exact continuation points.
+
+- [ ] **P21-T00 Baseline and pin the toolchain.**
+  **Depends:** none.
+  **Acceptance:** Inspect actual source/tests and run their available baselines. Record existing failures and supported clients. Pin verified Godot/godot-cpp/Blender releases and repository-local bootstrap/build commands in TOOLCHAIN.md; record target hardware, renderer candidates and performance goals. Prove tools run, or record exact unavailable dependencies without claiming implementation.
+
+- [ ] **P21-T01 Create the Godot frontend scaffold.**
+  **Depends:** P21-T00.
+  **Acceptance:** Create world/project.godot, main scene, safe spawn, documented run/import commands and automated script/import checks. Launch a real host window and capture a rendered scene; preserve the standalone C++ headless tests. Placeholder geometry is explicitly temporary.
+
+- [ ] **P21-T02 Curate the study asset set.**
+  **Depends:** P21-T00.
+  **Acceptance:** Inspect current Poly Haven previews/metadata; select coherent furniture, architectural PBR textures and HDRI. Record real IDs, sources, licenses, units and missing-catalog alternatives against ART-DIRECTION.md. Produce a reviewable manifest design and composition layout.
+
+- [ ] **P21-T03 Implement selective asset fetching and verification.**
+  **Depends:** P21-T02.
+  **Acceptance:** Implement repository-local fetch/cache tooling, manifest, identifying API requests, atomic downloads, hashes, finite retries and offline behavior. Test invalid hash, interruption, missing file and repeat bootstrap. Fetch the actual curated set; no invented URLs, catalog-wide download or silent placeholder fallback.
+
+- [ ] **P21-T04 Convert models and verify PBR imports.**
+  **Depends:** P21-T01, P21-T03.
+  **Acceptance:** Implement reproducible GLB conversion where required and deliberate Godot import/material settings. Render and inspect a model/material contact sheet; verify texture channels, scale, normal orientation and provenance. Retain exact commands and pinned conversion versions.
+
+- [ ] **P21-T05 Assemble the furnished study.**
+  **Depends:** P21-T04.
+  **Acceptance:** Use real furniture and distinct floor/wall/ceiling materials. Place desk/chair/monitor/lamp/shelf/rug/window with believable scale, no major intersections and usable circulation. Render arrival, desk and opposite-corner views and inspect them. Primitives do not pass this task.
+
+- [ ] **P21-T06 Light and refine the study.**
+  **Depends:** P21-T05.
+  **Acceptance:** Implement appropriate environment/indirect/practical lighting and tune exposure, contact shadows, reflections and material scale. Compare captured revisions, fix observed defects and pass the applicable art rubric. Record renderer/settings and remaining visual defects honestly.
+
+- [ ] **P21-T07 Implement comfortable world movement.**
+  **Depends:** P21-T01, P21-T05.
+  **Acceptance:** Implement camera, host-scoped controls, collision, safe spawn, reduced-motion option and fast return/teleport. Run movement/collision checks and an observed room traversal. No clipping through desk/walls or unavoidable camera bob.
+
+- [ ] **P21-T08 Create stable entities and the monitor screen slot.**
+  **Depends:** P21-T05.
+  **Acceptance:** Assign stable entity IDs and parent-relative furniture/monitor/screen transforms independent of runtime nodes. Add ray picking and inspect a labelled diagnostic screen for aspect/orientation. Move/rotate the desk and prove the monitor and panel move with it; do not claim live application support.
+
+- [ ] **P21-T09 Review the first room visually.**
+  **Depends:** P21-T06, P21-T07, P21-T08.
+  **Acceptance:** Render and inspect fixed comparison views and record a criterion-by-criterion ART-DIRECTION.md review. Fix defects until the finished-room criteria pass. If image inspection is unavailable, keep this task open with its exact blocker while continuing core tasks.
+
+- [ ] **P21-T10 Extract the compositor core from presentation.**
+  **Depends:** P21-T00.
+  **Acceptance:** Separate the reusable protocol/client/seat core from old host GL rendering/input. Keep the headless executable and existing tests working. Prove core start/nonblocking pump/stop and callback ownership without any visible host dependency. Fix reproducible lifetime/commit regressions relevant to reuse.
+
+- [ ] **P21-T11 Build and load the GDExtension adapter.**
+  **Depends:** P21-T01, P21-T10.
+  **Acceptance:** Build a minimal compatible adapter with explicit lifecycle and nonblocking pump. Godot loads it, starts a private socket, accepts a fixture client and shuts down cleanly; extension load/unload and headless regression checks pass. No second blocking loop or arbitrary-thread resource access.
+
+- [ ] **P21-T12 Implement owned shm frame snapshots.**
+  **Depends:** P21-T11.
+  **Acceptance:** Implement tested format/stride/alpha/bounds/scale/transform handling, copied frame revisions and window generations. Test buffer replacement/release/disconnect ownership using asymmetric color fixtures. Snapshots remain valid after source destruction; no raw Wayland pointers escape into GDScript.
+
+- [ ] **P21-T13 Display live client textures in Godot.**
+  **Depends:** P21-T08, P21-T12.
+  **Acceptance:** Create/recreate/update ImageTexture from copied frames; handle sizes, revisions and invalidated windows. Verify moving real fixture pixels, orientation and monitor UV mapping in runtime captures. Keep client pixels unlit; measure copy/update bytes and cost. Mark this CPU bridge explicitly.
+
+- [ ] **P21-T14 Route keyboard and pointer through the seat.**
+  **Depends:** P21-T11, P21-T13.
+  **Acceptance:** Implement explicit Godot physical-key to seat/XKB mapping, modifiers/repeat and surface-local pointer mapping. Test keys and corners/center under letterboxing, scale and transforms. Input only enters while the Godot host owns focus; no /dev/input access.
+
+- [ ] **P21-T15 Implement world/application focus transitions.**
+  **Depends:** P21-T07, P21-T14.
+  **Acceptance:** Use one live binding in both world panel and readable application view. Test reserved return shortcut, host-focus loss, held keys/buttons and repeated mode changes. Ordinary app keys reach the client and world controls do not steal them; no stuck input.
+
+- [ ] **P21-T16 Implement configure and resize behavior.**
+  **Depends:** P21-T12, P21-T15.
+  **Acceptance:** Test configure/ack/commit ordering, host/application size changes, remap and coordinate mapping at several aspect ratios. Verify client content actually changes size rather than merely stretching a stale buffer; record unsupported protocol cases.
+
+- [ ] **P21-T17 Harden window and client lifecycle.**
+  **Depends:** P21-T16.
+  **Acceptance:** Test map/unmap/remap/destroy/relaunch, focus invalidation, texture cleanup, socket cleanup and shutdown. Repeated disconnect cycles pass relevant sanitizers; report whether leak detection was enabled. No stale content or callback touches destroyed state.
+
+- [ ] **P21-T18 Run a real native terminal through the bridge.**
+  **Depends:** P21-T17.
+  **Acceptance:** Implement/document a native software-rendered terminal launch onto the private socket and repeatable integration checks. Observe changing output, typed command, modifiers, pointer/scroll, resize, five mode switches, host-focus loss and close/relaunch. Capture evidence with environment/revision; a fixture, mock or host terminal is insufficient.
+
+- [ ] **P21-T19 Accept the furnished live-terminal demonstration.**
+  **Depends:** P21-T09, P21-T18.
+  **Acceptance:** Run the full GODOT-INTEGRATION.md convergence trial in the furnished study, capture world and application views, inspect them and record measured responsiveness. Fix integration and visual defects before passing. Label agent-observed evidence; this is an automated/agent gate, not personal acceptance or general desktop compatibility.
+
+- [ ] **P21-T20 Implement multiple live windows and surface trees.**
+  **Depends:** P21-T19.
+  **Acceptance:** Reuse audited registry code where appropriate. Demonstrate three real supported windows, focused input, manual slot assignment, cycling, per-window close and required popup/subsurface composition. Expand this task into unique numeric tasks first if distinct protocol boundaries need separate acceptance. Record exactly which clients work.
+
+- [ ] **P21-T21 Implement persistent resources and placements.**
+  **Depends:** P21-T19.
+  **Acceptance:** Add/version the persistence schema for stable IDs, resource references, rooms, parenting and slots. Move furniture/artifacts, restart and recover positions without persisting PIDs/live handles. Test migrations/interrupted writes and missing resources; inactive placeholders are explicit.
+
+- [ ] **P21-T22 Implement usable file and launch artifacts.**
+  **Depends:** P21-T20, P21-T21.
+  **Acceptance:** Place chosen ordinary files/launch recipes deliberately; open them with supported real applications and explicitly bind or assign windows. Test missing file, ambiguous app identity, close/reopen and restart. Do not pretend a portal response proves a file was saved or spawn a directory as clutter.
+
+- [ ] **P21-T23 Implement search and fast access.**
+  **Depends:** P21-T22.
+  **Acceptance:** Add keyboard-accessible artifact/window list and search, quick focus/teleport and reduced-motion navigation. Demonstrate finding and returning to three saved resources, without depending on walking through every room. Test selection and focus transitions.
+
+- [ ] **P21-T24 Build one connected secondary room and a working door.**
+  **Depends:** P21-T19, P21-T21.
+  **Acceptance:** Extend the coherent asset family to one furnished adjacent room. Implement door collision/open/close and stable room IDs; test navigation, placement persistence and passage. Capture/inspect both sides. Do not grow a huge empty mansion.
+
+- [ ] **P21-T25 Implement door-aware navigation.**
+  **Depends:** P21-T24.
+  **Acceptance:** Implement measured pathing over actual walkable space with correct open/closed-door behavior and safe fallback. Verify a route between room artifacts around furniture, then close the door and check replanning/unreachable behavior. Keep fast access available.
+
+- [ ] **P21-T26 Implement the reminder domain and accessible UI.**
+  **Depends:** P21-T23.
+  **Acceptance:** Persist real reminder records with due time, state, snooze/dismiss and artifact association. Test scheduling/restart/time behavior and demonstrate an accessible reminder list. Reminder semantics live outside animation nodes.
+
+- [ ] **P21-T27 Add a coherent animated reminder creature.**
+  **Depends:** P21-T25, P21-T26.
+  **Acceptance:** Select or author a properly licensed fitting character with real animation and collision/floor contact. Bind it to a due reminder, demonstrate unobtrusive appearance/path/notification, snooze/dismiss and duplicate prevention. A floating primitive or fake reminder cannot pass; provide accessible list fallback.
+
+- [ ] **P21-T28 Polish the complete workspace visually.**
+  **Depends:** P21-T20, P21-T23, P21-T24, P21-T27.
+  **Acceptance:** Inspect actual captures and motion of the complete two-room workspace; iterate on composition, light, UI, material detail and creature coherence until the full applicable art rubric passes. Keep text readability and navigation comfort. Record resolved defects and remaining limits.
+
+- [ ] **P21-T29 Measure and tune target performance.**
+  **Depends:** P21-T28.
+  **Acceptance:** Profile real scene frame times, copy/upload cost, draw calls and memory under live-window load. Tune LOD, instancing, texture sizes/shadows and update coalescing without violating the visual rubric. Record hardware/resolution/renderer and percentile times. Target-device results remain blocked if that device is unavailable; other-machine data is provisional.
+
+- [ ] **P21-T30 Verify regressions and failure recovery.**
+  **Depends:** P21-T20, P21-T21, P21-T23, P21-T27.
+  **Acceptance:** Run current core/bridge/engine checks and real-client lifecycle/focus/persistence regressions. Test missing assets, client crash, restart and unavailable resources with actionable behavior. Preserve test strength; record unsupported GPU clients and protocol features explicitly.
+
+- [ ] **P21-T31 Make the workspace reproducible.**
+  **Depends:** P21-T28, P21-T30.
+  **Acceptance:** Demonstrate fresh-clone pinned bootstrap, verified asset fetch, extension build, Godot import/run and supported launch commands. Document offline launch and package/export decisions with licenses. Do not install a native session or silently depend on developer caches.
+
+- [ ] **P21-T32 Write the final evidence and handoff.**
+  **Depends:** P21-T29, P21-T31.
+  **Acceptance:** Update STATUS, ACCEPTANCE, TOOLCHAIN and handoff with actual revisions/commands/captures, supported clients, performance, known limits and exact human trial. Reconcile any fully reused legacy tasks by their entire original acceptance; leave partial/deferred work open. Documentation matches implemented launch commands.
+
+- [ ] **P21-T33 Review the completed autonomous workspace gate.**
+  **Depends:** P21-T32.
+  **Acceptance:** Audit required evidence for the furnished live-terminal study, multiwindow/persistence/search, connected room, reminder creature, quality and measured performance. Reproduce key checks; fix missing evidence or keep gate open. Record readiness for owner review without claiming owner acceptance.
+
+- [ ] **P21-T34 (human) Try the finished workspace on the target machine.**
+  **Depends:** P21-T33.
+  **Acceptance:** Owner follows the recorded terminal/focus/movement/placement/search/reminder/door trial and art rubric, reports comfort and target-device behavior. Agent prepares captures and procedure but never ticks this task. Unobserved remains unobserved.
+
+- [ ] **P21-T35 Record owner acceptance and next scope.**
+  **Depends:** P21-T34.
+  **Acceptance:** Review the owner report, resolve or task defects with dependencies, and record the accepted scope/limits in Decision 06 and STATUS. Broader GPU/native-session/portal work requires its own plan. No automatic assumption of owner approval.
 
 ## Conventions
 
-- One task per turn. A task is small enough to finish, build, and test in one
-  sitting. If it is not, split it (add sub-tasks here) instead of doing half.
+- One coherent task at a time; it may span several turns. Split tasks by useful
+  acceptance boundaries using unique numeric IDs, not by arbitrary time quotas.
 - Every task has an **Acceptance** line and explicit prerequisites for new
   recovery tasks. Behavioral changes require appropriate automated checks;
   graphical/product acceptance also requires observation where stated.
@@ -43,7 +199,7 @@ Completion of a range is not acceptance of the product or a later gate.
   procedure and leave the result as "not observed" in `docs/STATUS.md`.
 - Commit verified task changes only: `git add -- <task files>`, then
   `git commit -q -m "<id>: <summary>"`. Never push or rewrite history.
-- Build and test commands are always:
+- Use task-specific checks from Decision 06. C++ regression commands are:
 
   ```sh
   meson setup build --buildtype=debug        # first time only
@@ -623,7 +779,8 @@ Each project starts with an expansion task. Autonomous sessions perform the
 expansion task, then work the resulting list.
 
 - [x] **P5-T00 Expand Project 5.** Existing expansion revised below; feature
-  tasks require P4-T18 and P4-T28 accepted. Historical completion: 2026-09-28.
+  tasks require the current integration gate P21-T19; Project 21 is the active
+  implementation scope and reuses these requirements where applicable. Historical completion: 2026-09-28.
 
   Historical 2026-09-28 expansion (superseded, kept as evidence): the earlier
   nested sub-tasks "P5-T01 Window registry" and "P5-T02 Alt+Tab focus cycling"
@@ -636,7 +793,7 @@ expansion task, then work the resulting list.
   (same-client windows, unmapped windows, teardown orders, sanitizers, held-input
   release) has not been demonstrated.
 
-- [ ] **P5-T01 Window registry and surface trees.** Prerequisites: P4-T28.
+- [ ] **P5-T01 Window registry and surface trees.** Prerequisites: P21-T19.
   Inspect partial registry code before adding another registry. Track runtime
   toplevel handles, mapped state, metadata and related surfaces across clients.
   Registration/unregistration is idempotent for role teardown and disconnect;

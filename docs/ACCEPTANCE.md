@@ -4,7 +4,35 @@ Status: procedures only; no check below has been performed by this documentation
 update. Synthetic tests and screenshots are supporting evidence, not usability
 acceptance. Human tasks in TASKS.md remain unchecked until a person records them.
 
-## Build and collect the baseline
+## Current Project 21 acceptance
+
+Use Decision 06, ART-DIRECTION.md and GODOT-INTEGRATION.md for the new frontend.
+The commands below describe the supplied legacy executable and are historical
+procedures for it, not Godot launch commands. P21-T00/T01/T11 must document the
+new actual commands in TOOLCHAIN.md and this file after implementing them.
+
+For P21-T09/P21-T19/P21-T28, keep fixed rendered world/application views with
+revision, camera, renderer, resolution, machine and observed defects. Inspect
+the images; never infer visual quality from a successful headless import.
+For P21-T18/T19, run a real native software terminal on the private socket and
+record typing/output, modifiers, pointer/scroll, resize, repeated mode switches,
+host-focus loss, close/relaunch and responsive world movement. Record moving
+content and input results, not just a static screenshot. Include exact client
+and environment; fixture and CPU-copy proofs do not establish GPU compatibility.
+
+P21-T33 audits the implemented workspace and prepares the owner trial. P21-T34
+requires a person. Agent GUI observation may satisfy an explicitly agent-observed
+task but never ticks that human task. Performance on another machine is provisional
+until measured on the target Steam Deck. Missing GUI or target hardware is a
+blocker for its dependent acceptance, not permission to invent results; complete
+other independent eligible tasks first.
+
+Record: task IDs, revision/date, command, environment, expected/actual result,
+evidence path, observer, pass/fail and limitations. Track material/lighting,
+interaction, real-client compatibility and performance separately. A correct
+test suite does not erase a failed visual criterion.
+
+## Legacy baseline and procedures
 
 Run from the repository root in the normal development container/session:
 
