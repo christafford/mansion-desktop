@@ -33,9 +33,10 @@ dependent tasks. Do not use suffixed IDs or hide subtasks inside prose. The
 continuation plugin checks boxes, not the truth of evidence or dependencies.
 The agent must enforce both. Record blockers and exact continuation points.
 
-- [ ] **P21-T00 Baseline and pin the toolchain.**
+- [x] **P21-T00 Baseline and pin the toolchain.**
   **Depends:** none.
   **Acceptance:** Inspect actual source/tests and run their available baselines. Record existing failures and supported clients. Pin verified Godot/godot-cpp/Blender releases and repository-local bootstrap/build commands in TOOLCHAIN.md; record target hardware, renderer candidates and performance goals. Prove tools run, or record exact unavailable dependencies without claiming implementation.
+  **Evidence (2026-10-01):** C++ baseline 27/28 pass in `build` (1 pre-existing flaky `camera-move` test, UBSan/ASan enabled in normal build), 28/28 pass in `build-asan` (zero sanitizer errors). Node plugin 62/62 pass. Godot 4.7.2-stable, godot-cpp 10.0.0-stable, Blender 5.2.2 LTS pinned in `docs/TOOLCHAIN.md` with SHA-256 checksums and install instructions. Target hardware: Steam Deck (AMD Custom APU 0405, RDNA 2 GPU, 16 GB RAM, 1280×800). Target renderer: Compatibility (Vulkan). Performance goal: 30 FPS sustained, 60 FPS pursued. Godot/godot-cpp/Blender NOT installed on dev system — documented in TOOLCHAIN.md as repository-local downloads.
 
 - [ ] **P21-T01 Create the Godot frontend scaffold.**
   **Depends:** P21-T00.

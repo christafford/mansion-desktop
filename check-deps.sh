@@ -9,5 +9,9 @@ for pkg in wayland-server wayland-client wayland-protocols wayland-egl egl glesv
 done
 # Optional: only the human smoke test needs a real terminal client.
 if command -v weston-terminal >/dev/null 2>&1; then echo "  weston-terminal: ok (optional)"; else echo "  weston-terminal: missing (optional; sudo pacman -S weston)"; fi
+# Project 21 tools: download into tools/ per docs/TOOLCHAIN.md before use.
+if [ -f "$PWD/tools/Godot_v4.7.2-stable_linux.x86_64" ]; then echo "  godot-4.7.2-stable: ok"; else echo "  godot-4.7.2-stable: missing (download per docs/TOOLCHAIN.md)"; fi
+if [ -d "$PWD/tools/godot-cpp" ]; then echo "  godot-cpp-10.0.0-stable: ok"; else echo "  godot-cpp-10.0.0-stable: missing (git clone per docs/TOOLCHAIN.md)"; fi
+if [ -f "$PWD/tools/blender-5.2.2-linux-x64/blender" ]; then echo "  blender-5.2.2-lts: ok"; else echo "  blender-5.2.2-lts: missing (download per docs/TOOLCHAIN.md)"; fi
 [ "$status" -eq 0 ] && echo "All required dependencies are available." || echo "Some required dependencies are missing. See DEVELOPMENT.md."
 exit $status

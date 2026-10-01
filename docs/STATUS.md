@@ -10,11 +10,20 @@ running the check that proves it.
 
 ## Next task
 
-**P21-T00: baseline and pinned toolchain.** Then select the first eligible
-Project 21 task. Decision 06 authorizes the Godot world frontend and Poly Haven
-assets; world art and compositor extraction are independently eligible. No
-deadline or default continuation-count limit applies. P21-T19 is the furnished
-live-terminal gate; P21-T34 is the final personal review.
+**P21-T01: create the Godot frontend scaffold.** P21-T00 is complete
+(toolchain pinned in TOOLCHAIN.md, baselines recorded). P21-T02 (asset curation)
+is independently eligible and does not require Godot to be installed.
+Decision 06 authorizes the Godot world frontend and Poly Haven assets; world art
+and compositor extraction are independently eligible. No deadline or default
+continuation-count limit applies. P21-T19 is the furnished live-terminal gate;
+P21-T34 is the final personal review.
+
+**P21-T00 completed 2026-10-01.** Baselines recorded: C++ 27/28 pass in normal
+build (1 pre-existing flaky `camera-move`, UBSan/ASan enabled), 28/28 in
+build-asan (zero sanitizer errors). Node plugin 62/62 pass. Toolchain pinned:
+Godot 4.7.2-stable, godot-cpp 10.0.0-stable, Blender 5.2.2 LTS. Target: Steam
+Deck, Compatibility (Vulkan) renderer, 30 FPS minimum. Godot/godot-cpp/Blender
+not installed on dev system — repository-local download path documented.
 
 **Not verified:** Godot project, GDExtension bridge, imported assets, furnished
 room, live-terminal integration, new performance goals and final usability.
