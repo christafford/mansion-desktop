@@ -53,7 +53,7 @@ function memoryStore(initial = {}) {
 }
 
 // Mock of the OpenCode V2 Promise plugin context: only the parts the plugin uses.
-async function harness(t, { options = {}, fingerprints, events = true, tasks = TASKS_DONE, store = memoryStore(), sessions } = {}) {
+async function harness(t, { options = {}, fingerprints, events = true, tasks = TASKS_DONE, store = memoryStore(), sessions, now = Date.now } = {}) {
   const prompts = [], commands = new Map(), hooks = new Map();
   let messages = [], session = { id: 'main', time: { created: 1, updated: 1 } };
   const lookup = sessions ?? ((sessionID) => (sessionID === 'child' ? { id: 'child', parentID: 'main' } : session));
@@ -90,8 +90,8 @@ async function harness(t, { options = {}, fingerprints, events = true, tasks = T
   let prints = fingerprints ?? [];
   let printIndex = 0;
   const fingerprint = async () => prints.length ? prints[Math.min(printIndex++, prints.length - 1)] : `print-${printIndex++}`;
-  const readTasks = async () => { if (tasks instanceof Error) throw tasks; return tasks; };
-  const make = () => createPlugin({ fingerprint, readTasks, stateStore: () => store });
+  const readTasks = async () => { if (tasks instanceof Error) throw tasks; return typeof tasks === 'function' ? tasks() : tasks; };
+  const make = () => createPlugin({ fingerprint, readTasks, now, stateStore: () => store });
   let cleanup = await make().setup(ctx);
   t.after(() => cleanup());
   // reload(): unload the plugin and set it up again against the same store, as OpenCode does on file change.
@@ -343,7 +343,7 @@ test('cleanup cancels a pending follow-up', async (t) => {
     session: {
       get: async () => ({ id: 'main', time: { created: 1, updated: 1 } }),
       context: async () => ({ data: [
-        { id: 'u', type: 'user', text: instructions('x'), time: { created: 1 } },
+        { id: 'u', type: 'user', text: instructions('Projects 1–2'), time: { created: 1 } },
         { id: 'a', type: 'assistant', content: [{ type: 'text', text: 'done one' }], finish: 'stop', time: { created: 2, completed: 3 } },
         { id: 'i', type: 'idle', outcome: 'succeeded', time: { created: 4 } },
       ] }),
@@ -353,12 +353,12 @@ test('cleanup cancels a pending follow-up', async (t) => {
     command: { transform: async (fn) => fn({ add: () => {} }) },
     event: { subscribe: () => ({ async *[Symbol.asyncIterator]() {} }) },
   };
-  const cleanup = await createPlugin({ fingerprint: async () => 'x' }).setup(ctx);
+  const cleanup = await createPlugin({ fingerprint: async () => 'x', readTasks: async () => TASKS_DONE }).setup(ctx);
   // Start a run directly through the internal command path by re-adding commands.
   let autocontinue;
   ctx.command.transform = async (fn) => fn({ add: (c) => { if (c.name === 'autocontinue') autocontinue = c; } });
-  const cleanup2 = await createPlugin({ fingerprint: async () => 'x' }).setup(ctx);
-  await autocontinue.execute({ sessionID: 'main', prompt: { text: 'x' } });
+  const cleanup2 = await createPlugin({ fingerprint: async () => 'x', readTasks: async () => TASKS_DONE }).setup(ctx);
+  await autocontinue.execute({ sessionID: 'main', prompt: { text: 'Projects 1–2' } });
   assert.equal(prompts.length, 1);
   cleanup(); cleanup2();
   await sleep(80);
@@ -428,20 +428,26 @@ test(`repeated false ${DONE} claims stop the run`, async (t) => {
   assert.equal(h.prompts.length, 2);
 });
 
-test(`${DONE} is accepted when the scope names no task range`, async (t) => {
+test('unrecognized scopes are rejected before enabling a run', async (t) => {
   const h = await harness(t, { tasks: TASKS_OPEN });
-  await h.start('tidy the docs');
-  await h.finish(`Finished.\n${DONE}`);
-  await h.finish('more');
-  assert.equal(h.prompts.length, 1);
+  await assert.rejects(h.start('tidy the docs'), /numeric project or task range/);
+  assert.equal(h.prompts.length, 0);
+  assert.deepEqual(h.store.state, {});
 });
 
-test(`an unreadable task list stops the run instead of trusting ${DONE}`, async (t) => {
+test('recognized scopes matching no tasks are rejected', async (t) => {
+  const h = await harness(t);
+  await assert.rejects(h.start('Project 999'), /matches no tasks/);
+  await assert.rejects(h.start('P1-T99'), /matches no tasks/);
+  assert.equal(h.prompts.length, 0);
+  assert.deepEqual(h.store.state, {});
+});
+
+test('an unreadable task list prevents enabling a run', async (t) => {
   const h = await harness(t, { tasks: Object.assign(new Error('ENOENT'), { code: 'ENOENT' }) });
-  await h.start('Projects 1–2');
-  await h.finish(`Finished.\n${DONE}`);
-  await h.finish('more');
-  assert.equal(h.prompts.length, 1);
+  await assert.rejects(h.start('Projects 1–2'), /ENOENT/);
+  assert.equal(h.prompts.length, 0);
+  assert.deepEqual(h.store.state, {});
 });
 
 test(`${BLOCKED} still stops without consulting the task list`, async (t) => {
@@ -470,28 +476,20 @@ test('reopened gate task is required for DONE verification', async (t) => {
   assert.ok(open.length > 0, 'reopened gate prevents false completion');
 });
 
-test('unknown scope rejects DONE verification in normal runs', async (t) => {
-  // When the scope names no recognizable project or task range,
-  // DONE is accepted unverified (the plugin logs this).
-  // This test verifies the parsing behavior.
-  assert.equal(parseScope('tidy the docs'), null);
-  assert.equal(parseScope(''), null);
-  assert.equal(parseScope('fix bugs'), null);
-  // These should NOT parse to any project:
-  const scope = parseScope('tidy the docs');
-  assert.equal(scope, null, 'non-project scope returns null');
+test('unknown scopes cannot be parsed or used for completion verification', () => {
+  for (const scope of ['tidy the docs', '', 'fix bugs']) {
+    assert.equal(parseScope(scope), null);
+    assert.equal(unfinishedTasks(TASKS_OPEN, scope), null);
+  }
 });
 
-test('unknown scope does not trigger blocked gate behavior in normal runs', async (t) => {
-  // An unknown scope cannot be verified, so DONE is accepted and the run
-  // stops without checking the task list. This is the expected "fail closed"
-  // behavior: the plugin stops rather than blindly trusting an unverifiable
-  // scope claim.
-  const h = await harness(t, { tasks: TASKS_OPEN });
-  await h.start('tidy the docs');
-  await h.finish(`Finished.\n${DONE}`);
-  await h.finish('more');
-  assert.equal(h.prompts.length, 1, 'unknown scope accepts DONE unverified');
+test('a failed scope change preserves an existing valid run', async (t) => {
+  const h = await harness(t);
+  await h.start();
+  await assert.rejects(h.start('tidy the docs'), /numeric project/);
+  await h.finish('Continuing the valid scoped task.');
+  assert.equal(h.prompts.length, 2);
+  assert.equal(h.store.state.main.scope, 'Projects 1–2');
 });
 
 test('numeric IDs are parsed correctly across all projects', async (t) => {
@@ -562,4 +560,89 @@ test('a broken state store does not prevent starting a run', async (t) => {
   await h.start('Projects 1–2');
   await h.finish();
   assert.equal(h.prompts.length, 2);
+});
+
+test('zero disables count/time budgets, with positive opt-in budgets still available', () => {
+  assert.equal(DEFAULTS.maxContinuations, 0);
+  assert.equal(DEFAULTS.maxDurationMs, 0);
+  const l = resolveLimits({}, { AUTOCONTINUE_MAX_CONTINUATIONS: '0', AUTOCONTINUE_MAX_HOURS: '0' });
+  assert.equal(l.maxContinuations, 0);
+  assert.equal(l.maxDurationMs, 0);
+  assert.equal(resolveLimits({ maxContinuations: 2 }, {}).maxContinuations, 2);
+  for (const key of ['maxContinuations', 'maxDurationMs']) {
+    assert.throws(() => resolveLimits({ [key]: -1 }, {}), /integer >= 0/);
+    assert.throws(() => resolveLimits({ [key]: 0.5 }, {}), /integer >= 0/);
+  }
+});
+
+test('unlimited budgets continue beyond the old count and duration limits after reload', async (t) => {
+  let clock = 1;
+  const h = await harness(t, { now: () => clock });
+  await h.start();
+  h.store.state.main.count = 1000;
+  clock += 366 * 24 * 3600 * 1000;
+  await h.reload();
+  await h.finish('A productive task checkpoint. Next: P1-T02');
+  assert.equal(h.prompts.length, 2);
+  assert.match(h.prompts[1].text, /^Automatic follow-up 1001\/unlimited\./);
+  await h.finish(`Scope verified.\n${DONE}`);
+  assert.equal(h.prompts.length, 2);
+  assert.deepEqual(h.store.state, {});
+});
+
+test('Project 21 task grammar is fully visible, including the final human-dependent gate', async (t) => {
+  const file = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../docs/TASKS.md');
+  const markdown = await readFile(file, 'utf8');
+  const fixture = markdown.replace(/^- \[[xX]\]/gm, '- [ ]');
+  const ids = unfinishedTasks(fixture, 'Project 21');
+  assert.ok(ids.includes('P21-T00'));
+  assert.ok(ids.includes('P21-T19'));
+  assert.ok(ids.includes('P21-T35'));
+  assert.ok(!ids.includes('P21-T34'), 'personal observation is excluded, its dependent gate remains open');
+  assert.ok(ids.length >= 35);
+  const h = await harness(t, { tasks: fixture });
+  await h.start('Project 21');
+  await h.finish(`Premature claim.\n${DONE}`);
+  assert.equal(h.prompts.length, 2);
+  assert.match(h.prompts[1].text, /P21-T35/);
+});
+
+test('unlimited prompt carries task-specific verification and current visual direction', () => {
+  const text = instructions('Project 21');
+  assert.match(text, /06-godot-poly-haven/);
+  assert.match(text, /ART-DIRECTION/);
+  assert.match(text, /actual rendered image inspection/);
+  assert.match(text, /several turns/);
+  assert.match(text, /stage only this task/);
+  assert.match(text, /independent eligible task/);
+});
+
+
+test('deleting scoped tasks during a run cannot verify DONE', async (t) => {
+  let markdown = TASKS_DONE;
+  const h = await harness(t, { tasks: () => markdown });
+  await h.start();
+  markdown = '';
+  await h.finish(`No tasks remain.\n${DONE}`);
+  assert.equal(h.prompts.length, 1);
+  assert.deepEqual(h.store.state, {});
+});
+
+test('a task list becoming unreadable during a run stops continuation', async (t) => {
+  let unreadable = false;
+  const h = await harness(t, { tasks: () => { if (unreadable) throw new Error('task list missing'); return TASKS_DONE; } });
+  await h.start();
+  unreadable = true;
+  await h.finish(`Claim.\n${DONE}`);
+  assert.equal(h.prompts.length, 1);
+  assert.deepEqual(h.store.state, {});
+});
+
+test('invalid scopes saved by an older plugin are not resumed', async (t) => {
+  const store = memoryStore({ main: { scope: 'tidy the docs', started: 1, count: 0, expected: 'old prompt' } });
+  const h = await harness(t, { store });
+  await sleep(10);
+  assert.deepEqual(store.state, {});
+  await h.finish('old reply');
+  assert.equal(h.prompts.length, 0);
 });

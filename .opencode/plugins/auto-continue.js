@@ -1,7 +1,7 @@
 // OpenCode V2 plugin (Promise API). No dependencies; plain JavaScript.
 //
 // Adds two commands to the session:
-//   /autocontinue <scope>   start a bounded autonomous run in this session
+//   /autocontinue <scope>   start a task-scoped autonomous run in this session
 //   /autostop               disable further automatic follow-ups
 //
 // After every completed assistant turn in an enabled session, the plugin waits
@@ -18,8 +18,8 @@ import { execFile } from "node:child_process";
 import path from "node:path";
 
 export const DEFAULTS = {
-  maxContinuations: 400,            // automatic follow-ups per run
-  maxDurationMs: 96 * 60 * 60 * 1000, // no follow-ups after this much wall time
+  maxContinuations: 0,              // 0 = no automatic follow-up count limit
+  maxDurationMs: 0,                 // 0 = no wall-clock limit
   delayMs: 2000,                    // settle time after a turn ends
   pollMs: 10000,                    // idle detection fallback poll interval
   repeatLimit: 3,                   // identical final replies before stopping
@@ -42,24 +42,39 @@ export const BLOCKED = "AUTOCONTINUE_BLOCKED";
 
 export function instructions(scope) {
   return `Autonomous run scope: ${scope}
-This is an unattended run. Nobody will answer questions, so decide and continue.
-1. Read docs/STATUS.md ("Next task") and docs/TASKS.md. Take the first unchecked
-   task inside the scope whose prerequisites are checked.
-2. Do only that task, with small changes that fit the existing code.
-3. Run: meson compile -C build && meson test -C build --print-errorlogs
-   Fix failures before anything else.
-4. Only when the task's acceptance check has actually passed: tick it in
-   docs/TASKS.md, update docs/STATUS.md, then commit:
-   git add -A && git commit -q -m "<task id>: <summary>"   (never push)
-5. If the task cannot be finished this turn, leave the tree compiling and write
-   the exact continuation point under "Next task" in docs/STATUS.md.
-Never claim a check passed without running it. Never tick a task whose check
-failed. Do not delete or weaken tests. Stay inside the scope.
-End your reply with a line containing exactly ${DONE} when every task in the
-scope is ticked and verified, ${BLOCKED} when no task in the scope can proceed
-(record the blockers in docs/STATUS.md first), otherwise "Next: <task id>".
-Put these markers outside code blocks. ${DONE} is checked against docs/TASKS.md:
-if any non-human task in the scope is still unticked, the run continues.`;
+This is an unattended run. Decide routine implementation details and continue.
+No arbitrary deadline applies; task acceptance, quality and verified evidence
+determine completion. Follow the configured stop conditions and user controls.
+1. Read AGENTS.md, docs/STATUS.md, docs/TASKS.md, docs/ARCHITECTURE.md and the
+   current decision (06-godot-poly-haven.md). For Project 21 also read
+   docs/GODOT-INTEGRATION.md, docs/ART-DIRECTION.md and docs/ASSET-PIPELINE.md.
+   Select the first eligible unchecked non-human task in scope. Prerequisites
+   require both checked boxes and their stated evidence. Record blocked tasks
+   and continue another independent eligible task. Stay inside this scope.
+2. Implement one coherent task at a time. It can span several turns; checkpoint
+   the exact next step and continue. Split by meaningful acceptance boundaries
+   into unique unsuffixed numeric IDs if needed. Do not replace implementation
+   with more planning, TODOs, synthetic substitutes or weakened acceptance.
+3. Run task-specific checks and relevant regressions: Meson for C++, engine
+   import/script/runtime checks for Godot, extension/real-client checks for the
+   bridge, manifest/import checks for assets, actual rendered image inspection
+   for art, Node tests for this plugin, links/references/diff for documentation.
+   Fix regressions before advancing. A headless import is not visual evidence.
+4. Only after the full acceptance passes, tick the task, record revision,
+   environment, commands/results and evidence in STATUS/ACCEPTANCE/handoff,
+   then stage only this task's files and commit locally (never push).
+   Never use git add -A to sweep unrelated user work into the commit.
+5. If unfinished, leave a buildable checkpoint and exact continuation point in
+   STATUS. Do not tick missing features or human observation. Label agent-observed
+   GUI evidence honestly. Keep shm-only/GPU and target-device limits explicit.
+Never claim a check passed without running it. Preserve test strength, user work
+and host services. Re-read the on-disk state after compaction/restart. Resolve
+recoverable failures; do not loop indefinitely on a proven unavailable tool.
+End with exactly ${DONE} only when every non-human task in scope has passed,
+or ${BLOCKED} when no eligible task in scope can proceed (record blockers first),
+otherwise "Next: <task id>". Markers go on the final line outside code blocks.
+The plugin verifies checklist completion only, not evidence or prerequisites;
+you must verify both before ticking or claiming completion.`;
 }
 
 // Task ids look like P1-T03; "(human)" tasks are never required for DONE.
@@ -67,8 +82,8 @@ const TASK_RE = /^- \[( |x|X)\] \*\*(P(\d+)-T(\d+))\b([^\n]*)/gm;
 
 // Which projects and tasks a free-text scope covers. Understands "Project 3",
 // "Projects 1–4" / "1-4" / "1 to 4", and explicit ids "P1-T03" or "P1-T03 to
-// P1-T11". Returns null when nothing recognisable is present (then DONE cannot
-// be verified and is accepted as before).
+// P1-T11". Returns null when nothing recognisable is present. Such scopes are
+// rejected instead of accepting an unverified DONE claim.
 export function parseScope(scope) {
   const text = String(scope ?? "");
   const projects = new Set();
@@ -88,20 +103,27 @@ export function parseScope(scope) {
 
 const cmp = (a, b) => a[0] - b[0] || a[1] - b[1];
 
-// Tasks inside the scope that are not ticked and not marked (human).
-export function unfinishedTasks(tasksMarkdown, scope) {
-  const parsed = typeof scope === "string" ? parseScope(scope) : scope;
-  if (!parsed) return null;
-  const open = [];
+// Match the same task grammar for validation and completion. Historical
+// suffixed IDs remain aliases; new executable tasks use unsuffixed numeric IDs.
+function tasksInScope(tasksMarkdown, parsed) {
+  const matches = [];
   for (const m of tasksMarkdown.matchAll(TASK_RE)) {
     const [, tick, id, project, task, rest] = m;
     const key = [Number(project), Number(task)];
     const inScope = parsed.projects.has(key[0]) ||
       parsed.taskRanges.some((r) => cmp(r.from, key) <= 0 && cmp(key, r.to) <= 0);
-    if (!inScope || tick.toLowerCase() === "x" || /\(human\)/i.test(rest)) continue;
-    open.push(id);
+    if (inScope) matches.push({ tick, id, rest });
   }
-  return open;
+  return matches;
+}
+
+// Tasks inside the scope that are not ticked and not marked (human).
+export function unfinishedTasks(tasksMarkdown, scope) {
+  const parsed = typeof scope === "string" ? parseScope(scope) : scope;
+  if (!parsed) return null;
+  return tasksInScope(tasksMarkdown, parsed)
+    .filter(({ tick, rest }) => tick.toLowerCase() !== "x" && !/\(human\)/i.test(rest))
+    .map(({ id }) => id);
 }
 
 export function resolveLimits(options = {}, env = process.env) {
@@ -115,7 +137,7 @@ export function resolveLimits(options = {}, env = process.env) {
   }
   for (const key of Object.keys(DEFAULTS)) {
     if (options[key] !== undefined) limits[key] = Number(options[key]);
-    const min = key === "stallLimit" || key === "pollMs" ? 0 : 1;
+    const min = ["maxContinuations", "maxDurationMs", "stallLimit", "pollMs"].includes(key) ? 0 : 1;
     if (!Number.isSafeInteger(limits[key]) || limits[key] < min) {
       throw new Error(`auto-continue: ${key} must be an integer >= ${min}`);
     }
@@ -248,22 +270,29 @@ export function createPlugin(deps = {}) {
         return [...list].sort((a, b) => (a.time?.created ?? 0) - (b.time?.created ?? 0));
       }
 
-      // Unticked non-human tasks in scope; [] when the claim holds or the scope
-      // names no task range. A missing or unreadable task list stops the run.
-      async function verifyDone(scope) {
+      async function validatedTasks(scope) {
         const parsed = parseScope(scope);
-        if (!parsed) {
-          void log(`scope "${scope}" names no project or task range; ${DONE} accepted unverified`);
-          return [];
+        if (!parsed) throw new Error("Scope must name a numeric project or task range in docs/TASKS.md");
+        const markdown = await readTasks(directory);
+        if (!tasksInScope(markdown, parsed).length) {
+          throw new Error(`Scope "${scope}" matches no tasks in docs/TASKS.md`);
         }
-        return unfinishedTasks(await readTasks(directory), parsed);
+        return unfinishedTasks(markdown, parsed);
       }
+
+      // Re-read on DONE: missing/deleted tasks cannot turn a claim into success.
+      async function verifyDone(scope) {
+        return validatedTasks(scope);
+      }
+
+      const countLabel = (count) => `${count}/${limits.maxContinuations || "unlimited"}`;
 
       async function check(id, run) {
         if (runs.get(id) !== run || run.checking) return;
         run.checking = true;
         try {
-          if (now() - run.started >= limits.maxDurationMs || run.count >= limits.maxContinuations) {
+          if ((limits.maxDurationMs > 0 && now() - run.started >= limits.maxDurationMs) ||
+              (limits.maxContinuations > 0 && run.count >= limits.maxContinuations)) {
             stop(id, "run limit reached");
             return;
           }
@@ -338,10 +367,10 @@ export function createPlugin(deps = {}) {
 
           run.lastMessage = latest.id;
           run.count++;
-          run.expected = `Automatic follow-up ${run.count}/${limits.maxContinuations}.\n${falseDone}${instructions(run.scope)}`;
+          run.expected = `Automatic follow-up ${countLabel(run.count)}.\n${falseDone}${instructions(run.scope)}`;
           await persist();
           await ctx.session.prompt({ sessionID: id, text: run.expected, delivery: "queue" });
-          void log(`${id}: follow-up ${run.count}/${limits.maxContinuations} sent`);
+          void log(`${id}: follow-up ${countLabel(run.count)} sent`);
         } catch (error) {
           if (runs.get(id) === run) stop(id, `continuation failed: ${error?.message ?? error}`);
         } finally {
@@ -350,9 +379,10 @@ export function createPlugin(deps = {}) {
       }
 
       async function start(sessionID, scope, delivery) {
-        stop(sessionID, "restarting run");
         const session = await ctx.session.get({ sessionID });
         if (!session || session.parentID) throw new Error("Auto-continue requires a top-level session");
+        await validatedTasks(scope);
+        stop(sessionID, "restarting run");
         const text = instructions(scope);
         runs.set(sessionID, {
           scope, started: now(), count: 0, repeats: 0, stalls: 0, falseDone: 0,
@@ -360,14 +390,14 @@ export function createPlugin(deps = {}) {
           fingerprint: limits.stallLimit > 0 ? await fingerprint(directory) : undefined,
         });
         await persist();
-        await log(`${sessionID}: enabled, at most ${limits.maxContinuations} automatic follow-ups`);
+        await log(`${sessionID}: enabled, follow-up limit ${limits.maxContinuations || "unlimited"}, wall-clock limit ${limits.maxDurationMs || "unlimited"}`);
         await ctx.session.prompt({ sessionID, text, delivery: delivery ?? "queue" });
       }
 
       await ctx.command.transform((editor) => {
         editor.add({
           name: "autocontinue",
-          description: "Start a bounded autonomous run: /autocontinue <scope>",
+          description: "Start a task-scoped autonomous run: /autocontinue <scope>",
           execute: async ({ sessionID, prompt, delivery }) => {
             const scope = (prompt?.text ?? "").trim();
             if (!scope) throw new Error("Usage: /autocontinue <scope>, for example: Projects 1–2 of docs/TASKS.md");
@@ -471,6 +501,12 @@ export function createPlugin(deps = {}) {
           }
           if (!session) {
             void log(`${id}: saved run dropped, session no longer exists`);
+            continue;
+          }
+          try {
+            await validatedTasks(data.scope);
+          } catch (error) {
+            void log(`${id}: saved run dropped, invalid scope/task list: ${error?.message ?? error}`);
             continue;
           }
           const run = { ...data, checking: false, timer: undefined };
