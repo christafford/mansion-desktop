@@ -48,6 +48,30 @@ albedo_color = Color(0.2, 0.2, 0.2, 1)
 metallic = 0.0
 roughness = 0.7
 
+[sub_resource type="BoxMesh" id="BoxMesh_monitor_frame"]
+size = Vector3(1.6, 0.9, 0.05)
+
+[sub_resource type="BoxMesh" id="BoxMesh_monitor_stand_base"]
+size = Vector3(0.5, 0.1, 0.4)
+
+[sub_resource type="BoxMesh" id="BoxMesh_monitor_stand_column"]
+size = Vector3(0.1, 1.2, 0.1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_monitor_frame"]
+albedo_color = Color(0.1, 0.1, 0.1, 1)
+metallic = 0.2
+roughness = 0.3
+
+[sub_resource type="StandardMaterial3D" id="Mat_monitor_stand"]
+albedo_color = Color(0.2, 0.2, 0.2, 1)
+metallic = 0.4
+roughness = 0.5
+
+[sub_resource type="StandardMaterial3D" id="Mat_monitor_screen_diag"]
+albedo_color = Color(0.1, 0.3, 0.5, 1)
+metallic = 0.1
+roughness = 0.2
+
 [node name="Main" type="Node3D"]
 
 [node name="Camera3D" type="Camera3D" parent="."]
@@ -104,9 +128,6 @@ material_override = [SubResource("Mat_rug")]
 position = Vector3(0, 0.025, 0)
 rotation = Vector3(0, 0, 0)
 
-[node name="MonitorSlot" type="Node3D" parent="Room"]
-position = Vector3(0, 1.5, -2.8)
-
 [node name="Bookshelf" type="Node3D" parent="Room"]
 instance = ExtResource("1_scn_bookshelf")
 position = Vector3(4, 0, 3)
@@ -137,7 +158,55 @@ instance = ExtResource("1_scn_bookset")
 position = Vector3(-0.5, 1.5, -2.5)
 rotation = Vector3(0, 0, 0)
 
+[node name="MonitorSlot" type="Node3D" parent="Room"]
+position = Vector3(0, 1.5, -2.8)
+
 [node name="MonitorScreen" type="MeshInstance3D" parent="Room/MonitorSlot"]
+mesh = SubResource("BoxMesh_monitor_frame")
+material_override = [SubResource("Mat_monitor_frame")]
+position = Vector3(0, 0, 0)
+
+[node name="MonitorScreen_Diagnostic" type="MeshInstance3D" parent="Room/MonitorSlot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.01)
+mesh = SubResource("BoxMesh_monitor_frame")
+material_override = [SubResource("Mat_monitor_screen_diag")]
+rotation = Vector3(0, 0, 0)
+scale = Vector3(0.95, 0.95, 1)
+
+[node name="DiagnosticCorner_TL" type="MeshInstance3D" parent="Room/MonitorSlot"]
 mesh = SubResource("BoxMesh_floor")
-material_override = [SubResource("Mat_floor")]
-scale = Vector3(1.6, 1, 0.05)
+material_override = [SubResource("Mat_monitor_frame")]
+position = Vector3(-0.75, 0.4, -0.02)
+rotation = Vector3(1.5708, 0, 0)
+scale = Vector3(0.1, 0.1, 0.01)
+
+[node name="DiagnosticCorner_TR" type="MeshInstance3D" parent="Room/MonitorSlot"]
+mesh = SubResource("BoxMesh_floor")
+material_override = [SubResource("Mat_monitor_frame")]
+position = Vector3(0.75, 0.4, -0.02)
+rotation = Vector3(1.5708, 0, 0)
+scale = Vector3(0.1, 0.1, 0.01)
+
+[node name="DiagnosticCorner_BL" type="MeshInstance3D" parent="Room/MonitorSlot"]
+mesh = SubResource("BoxMesh_floor")
+material_override = [SubResource("Mat_monitor_frame")]
+position = Vector3(-0.75, -0.4, -0.02)
+rotation = Vector3(1.5708, 0, 0)
+scale = Vector3(0.1, 0.1, 0.01)
+
+[node name="DiagnosticCorner_BR" type="MeshInstance3D" parent="Room/MonitorSlot"]
+mesh = SubResource("BoxMesh_floor")
+material_override = [SubResource("Mat_monitor_frame")]
+position = Vector3(0.75, -0.4, -0.02)
+rotation = Vector3(1.5708, 0, 0)
+scale = Vector3(0.1, 0.1, 0.01)
+
+[node name="MonitorStandColumn" type="MeshInstance3D" parent="Room/MonitorSlot"]
+mesh = SubResource("BoxMesh_monitor_stand_column")
+material_override = [SubResource("Mat_monitor_stand")]
+position = Vector3(0, -0.45, 0)
+
+[node name="MonitorStandBase" type="MeshInstance3D" parent="Room/MonitorSlot"]
+mesh = SubResource("BoxMesh_monitor_stand_base")
+material_override = [SubResource("Mat_monitor_stand")]
+position = Vector3(0, -1.0, 0)

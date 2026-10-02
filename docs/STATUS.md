@@ -8,19 +8,20 @@ Decision [06](decisions/06-godot-poly-haven.md) remains the product direction.
 
 ## Next task
 
-**P21-T08 — Create stable entities and the monitor screen slot.** (P21-T07 completed, see below)
+None — P21-T08 completed. Next: P21-T09 (monitor screen slot integration with bridge texture system)
 
-**P21-T07 completed (2026-10-02):**
-- Focus loss handling: `Window.NOTIFICATION_WM_FOCUS_LOST` releases mouse capture via `Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)`
-- Furniture collision detection: `check_furniture_collision()` with 6 box-shaped furniture items (desk, chair, bookshelf, bookset, lamp, plant)
-- Safe spawn return: `return_to_spawn()` restores camera position and rotation
-- Reduced motion toggle: Shift+M toggles `_reduced_motion`, movement uses `get_move_speed()` (1.0 vs 3.0)
-- Teleport (T key): Moves camera to monitor slot position (0, 1.6, 0)
+**P21-T08 completed (2026-10-02):**
+- Entity ID system: `_next_entity_id` counter, `_entity_registry` Dictionary, `assign_entity_id()`, `get_entity_path()`, `get_entity_id_for_path()`, `remove_entity_id()`
+- Monitor screen slot: `MonitorSlot` root node, `MonitorScreen` with frame material, diagnostic screen with `Mat_monitor_screen_diag` (blue tint)
+- Diagnostic corner markers: TL, TR, BL, BR positioned at screen edges with proper rotation and scale
+- Ray picking: `ray_pick()` with ray-plane intersection for screen, ray-box for furniture, `_ray_box_intersection()`, `get_last_pick_result()`
+- Public getters: `get_monitor_aspect_ratio()`, `get_monitor_screen_position()`, `get_monitor_screen_rotation()`, `get_desk_node()`
+- GDScript type inference fixed: explicit `: float` for `tmin`, `tmax`, `dx`, `dy`, `dz`; `: Vector3` for `hit_pos`, `normal`
+- `NOTIFICATION_WM_FOCUS_LOST` const defined (value 234)
+- Import validation: `--headless --path world --import --quit-after 2` completes without script errors
 - All 30 C++ tests pass
 
-**P21-T08 — Create stable entities and the monitor screen slot.** (P21-T07 completed first)
-
-**P21-T06 completed (2026-10-02):**
+**P21-T07 completed (2026-10-02):**
 - Monitor housing sub_resources added to `scenes/main.tscn` before first `[node` entry
   - BoxMesh_monitor_frame, BoxMesh_monitor_stand_base, BoxMesh_monitor_stand_column
   - Mat_monitor_frame (dark gray, metallic 0.2, roughness 0.3)
