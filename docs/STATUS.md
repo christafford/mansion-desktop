@@ -14,11 +14,11 @@ running the check that proves it.
 (asset manifest with 30 verified Poly Haven assets). P21-T03 depends on P21-T02
 and needs a running Godot editor to download GLB/OBJ models, convert textures,
 and place them in the scene. Godot is NOT installed on dev system — blocked until
-display server available or local install. P21-T10 (compositor core extraction)
-is independently eligible as an alternative parallel track. Decision 06
-authorizes the Godot world frontend and Poly Haven assets; world art and
-compositor extraction are independently eligible. P21-T19 is the furnished
-live-terminal gate; P21-T34 is the final personal review.
+display server available or local install. P21-T10 is complete (compositor core
+extracted from presentation). P21-T11 (GDExtension adapter) depends on P21-T10
+being complete. Decision 06 authorizes the Godot world frontend and Poly Haven
+assets; world art and compositor extraction are independently eligible. P21-T19
+is the furnished live-terminal gate; P21-T34 is the final personal review.
 
 **P21-T02 completed 2026-10-01.** Asset manifest at `world/assets/manifest.md`.
 Live Poly Haven API queried (2382 assets: 997 HDRIs, 864 textures, 521 models).
@@ -247,6 +247,16 @@ Full reconciliation completed. Handoff at
   been removed rather than fixed.
 
 ## Verified by automated test
+
+- **P21-T10 Compositor core extraction.** GL/EGL dependency removed from the
+  protocol core: `compositor-private.h` no longer includes `<GLES2/gl2.h>` and
+  `MansionSurface` no longer carries a `gl_texture` field. A new header
+  `renderer-surface.h` defines `MansionRendererSurface` for GPU resources,
+  entirely in the presentation layer. Accessor functions
+  (`get_renderer_surface`, `ensure_renderer_surface`, `set_renderer_surface_texture`,
+  `destroy_renderer_surface`) bridge the layers via a static `unordered_map`
+  keyed by `wl_resource*`. All 28 tests pass in both `build` and `build-asan`
+  (28/28, zero sanitizer errors). (2026-10-01, this session)
 
 - **P4-T08 Resource and list lifetimes.** `MansionXdgShell` gains
   `toplevel_list` and `xdg_surface_list` tracking lists;
