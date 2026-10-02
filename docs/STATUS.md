@@ -10,6 +10,18 @@ running the check that proves it.
 
 ## Next task
 
+**P4-T30 host orientation fixed (2026-10-02), against `99fcedb`.** GL readback
+was copied bottom-first into top-first Wayland shm. The export now reverses
+rows while preserving ARGB channels. **Verified by automated test:** build,
+30/30 suite, then the expanded `host-input` rendered-export check pass; the
+rebuilt host launch renders 36 frames and exits 0. Agent inspected an actual
+room render after host pixel conversion: floor below wall. The regression
+checks asymmetric pixel rows/channels and rendered floor/wall positions;
+the existing screenshot path already flipped correctly and missed this bug.
+**Not verified:** human confirmation of the corrected host window. Prior user
+feedback confirms navigation works but reported the inversion; no broader
+usability gate is credited. See [handoff](handoffs/04-host-window.md).
+
 **P4-T29 host-navigation repair complete (2026-10-02).** Follow-up to the
 user's report that the rendered view still ignored input, against `a5ba64a`.
 Live host movement was never applied to the camera, WASD keycodes were wrong,

@@ -668,6 +668,14 @@ authorize a rewrite. If blocked, continue only independent eligible work.
   Physical input usability and application routing remain unverified; this
   bounded world-navigation repair does not complete P4-T12 or human gates.
 
+- [x] **P4-T30 Correct host frame orientation.** Prerequisites: P4-T29.
+  User-reported upside-down view, repaired 2026-10-02 against `99fcedb`.
+  Reverse GL readback rows during Wayland shm export. **Acceptance:** build
+  and 30/30 tests pass; expanded `host-input` additionally verifies asymmetric
+  rows/channels and a real rendered room's exported floor/wall orientation.
+  Agent-inspected export capture is upright; bounded host launch exits 0.
+  Human confirmation and wider host usability remain unverified.
+
 - [ ] **P4-T13 Accelerated buffer import investigation.** Prerequisites: P4-T09.
   Recheck EGL client/display extension strings and extension entry points with
   eglGetProcAddress. Compare EGL Wayland binding and linux-dmabuf import,

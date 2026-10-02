@@ -9,6 +9,19 @@ static void key(uint32_t code, bool down) {
 }
 
 int main() {
+    // Distinct corners in GL's bottom-first order. Check the exact conversion
+    // used to populate the host's shm mapping, including alpha and channels.
+    const uint8_t rgba[] = {
+        1, 2, 3, 4, 5, 6, 7, 8,
+        9, 10, 11, 12, 13, 14, 15, 16,
+        17, 18, 19, 20, 21, 22, 23, 24,
+    };
+    uint32_t pixels[6]{};
+    copy_host_pixels(rgba, pixels, 2, 3);
+    assert(pixels[0] == 0x14111213 && pixels[1] == 0x18151617);
+    assert(pixels[2] == 0x0c090a0b && pixels[3] == 0x100d0e0f);
+    assert(pixels[4] == 0x04010203 && pixels[5] == 0x08050607);
+
     MansionDisplay display{};
     host_window_state host{};
     g_hws = &host;
@@ -61,4 +74,45 @@ int main() {
     input_wayland_apply_movement(&display, 100);
     assert(display.camera.z == camera.z && display.camera.yaw == camera.yaw);
     g_hws = nullptr;
+
+    // Render a real room and check the host-export pixels, not the screenshot
+    // path (which has its own row flip and did not catch this bug).
+    auto* server = wl_display_create();
+    auto* compositor = create_compositor(server);
+    auto* rendered = create_display_headless(compositor, server);
+    assert(rendered);
+    rendered->room_mode = true;
+    rendered->flat_mode = false;
+    rendered->camera.x = 0;
+    rendered->camera.y = 2.5f;
+    rendered->camera.z = 3;
+    rendered->camera.pitch = -10.0f * 3.14159265f / 180.0f;
+    render(rendered);
+    int w = rendered->window_width, h = rendered->window_height;
+    std::vector<uint8_t> readback(w * h * 4);
+    std::vector<uint32_t> exported(w * h);
+    glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, readback.data());
+    assert(glGetError() == GL_NO_ERROR);
+    copy_host_pixels(readback.data(), exported.data(), w, h);
+    auto matches = [](uint32_t pixel, int r, int g, int b) {
+        return std::abs(int((pixel >> 16) & 255) - r) <= 20 &&
+               std::abs(int((pixel >> 8) & 255) - g) <= 20 &&
+               std::abs(int(pixel & 255) - b) <= 20;
+    };
+    assert(matches(exported[(h - 1) * w + w / 2], 97, 71, 44));
+    assert(matches(exported[w + w / 2], 127, 127, 140));
+    if (const char* path = std::getenv("MANSION_HOST_CAPTURE")) {
+        FILE* capture = fopen(path, "wb");
+        assert(capture);
+        fprintf(capture, "P6\n%d %d\n255\n", w, h);
+        for (uint32_t pixel : exported) {
+            fputc((pixel >> 16) & 255, capture);
+            fputc((pixel >> 8) & 255, capture);
+            fputc(pixel & 255, capture);
+        }
+        assert(fclose(capture) == 0);
+    }
+    destroy_display(rendered);
+    destroy_compositor(compositor);
+    wl_display_destroy(server);
 }

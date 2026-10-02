@@ -1714,6 +1714,21 @@ void render_surface_from_data(struct MansionDisplay* display, struct MansionSurf
 
 /* ─── wl_shm buffer creation helper ────────────────────────────────────────── */
 
+static void copy_host_pixels(const uint8_t* rgba, uint32_t* pixels, int w, int h) {
+    /* GL readback starts at the bottom; Wayland shm starts at the top.
+     * Reverse rows while converting RGBA to ARGB8888 (0xAARRGGBB).
+     * On little-endian, 0xAARRGGBB is stored in memory as [B,G,R,A]. */
+    for (int y = 0; y < h; ++y) {
+        for (int x = 0; x < w; ++x) {
+            int i = ((h - 1 - y) * w + x) * 4;
+            pixels[y * w + x] = ((uint32_t)rgba[i + 3] << 24)
+                             | ((uint32_t)rgba[i + 0] << 16)
+                             | ((uint32_t)rgba[i + 1] << 8)
+                             | (uint32_t)rgba[i + 2];
+        }
+    }
+}
+
 static struct wl_buffer* create_shm_buffer(struct MansionDisplay* display,
                                             struct wl_shm* shm)
 {
@@ -1760,15 +1775,7 @@ static struct wl_buffer* create_shm_buffer(struct MansionDisplay* display,
     glPixelStorei(GL_PACK_ALIGNMENT, 4);
     glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, rgba.data());
 
-    /* Convert GL_RGBA [R,G,B,A] to ARGB8888 (0xAARRGGBB) for the display.
-     * On little-endian, 0xAARRGGBB is stored in memory as [B,G,R,A]. */
-    uint32_t* pixels = (uint32_t*)ptr;
-    for (int i = 0; i < w * h; i++) {
-        pixels[i] = ((uint32_t)rgba[i * 4 + 3] << 24)  /* A in bits 24-31 */
-                  | ((uint32_t)rgba[i * 4 + 0] << 16)  /* R in bits 16-23 */
-                  | ((uint32_t)rgba[i * 4 + 1] << 8)   /* G in bits 8-15 */
-                  | (uint32_t)rgba[i * 4 + 2];         /* B in bits 0-7 */
-    }
+    copy_host_pixels(rgba.data(), static_cast<uint32_t*>(ptr), w, h);
 
     munmap(ptr, size);
 

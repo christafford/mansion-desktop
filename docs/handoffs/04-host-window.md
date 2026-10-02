@@ -1,5 +1,33 @@
 # Handoff 04-host-window — Wayland Client Window + Seat Input (2026-09-28)
 
+## P4-T30 host frame orientation (2026-10-02)
+
+User feedback after `99fcedb`: navigation works, but the view is upside down.
+`create_shm_buffer` copied GL bottom-first rows directly into Wayland's top-first
+buffer. `copy_host_pixels` now reverses rows during the existing ARGB conversion.
+The camera and screenshot path needed no orientation change.
+
+**Verified by automated test:** build and 30/30 full suite pass; the subsequently
+expanded `host-input` passes separately. It tests asymmetric rows/channels and
+renders the room through EGL, then checks the exact host-export conversion:
+brown floor below grey wall. Reproduce its inspectable rendered capture with
+`MANSION_HOST_CAPTURE=/tmp/mansion-host-orientation.ppm build/test_host_input`.
+Agent inspected that exported render (converted losslessly to PNG locally):
+floor below wall. This is an agent-observed export capture, not a host screenshot
+or human acceptance. Bounded real-host launch
+`timeout -k 2s 8s build/mansion-desktop --room-camera --exit-after-ms 1000`
+exits 0 after 36 frames.
+
+An initial nested-Mansion-as-host capture experiment produced background pixels
+both before and after the fix, so it could not establish export orientation.
+It was replaced during development by direct tests of the exported pixels and
+an actual EGL room render. No pre-existing regression was removed. Compatibility
+of Mansion hosting another Mansion remains unverified and outside this repair.
+
+**Not verified:** human confirmation of the upright host window or broader
+application usability. Existing screenshot tests use an independent row flip;
+passing them previously did not establish correct host presentation.
+
 ## P4-T29 host-navigation repair (2026-10-02)
 
 Follow-up against `a5ba64a`: the user reported a rendered but unresponsive view.
