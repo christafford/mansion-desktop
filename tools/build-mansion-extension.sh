@@ -4,17 +4,14 @@
 # This script compiles the GDExtension shared library.
 # Requires:
 #   - Godot C++ bindings built at tools/godot-cpp/build/
-#   - libgodot.so from a full Godot engine build (for full GDExtension)
 #   - Mansion core compiled (meson build)
 #
 # Usage:
 #   tools/build-mansion-extension.sh [build_dir]
 #
-# Without libgodot.so, this script verifies compilation of the
-# bridge and extension code (syntax/type checking).
-#
-# Full GDExtension linking requires libgodot.so and the mansion
-# core as a static library.
+# The GDExtension is a standalone .so loaded by Godot at runtime.
+# No libgodot.so is needed at build time — symbols resolve via
+# godot_extension_get_library_symbol() at load time.
 
 set -euo pipefail
 
@@ -41,33 +38,6 @@ if [ ! -f "${MANSION_BUILD}/mansion-desktop" ]; then
     echo "  meson setup ${MANSION_BUILD}"
     echo "  meson compile -C ${MANSION_BUILD}"
     exit 1
-fi
-
-# ─── Locate libgodot.so ───
-
-LIBGODOT=""
-if [ -n "${MANSION_GODOT_SO:-}" ]; then
-    LIBGODOT="${MANSION_GODOT_SO}"
-else
-    for candidate in \
-        "${REPO_ROOT}/tools/godot-4.7.2-stable/bin/libgodot.linuxbsd.template_debug.x86_64.so" \
-        "/usr/lib/libgodot.so" \
-        "/usr/lib64/libgodot.so" \
-        "/usr/local/lib/libgodot.so"; do
-        if [ -f "$candidate" ]; then
-            LIBGODOT="$candidate"
-            break
-        fi
-    done
-fi
-
-HAS_GODOT_SO=false
-if [ -n "${LIBGODOT}" ] && [ -f "${LIBGODOT}" ]; then
-    HAS_GODOT_SO=true
-    echo "Found libgodot.so: ${LIBGODOT}"
-else
-    echo "WARNING: libgodot.so not found. Building bridge-only (no GDExtension linking)."
-    echo "Set MANSION_GODOT_SO=/path/to/libgodot.so to link the full extension."
 fi
 
 # ─── Compile ───
@@ -104,27 +74,28 @@ g++ ${CXXFLAGS} -c \
     "${REPO_ROOT}/src/godot/mansion_extension.cpp" \
     && echo "  OK: mansion_extension.o"
 
-echo "=== Compilation complete ==="
-echo ""
-if [ "${HAS_GODOT_SO}" = true ]; then
-    echo "Full GDExtension linking requires:"
-    echo "  1. libgodot.so (from full Godot engine build)"
-    echo "  2. Mansion core as a static library (modify meson.build)"
-    echo ""
-    echo "To link manually:"
-    echo "  g++ -shared -o ${BUILD_DIR}/libmansion_godot.so \\"
-    echo "    ${BUILD_DIR}/mansion_extension.o \\"
-    echo "    ${BUILD_DIR}/mansion_bridge.o \\"
-    echo "    -L${GODOT_CPP_BUILD}/bin \\"
-    echo "    -lgodot-cpp.linux.template_debug.x86_64 \\"
-    echo "    -L${MANSION_BUILD} -lmansion-core \\"
-    echo "    -lwayland-server -lwayland-client \\"
-    echo "    -lEGL -lGLESv2 -lxkbcommon -ldl \\"
-    echo "    -Wl,-rpath,'\\\$ORIGIN'"
-else
-    echo "Bridge objects compiled successfully."
-    echo "Full GDExtension will link when libgodot.so is available."
-fi
+echo "=== Linking GDExtension shared library ==="
+g++ -shared -o "${BUILD_DIR}/libmansion_godot.so" \
+    "${BUILD_DIR}/mansion_bridge.o" \
+    "${BUILD_DIR}/mansion_extension.o" \
+    -L"${GODOT_CPP_BUILD}/bin" \
+    -lgodot-cpp.linux.template_debug.x86_64 \
+    -lwayland-server \
+    -lwayland-client \
+    -lEGL \
+    -lGLESv2 \
+    -lxkbcommon \
+    -ldl \
+    -Wl,-rpath,'$ORIGIN' \
+    && echo "  OK: libmansion_godot.so"
 
 echo ""
 echo "=== Build complete ==="
+echo "Extension: ${BUILD_DIR}/libmansion_godot.so"
+echo ""
+echo "To use in Godot:"
+echo "  1. Copy libmansion_godot.so to your project's bin/ directory"
+echo "  2. Ensure extension.toml is alongside it"
+echo "  3. Enable the extension in Project Settings > General > Extensions"
+echo ""
+echo "Godot engine: ${REPO_ROOT}/tools/godot-4.7.2-stable/bin/godot.linuxbsd.template_debug.dev.x86_64"

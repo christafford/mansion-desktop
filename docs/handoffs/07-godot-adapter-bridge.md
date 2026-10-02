@@ -8,13 +8,15 @@ nonblocking event dispatch, surface enumeration, frame callback management,
 and clean shutdown — all on the owning thread with no second blocking loop.
 
 **Status: partially verified.** Code compiles cleanly against mansion core and
-GDExtension interface. Full linking and Godot load/unload test blocked on
-`libgodot.so` (Godot engine build in progress).
+GDExtension interface. Extension .so built and ready for Godot editor. Full
+Godot load/unload test blocked on Godot editor build (target=editor) in progress.
 
 ## Architecture
 
 ```
 GDExtension (.so) ← mansion_extension.cpp (GDExtension entry point)
+                      ↓
+MansionAdapterWrapper (C++ wrapper for GDScript access)
                       ↓
 mansion_bridge.h/cpp (C-facing bridge API)
                       ↓
@@ -49,10 +51,10 @@ Wayland server socket
   - Exports: `godot_gdnative_init`, `godot_gdnative_exit`,
     `godot_extension_get_library_symbol`
   - `MansionAdapterWrapper` class exposes adapter to GDScript
-  - Will register full Godot class when libgodot.so is available
+  - Will register full Godot class when godot-cpp is linked
 
 - **`src/godot/CMakeLists.txt`** — CMake build for GDExtension
-
+- **`src/godot/extension.toml`** — Godot extension manifest
 - **`tools/build-mansion-extension.sh`** — Shell build script for verification
 
 ### No modifications to existing files
@@ -64,22 +66,43 @@ The bridge only reads the existing mansion core public API. No changes to
 ### Prerequisites
 - Godot C++ bindings: `tools/godot-cpp/build/bin/libgodot-cpp.linux.template_debug.x86_64.a`
 - Mansion core: `build/mansion-desktop` (meson build)
-- libgodot.so: `tools/godot-4.7.2-stable/bin/libgodot.linuxbsd.template_debug.x86_64.so`
-  (blocked — Godot engine build in progress)
 
-### Compile-only verification (works now)
+### Build command
 ```bash
 tools/build-mansion-extension.sh
 ```
-Compiles both `mansion_bridge.cpp` and `mansion_extension.cpp`. Reports success
-if both `.o` files compile cleanly.
+Produces: `build-godot-ext/libmansion_godot.so`
 
-### Full GDExtension build (requires libgodot.so)
+The GDExtension is a standalone shared library loaded by Godot at runtime.
+No `libgodot.so` is needed at build time — symbols resolve via
+`godot_extension_get_library_symbol()` at load time.
+
+### Deploy to Godot project
 ```bash
-tools/build-mansion-extension.sh
-# or with explicit libgodot.so path:
-MANSION_GODOT_SO=/path/to/libgodot.so tools/build-mansion-extension.sh
+cp build-godot-ext/libmansion_godot.so world/bin/
+cp src/godot/extension.toml world/bin/
 ```
+Then enable the extension in Godot Project Settings > General > Extensions.
+
+## Extension symbols
+
+```
+godot_gdnative_init
+godot_gdnative_exit
+godot_extension_get_library_symbol
+mansion_adapter_create
+mansion_adapter_destroy
+mansion_adapter_pump
+mansion_adapter_flush
+mansion_adapter_enumerate_surfaces
+mansion_adapter_fire_frame_callbacks
+mansion_adapter_launch_client
+mansion_adapter_set_modifiers
+mansion_adapter_get_focused_serial
+mansion_adapter_shutdown
+```
+
+All symbols verified via `nm -D build-godot-ext/libmansion_godot.so`.
 
 ## Acceptance status
 
@@ -90,40 +113,47 @@ MANSION_GODOT_SO=/path/to/libgodot.so tools/build-mansion-extension.sh
 | Nonblocking pump | **Done** — `wl_event_loop_dispatch(display, 0)` |
 | No blocking loops | **Done** — no `while()` loops, no `sleep()` |
 | No arbitrary-thread resource access | **Done** — all calls from owning thread |
-| Godot loads it | **Blocked** — libgodot.so not available |
-| Starts private socket | **Blocked** — code written, can't test without loading |
-| Accepts fixture client | **Blocked** — needs runtime |
-| Shuts down cleanly | **Blocked** — code written, can't test without loading |
+| Godot loads it | **Blocked** — Godot editor build in progress |
+| Starts private socket | **Code written** — `wl_display_add_socket_auto()` |
+| Accepts fixture client | **Code written** — `mansion_adapter_launch_client()` |
+| Shuts down cleanly | **Code written** — reverse-order teardown in `destroy()` |
 | Extension load/unload | **Blocked** — needs runtime |
-| Headless regression checks | **Done** — 28/28 pass, unchanged |
+| Headless regression checks | **Done** — 28/28 pass in build and asan |
 
 ## Godot engine build progress
 
-Started: `scons platform=linuxbsd target=template_debug dev_build=yes -j4`
-Status: still compiling (30+ minutes, 57+ static libraries built).
-Expected output: `tools/godot-4.7.2-stable/bin/libgodot.linuxbsd.template_debug.x86_64.so`
-Note: SCons 4.11.1 in `tools/.venv/`; no sudo or system package required.
+**template_debug build** (first attempt):
+- Started: `scons platform=linuxbsd target=template_debug dev_build=yes -j4`
+- Status: completed
+- Output: `tools/godot-4.7.2-stable/bin/godot.linuxbsd.template_debug.dev.x86_64` (772 MB)
+- Note: template_debug produces a library target, not a standalone binary
+
+**editor build** (for GDExtension testing):
+- Started: `scons platform=linuxbsd target=editor dev_build=yes -j4`
+- Status: in progress (building SConscript files)
+- Expected output: `tools/godot-4.7.2-stable/bin/godot.linuxbsd.editor.dev.x86_64`
+- Note: SCons 4.11.1 in `tools/.venv/`; no sudo or system package required
 
 ## Next steps
 
-1. Wait for Godot engine build to complete (check for `libgodot.so`)
-2. When available, link the GDExtension:
+1. Wait for Godot editor build to complete
+2. Copy extension to `world/bin/` and test loading:
    ```bash
-   MANSION_GODOT_SO=tools/godot-4.7.2-stable/bin/libgodot.linuxbsd.template_debug.x86_64.so \
-     tools/build-mansion-extension.sh
+   cp build-godot-ext/libmansion_godot.so world/bin/
+   cp src/godot/extension.toml world/bin/
+   tools/godot-4.7.2-stable/bin/godot.linuxbsd.editor.dev.x86_64
    ```
-3. Create `extension.toml` for Godot to find the library
-4. Test load/unload in Godot editor or Godot binary
-5. Test fixture client connection on private socket
-6. Verify clean shutdown (no leaks, no dangling pointers)
-7. Run `meson test -C build --print-errorlogs` to confirm no regressions
-8. Tick P21-T11 in TASKS.md and update STATUS.md
+3. Enable extension in Project Settings > General > Extensions
+4. Test fixture client connection on private socket
+5. Verify clean shutdown (no leaks, no dangling pointers)
+6. Run `meson test -C build --print-errorlogs` to confirm no regressions
+7. Tick P21-T11 in TASKS.md and update STATUS.md
 
 ## Known issues
 
-1. **`launch_app()` signature mismatch**: `launch_app(display, socket_name, command)` takes
-   a socket name string (not a wl_display pointer). The bridge passes `adapter->socket_name`
-   which contains the auto-generated socket name from `wl_display_add_socket_auto()`.
+1. **`launch_app()` signature**: `launch_app(display, socket_name, command)` takes
+   a socket name string. The bridge passes `adapter->socket_name` which contains
+   the auto-generated socket name from `wl_display_add_socket_auto()`.
 
 2. **Mansion core as executable**: The meson build produces `mansion-desktop` as a
    single executable, not a shared library. The bridge code compiles against the
@@ -135,5 +165,5 @@ Note: SCons 4.11.1 in `tools/.venv/`; no sudo or system package required.
    define the correct struct types for this version.
 
 4. **No godot-cpp class registration yet**: The extension uses raw GDExtension
-   interface functions for now. Full `ClassDB::register_class<MansionCompositor>()`
+   interface functions. Full `ClassDB::register_class<MansionAdapterWrapper>()`
    requires godot-cpp with libgodot.so linked.
