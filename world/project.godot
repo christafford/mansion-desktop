@@ -1,0 +1,32 @@
+; Mansion Desktop — Godot frontend scaffold
+; P21-T01: Minimal study room with placeholder geometry
+; Renderer: Compatibility (Vulkan) — default for Steam Deck
+
+config_version=5
+
+[application]
+
+config/name="Mansion Desktop"
+config/description="A functional Linux desktop as a persistent first-person 3D environment."
+run/main_scene="res://scenes/main.tscn"
+config/features=PackedStringArray("Compatibility (Vulkan)")
+
+[autoload]
+
+GameWorld="_path_:res://scripts/game_world.gd"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=800
+window/stretch/mode="canvas_items"
+window/stretch/aspect="keep"
+
+[rendering]
+
+renderer/rendering_method="compatibility"
+environment/defaults/default_clear_color=Color(0.15, 0.15, 0.2, 1)
+
+[devtools]
+
+editor_protocol=1

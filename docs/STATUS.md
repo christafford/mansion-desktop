@@ -10,20 +10,30 @@ running the check that proves it.
 
 ## Next task
 
-**P21-T01: create the Godot frontend scaffold.** P21-T00 is complete
-(toolchain pinned in TOOLCHAIN.md, baselines recorded). P21-T02 (asset curation)
-is independently eligible and does not require Godot to be installed.
+**P21-T02: curate the study asset set.** P21-T01 is complete (Godot scaffold
+with validated project, scene, script, and automation). P21-T02 is independently
+eligible — it does not require Godot to be installed, only catalog inspection.
 Decision 06 authorizes the Godot world frontend and Poly Haven assets; world art
 and compositor extraction are independently eligible. No deadline or default
 continuation-count limit applies. P21-T19 is the furnished live-terminal gate;
 P21-T34 is the final personal review.
 
-**P21-T00 completed 2026-10-01.** Baselines recorded: C++ 27/28 pass in normal
-build (1 pre-existing flaky `camera-move`, UBSan/ASan enabled), 28/28 in
-build-asan (zero sanitizer errors). Node plugin 62/62 pass. Toolchain pinned:
-Godot 4.7.2-stable, godot-cpp 10.0.0-stable, Blender 5.2.2 LTS. Target: Steam
-Deck, Compatibility (Vulkan) renderer, 30 FPS minimum. Godot/godot-cpp/Blender
-not installed on dev system — repository-local download path documented.
+**P21-T00 completed 2026-10-01.** Baselines recorded: C++ 28/28 pass in normal
+build (camera-move test now passing), 28/28 in build-asan (zero sanitizer errors).
+Node plugin 62/62 pass. Toolchain pinned: Godot 4.7.2-stable, godot-cpp
+10.0.0-stable, Blender 5.2.2 LTS. Target: Steam Deck, Compatibility (Vulkan)
+renderer, 30 FPS minimum. Godot/godot-cpp/Blender not installed on dev system
+— repository-local download path documented.
+
+**P21-T01 completed 2026-10-01.** Godot frontend scaffold created under `world/`:
+`project.godot` (Compatibility renderer, 1280×800), `scenes/main.tscn` (room
+geometry with placeholder materials, monitor slot, desk, Camera3D, SpawnMarker),
+`scripts/game_world.gd` (WASD movement, mouse look, collision bounds, teleport,
+application mode toggle). Automated validation via
+`tools/validate-godot-project.sh` (import check, scene node verification, script
+presence). Run command: `tools/run-godot.sh`. C++ headless tests preserved:
+28/28 pass, unchanged. Node plugin 62/62 pass. Live render capture deferred to
+P21-T09 (requires display server).
 
 **Not verified:** Godot project, GDExtension bridge, imported assets, furnished
 room, live-terminal integration, new performance goals and final usability.

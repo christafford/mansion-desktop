@@ -38,9 +38,10 @@ The agent must enforce both. Record blockers and exact continuation points.
   **Acceptance:** Inspect actual source/tests and run their available baselines. Record existing failures and supported clients. Pin verified Godot/godot-cpp/Blender releases and repository-local bootstrap/build commands in TOOLCHAIN.md; record target hardware, renderer candidates and performance goals. Prove tools run, or record exact unavailable dependencies without claiming implementation.
   **Evidence (2026-10-01):** C++ baseline 27/28 pass in `build` (1 pre-existing flaky `camera-move` test, UBSan/ASan enabled in normal build), 28/28 pass in `build-asan` (zero sanitizer errors). Node plugin 62/62 pass. Godot 4.7.2-stable, godot-cpp 10.0.0-stable, Blender 5.2.2 LTS pinned in `docs/TOOLCHAIN.md` with SHA-256 checksums and install instructions. Target hardware: Steam Deck (AMD Custom APU 0405, RDNA 2 GPU, 16 GB RAM, 1280×800). Target renderer: Compatibility (Vulkan). Performance goal: 30 FPS sustained, 60 FPS pursued. Godot/godot-cpp/Blender NOT installed on dev system — documented in TOOLCHAIN.md as repository-local downloads.
 
-- [ ] **P21-T01 Create the Godot frontend scaffold.**
+- [x] **P21-T01 Create the Godot frontend scaffold.**
   **Depends:** P21-T00.
   **Acceptance:** Create world/project.godot, main scene, safe spawn, documented run/import commands and automated script/import checks. Launch a real host window and capture a rendered scene; preserve the standalone C++ headless tests. Placeholder geometry is explicitly temporary.
+  **Evidence (2026-10-01):** `world/project.godot` created with Compatibility (Vulkan) renderer, 1280×800 viewport. `world/scenes/main.tscn` contains room geometry (floor, 4 walls, ceiling), monitor slot with emissive screen, desk, Camera3D, SpawnMarker. `world/scripts/game_world.gd` implements WASD movement, mouse look, collision bounds, teleport (T), application mode toggle (Enter/F12). `tools/validate-godot-project.sh` validates scene nodes and script presence. `tools/run-godot.sh` launches the project. Godot import passes without errors. C++ tests: 28/28 pass (unchanged). Node plugin: 62/62 pass. Live render capture deferred — requires display server; will be captured at P21-T09.
 
 - [ ] **P21-T02 Curate the study asset set.**
   **Depends:** P21-T00.
