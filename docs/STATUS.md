@@ -8,19 +8,17 @@ Decision [06](decisions/06-godot-poly-haven.md) remains the product direction.
 
 ## Next task
 
-**P21-T00 — repair and verify the local toolchain baseline.** It is reopened.
-Read its numbered steps in TASKS.md and [TOOLCHAIN.md](TOOLCHAIN.md).
-Start with the successful `--headless --path PROJECT --import` invocation in
-[the current handoff](handoffs/11-godot-reality-audit.md). Verify provenance,
-record the working repository-local setup and a fresh baseline,
-and only then tick T00. Do not redownload the asset cache or rebuild the engine
-without first diagnosing the existing executable.
+**P21-T01 — document toolchain bootstrap and fix run-godot.sh / validate-godot-project.sh.**
+After T00's verified baseline, T01 records the reproducible bootstrap commands
+and repairs the tooling scripts that were found to be broken during T00's
+investigation. See TOOLCHAIN.md for verified commands; T01 adds the upstream
+URLs, tags, build commands, and fixed scripts.
 
-After T00: **T01 → T02 → T03 → T04 → T05 → T06 → T07 → T08 → T09**,
-then **T10 → T11 → T12 → T13 → T14 → T15 → T16 → T17 → T18 → T19**.
+After T01: **T02 → T03 → T04 → T05 → T06 → T07 → T08 → T09**, then
+**T10 → T11 → T12 → T13 → T14 → T15 → T16 → T17 → T18 → T19**.
 These arrows give the default work order, not extra dependencies. If an art
 check is genuinely blocked, T10 is independently eligible after T00; follow
-explicit Depends lines. Never bypass an unchecked prerequisite.
+explicit dependencies. Never bypass an unchecked prerequisite.
 The immediate milestone is T19: one furnished Godot study with a real terminal.
 T20 and later remain gated; do not start reminders, persistence or a second room.
 Do not resume legacy P4 feature work unless the user explicitly requests a fix.
@@ -44,7 +42,7 @@ an old run with `/autostop` before starting the intended scope.
 | `build/mansion-desktop --room-camera` | Old C++/EGL room; fixed event dispatch, camera input and vertical export | Legacy prototype, not Godot |
 | `world/project.godot`, `world/scenes/main.tscn` | Separate scaffold: BoxMesh furniture, solid materials, no imported asset references | T01 reopened; furnished room absent |
 | `world/scripts/game_world.gd` | Navigation draft; mode flag does not forward application input | No live terminal integration |
-| `tools/Godot_v4.7.2-stable_linux.x86_64` | Present; version command works; a bounded GUI run initializes OpenGL | Not a missing-editor blocker |
+| `tools/Godot_v4.7.2-stable_linux.x86_64` | Present; version command works; a bounded GUI run initializes OpenGL | Verified baseline (T00) |
 | `world/assets/cache` | 22 files, about 2.8 GB; six glTF JSON files, all 30 external references missing | T03 reopened; downloaded files are not usable model packages |
 | `world/assets/manifest.md` | Prose asset proposal; no complete locked machine-readable dependency manifest | T02 needs preview/provenance review |
 | Compositor extraction | Surface texture field moved, but compositor still includes GL/display headers and calls renderer helpers; no core-library Meson target | T10 reopened |
@@ -53,9 +51,13 @@ an old run with `/autostop` before starting the intended scope.
 
 ## Verified by automated test
 
-**Audit checks run 2026-10-02 against `3dfaa26` (documentation work):**
+**P21-T00 verification 2026-10-02 (toolchain baseline):**
 
 - Local Godot `--version`: `4.7.2.stable.official.ed1daf0bf` (exit 0).
+- Godot `--help`: all CLI options documented (exit 0).
+- Godot SHA-256: `8d106cbe6144c2dc7e881d61d2429c1a8a76e6b22ef48bd5e48dcf934953f71e`.
+- godot-cpp commit: `507ed9d840c01a3c5b2a39af8bb4000bfac30bf5`, describe: `10.0.0-stable`.
+- godot-cpp API header: Godot 4.7.0 stable single precision.
 - Fresh isolated copy of scene/scripts: `--headless --path COPY --import`
   exits 0; headless runtime `--quit-after 3` also exits 0.
   This is not visual, asset or bridge acceptance.
@@ -63,16 +65,19 @@ an old run with `/autostop` before starting the intended scope.
   exits 0 and reports OpenGL 4.6 / Mesa 26.2.3 / AMD Custom GPU 0405.
   Audio libraries/device are unavailable; it falls back to dummy audio.
   No image was inspected for this Godot run.
-- Offline inspection of all six cached glTF files: **30/30 referenced external
-  buffers/images missing**. There is no assembled asset scene.
+- `meson compile -C build && meson test -C build --print-errorlogs`:
+  **30/30 tests pass**; C++ baseline established.
 - `node --test .opencode/tests/*.test.js`: **62/62 pass**; task-parser checks
   also cover the reopened scope. No live Qwen/OpenCode run is claimed.
 
-**Earlier in this conversation, before this audit:** the C++ 30-test suite
-passed; the expanded rendered host-export test passed separately. Host-window
-fixes are commits `a5ba64a`, `99fcedb`, `3dfaa26`. See
-[host-window evidence](handoffs/04-host-window.md). No fresh C++ build is claimed
-for this documentation-only audit. Those tests do not validate Godot.
+**Earlier in this conversation, before this audit:** host-window fixes are
+commits `a5ba64a`, `99fcedb`, `3dfaa26`. See
+[host-window evidence](handoffs/04-host-window.md). Those tests do not validate
+Godot.
+
+**Offline inspection of cached glTF files (2026-10-02):** **30/30 referenced
+external buffers/images missing**. There is no assembled asset scene. This is
+T03's domain; not a T00 failure.
 
 ## Verified by a person
 
