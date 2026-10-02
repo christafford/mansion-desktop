@@ -8,7 +8,27 @@ Decision [06](decisions/06-godot-poly-haven.md) remains the product direction.
 
 ## Next task
 
-**P21-T06 — Add monitor housing and final visual checks.** (P21-T05 must be completed first)
+**P21-T08 — Create stable entities and the monitor screen slot.** (P21-T07 completed, see below)
+
+**P21-T07 completed (2026-10-02):**
+- Focus loss handling: `Window.NOTIFICATION_WM_FOCUS_LOST` releases mouse capture via `Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)`
+- Furniture collision detection: `check_furniture_collision()` with 6 box-shaped furniture items (desk, chair, bookshelf, bookset, lamp, plant)
+- Safe spawn return: `return_to_spawn()` restores camera position and rotation
+- Reduced motion toggle: Shift+M toggles `_reduced_motion`, movement uses `get_move_speed()` (1.0 vs 3.0)
+- Teleport (T key): Moves camera to monitor slot position (0, 1.6, 0)
+- All 30 C++ tests pass
+
+**P21-T08 — Create stable entities and the monitor screen slot.** (P21-T07 completed first)
+
+**P21-T06 completed (2026-10-02):**
+- Monitor housing sub_resources added to `scenes/main.tscn` before first `[node` entry
+  - BoxMesh_monitor_frame, BoxMesh_monitor_stand_base, BoxMesh_monitor_stand_column
+  - Mat_monitor_frame (dark gray, metallic 0.2, roughness 0.3)
+  - Mat_monitor_stand (medium gray, metallic 0.4, roughness 0.5)
+- Monitor housing nodes added: MonitorSlot, MonitorScreen, MonitorStandColumn, MonitorStandBase
+- Import validation: `--headless --path world --import --quit-after 2` exits 0
+- Scene file syntax validated: 45 section headers, correct ExtResource/SubResource references
+- All 6 imported glTF scenes and monitor housing components present in `world/scenes/main.tscn`
 
 **P21-T05 completed (2026-10-02):**
 - Imported 6 complete glTF models into Godot 4.7.2-stable with Compatibility renderer
