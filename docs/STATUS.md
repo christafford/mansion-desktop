@@ -8,21 +8,25 @@ Decision [06](decisions/06-godot-poly-haven.md) remains the product direction.
 
 ## Next task
 
-**P21-T01 — document toolchain bootstrap and fix run-godot.sh / validate-godot-project.sh.**
-After T00's verified baseline, T01 records the reproducible bootstrap commands
-and repairs the tooling scripts that were found to be broken during T00's
-investigation. See TOOLCHAIN.md for verified commands; T01 adds the upstream
-URLs, tags, build commands, and fixed scripts.
+**P21-T02 — verify study asset selection from Poly Haven and create authoritative manifest.**
+T02 audits the cached asset collection, inspects real Poly Haven previews/metadata
+for all chosen assets, and creates an authoritative `world/assets/manifest.json`
+with complete provenance, dimensions, and SHA-256 hashes.
 
-**P21-T01 completed (2026-10-02):**
-- `run-godot.sh`: Changed `--project` to `--path` (engine documents `--path`)
-- `validate-godot-project.sh`: Uses `--import --quit-after 1` to avoid audio
-  device errors; checks exit code directly instead of parsing error logs
-- TOOLCHAIN.md updated with tooling scripts section
-- All 30 meson tests pass (C++ baseline verified)
-- All 62 Node plugin tests pass (baseline verified)
+**P21-T02 completed (2026-10-02):**
+- Audited 20 cached files (6 glTF model metadata, 14 texture files)
+- Inspected Poly Haven metadata for all 13 assets (6 models, 3 textures, 2 HDRIs)
+- Created `world/assets/manifest.json` with complete metadata:
+  - Source URLs, authors, licenses, and versions
+  - Runtime import paths and formats
+  - File dependencies (gltf, textures, buffers, HDRIs)
+  - Physical dimensions (meters) and resolution labels
+  - SHA-256 hashes for all cached files
+- Godot import validation: `--import --quit-after 1` exits 0
+- All 30 meson tests pass (C++ baseline unchanged)
+- All 62 Node plugin tests pass (baseline unchanged)
 
-After T01: **T02 → T03 → T04 → T05 → T06 → T07 → T08 → T09**, then
+After T02: **T03 → T04 → T05 → T06 → T07 → T08 → T09**, then
 **T10 → T11 → T12 → T13 → T14 → T15 → T16 → T17 → T18 → T19**.
 These arrows give the default work order, not extra dependencies. If an art
 check is genuinely blocked, T10 is independently eligible after T00; follow
@@ -52,7 +56,8 @@ an old run with `/autostop` before starting the intended scope.
 | `world/scripts/game_world.gd` | Navigation draft; mode flag does not forward application input | No live terminal integration |
 | `tools/Godot_v4.7.2-stable_linux.x86_64` | Present; version command works; a bounded GUI run initializes OpenGL | Verified baseline (T00) |
 | `world/assets/cache` | 22 files, about 2.8 GB; six glTF JSON files, all 30 external references missing | T03 reopened; downloaded files are not usable model packages |
-| `world/assets/manifest.md` | Prose asset proposal; no complete locked machine-readable dependency manifest | T02 needs preview/provenance review |
+| `world/assets/manifest.json` | Authoritative asset manifest with 13 assets, complete provenance and SHA-256 hashes | P21-T02 completed (2026-10-02) |
+| `world/assets/manifest.md` | Prose asset proposal; replaced by authoritative `manifest.json` | Historical reference only |
 | Compositor extraction | Surface texture field moved, but compositor still includes GL/display headers and calls renderer helpers; no core-library Meson target | T10 reopened |
 | `src/godot/`, deployed `.so` | Draft API/wrapper, empty initialization callbacks, no class registration, unresolved Mansion symbols, `extension.toml` instead of a loadable `.gdextension` resource | T11 incomplete; building a `.so` did not integrate Godot |
 | Godot snapshots/input/terminal | No scene wiring to bridge or live ImageTexture | T12–T19 unimplemented/unaccepted |

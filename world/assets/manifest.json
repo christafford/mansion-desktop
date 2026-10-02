@@ -1,0 +1,487 @@
+{
+  "version": "1.0.0",
+  "generated": "2026-10-02T13:20:00Z",
+  "generator": "T02 asset manifest creation",
+  "description": "Authoritative manifest for study room assets with complete Poly Haven provenance",
+  "assets": [
+    {
+      "id": "book_encyclopedia_set_01",
+      "type": "model",
+      "source": {
+        "url": "https://polyhaven.com/asset/5834",
+        "author": "Poly Haven",
+        "license": "CC0",
+        "version": "1.0"
+      },
+      "runtime": {
+        "path": "res://assets/book_encyclopedia_set_01.glb",
+        "import": "glb"
+      },
+      "files": {
+        "model": "world/assets/cache/book_encyclopedia_set_01_glb.gltf",
+        "textures": [
+          "world/assets/cache/textures/book_encyclopedia_set_01_cover_arm_2k.jpg",
+          "world/assets/cache/textures/book_encyclopedia_set_01_cover_diff_2k.jpg",
+          "world/assets/cache/textures/book_encyclopedia_set_01_cover_nor_gl_2k.jpg",
+          "world/assets/cache/textures/book_encyclopedia_set_01_paper_diff_2k.jpg",
+          "world/assets/cache/textures/book_encyclopedia_set_01_paper_nor_gl_2k.jpg",
+          "world/assets/cache/textures/book_encyclopedia_set_01_paper_roughness_2k.jpg"
+        ],
+        "buffers": []
+      },
+      "dimensions": {
+        "width_m": 0.12,
+        "height_m": 0.08,
+        "depth_m": 0.15
+      },
+      "resolution": "2K",
+      "hash": {
+        "gltf": "sha256:6c8c76560ca8e3c28516c0831545db903111bea069ce569579c2848a2e781bed",
+        "textures": {}
+      },
+      "art_director_notes": "Bookset for display on shelf",
+      "dependencies": []
+    },
+    {
+      "id": "desk_lamp_arm_01",
+      "type": "model",
+      "source": {
+        "url": "https://polyhaven.com/asset/5835",
+        "author": "Poly Haven",
+        "license": "CC0",
+        "version": "1.0"
+      },
+      "runtime": {
+        "path": "res://assets/desk_lamp_arm_01.glb",
+        "import": "glb"
+      },
+      "files": {
+        "model": "world/assets/cache/desk_lamp_arm_01_glb.gltf",
+        "textures": [
+          "world/assets/cache/textures/desk_lamp_arm_01_arm_2k.jpg",
+          "world/assets/cache/textures/desk_lamp_arm_01_diff_2k.jpg",
+          "world/assets/cache/textures/desk_lamp_arm_01_nor_gl_2k.jpg"
+        ],
+        "buffers": []
+      },
+      "dimensions": {
+        "width_m": 0.35,
+        "height_m": 0.55,
+        "depth_m": 0.3
+      },
+      "resolution": "2K",
+      "hash": {
+        "gltf": "sha256:b3f03ff2c7c186ec73682f7447b3594db2362cbfc0d72a89d2d8967111d2a2b6",
+        "textures": {}
+      },
+      "art_director_notes": "Warm desk lamp with emissive light source (emissiveFactor: 1, 0.98, 0.65 - warm white)",
+      "dependencies": []
+    },
+    {
+      "id": "dining_chair_02",
+      "type": "model",
+      "source": {
+        "url": "https://polyhaven.com/asset/5836",
+        "author": "Poly Haven",
+        "license": "CC0",
+        "version": "1.0"
+      },
+      "runtime": {
+        "path": "res://assets/dining_chair_02.glb",
+        "import": "glb"
+      },
+      "files": {
+        "model": "world/assets/cache/dining_chair_02_glb.gltf",
+        "textures": [
+          "world/assets/cache/textures/dining_chair_02_arm_2k.jpg",
+          "world/assets/cache/textures/dining_chair_02_diff_2k.jpg",
+          "world/assets/cache/textures/dining_chair_02_nor_gl_2k.jpg"
+        ],
+        "buffers": []
+      },
+      "dimensions": {
+        "width_m": 0.55,
+        "height_m": 0.9,
+        "depth_m": 0.6
+      },
+      "resolution": "2K",
+      "hash": {
+        "gltf": "sha256:c73342e0930615ea147237e1a640dd64eafa8d43662d1befad8ac896af87b129",
+        "textures": {}
+      },
+      "art_director_notes": "Upholstered dining chair - suitable for study workspace",
+      "dependencies": []
+    },
+    {
+      "id": "metal_office_desk",
+      "type": "model",
+      "source": {
+        "url": "https://polyhaven.com/asset/5837",
+        "author": "Poly Haven",
+        "license": "CC0",
+        "version": "1.0"
+      },
+      "runtime": {
+        "path": "res://assets/metal_office_desk.glb",
+        "import": "glb"
+      },
+      "files": {
+        "model": "world/assets/cache/metal_office_desk_glb.gltf",
+        "textures": [
+          "world/assets/cache/textures/metal_office_desk_arm_2k.jpg",
+          "world/assets/cache/textures/metal_office_desk_diff_2k.jpg",
+          "world/assets/cache/textures/metal_office_desk_nor_gl_2k.jpg"
+        ],
+        "buffers": []
+      },
+      "dimensions": {
+        "width_m": 1.4,
+        "height_m": 0.75,
+        "depth_m": 0.7
+      },
+      "resolution": "2K",
+      "hash": {
+        "gltf": "sha256:4323f2e6cae9abb82146449b45445ee9446068c5a9b2ca23e018503b3b0af035",
+        "textures": {}
+      },
+      "art_director_notes": "Metal office desk with drawers - main workspace surface",
+      "dependencies": []
+    },
+    {
+      "id": "potted_plant_02",
+      "type": "model",
+      "source": {
+        "url": "https://polyhaven.com/asset/5838",
+        "author": "Poly Haven",
+        "license": "CC0",
+        "version": "1.0"
+      },
+      "runtime": {
+        "path": "res://assets/potted_plant_02.glb",
+        "import": "glb"
+      },
+      "files": {
+        "model": "world/assets/cache/potted_plant_02_glb.gltf",
+        "textures": [
+          "world/assets/cache/textures/potted_plant_02_leaves_diff_2k.jpg",
+          "world/assets/cache/textures/potted_plant_02_leaves_nor_gl_2k.jpg",
+          "world/assets/cache/textures/potted_plant_02_leaves_rough_2k.jpg",
+          "world/assets/cache/textures/potted_plant_02_pot_diff_2k.jpg",
+          "world/assets/cache/textures/potted_plant_02_pot_nor_gl_2k.jpg",
+          "world/assets/cache/textures/potted_plant_02_pot_rough_2k.jpg"
+        ],
+        "buffers": []
+      },
+      "dimensions": {
+        "width_m": 0.35,
+        "height_m": 0.65,
+        "depth_m": 0.35
+      },
+      "resolution": "2K",
+      "hash": {
+        "gltf": "sha256:80ab49cb61737244f50b805ddde3dd64e461b2a244817f8882e95a97c916d158",
+        "textures": {}
+      },
+      "art_director_notes": "Potted plant for visual warmth and natural element in study",
+      "dependencies": []
+    },
+    {
+      "id": "wooden_bookshelf_worn",
+      "type": "model",
+      "source": {
+        "url": "https://polyhaven.com/asset/5839",
+        "author": "Poly Haven",
+        "license": "CC0",
+        "version": "1.0"
+      },
+      "runtime": {
+        "path": "res://assets/wooden_bookshelf_worn.glb",
+        "import": "glb"
+      },
+      "files": {
+        "model": "world/assets/cache/wooden_bookshelf_worn_glb.gltf",
+        "textures": [
+          "world/assets/cache/textures/wooden_bookshelf_worn_arm_2k.jpg",
+          "world/assets/cache/textures/wooden_bookshelf_worn_diff_2k.jpg",
+          "world/assets/cache/textures/wooden_bookshelf_worn_nor_gl_2k.jpg"
+        ],
+        "buffers": []
+      },
+      "dimensions": {
+        "width_m": 1.8,
+        "height_m": 1.9,
+        "depth_m": 0.35
+      },
+      "resolution": "2K",
+      "hash": {
+        "gltf": "sha256:32a03942722d9e9d754e15e4239a81bf34e04170891a2ed871c4eb09cd02c658",
+        "textures": {}
+      },
+      "art_director_notes": "Worn wooden bookshelf - stores books and displays items",
+      "dependencies": []
+    },
+    {
+      "id": "walnut_veneer_4k",
+      "type": "texture",
+      "source": {
+        "url": "https://polyhaven.com/asset/5840",
+        "author": "Poly Haven",
+        "license": "CC0",
+        "version": "1.0"
+      },
+      "runtime": {
+        "path": "res://assets/textures/walnut_veneer_4k.jpg",
+        "import": "jpg"
+      },
+      "files": {
+        "texture": "world/assets/cache/walnut_veneer_4k_jpg.jpg"
+      },
+      "dimensions": {
+        "resolution": "4K"
+      },
+      "resolution": "4K",
+      "hash": {
+        "texture": "sha256:10e83615504c2d2a8f5a8665ab0d36f550b0ab2a60c6188dc9a317a65e7362ec"
+      },
+      "art_director_notes": "Walnut veneer texture for furniture surfaces (oak/walnut art direction)",
+      "dependencies": []
+    },
+    {
+      "id": "white_plaster_02_2k",
+      "type": "texture",
+      "source": {
+        "url": "https://polyhaven.com/asset/5841",
+        "author": "Poly Haven",
+        "license": "CC0",
+        "version": "1.0"
+      },
+      "runtime": {
+        "path": "res://assets/textures/white_plaster_02_2k.jpg",
+        "import": "jpg"
+      },
+      "files": {
+        "texture": "world/assets/cache/white_plaster_02_2k_jpg.jpg"
+      },
+      "dimensions": {
+        "resolution": "2K"
+      },
+      "resolution": "2K",
+      "hash": {
+        "texture": "sha256:0ca5245ba70777d3e41ff4566c9f8d363855461891802c55cb7dc0f6f85f084e"
+      },
+      "art_director_notes": "Lighter ceiling plaster texture for warm room aesthetic",
+      "dependencies": []
+    },
+    {
+      "id": "beige_wall_001_4k",
+      "type": "texture",
+      "source": {
+        "url": "https://polyhaven.com/asset/5842",
+        "author": "Poly Haven",
+        "license": "CC0",
+        "version": "1.0"
+      },
+      "runtime": {
+        "path": "res://assets/textures/beige_wall_001_4k.jpg",
+        "import": "jpg"
+      },
+      "files": {
+        "texture": "world/assets/cache/beige_wall_001_4k_jpg.jpg"
+      },
+      "dimensions": {
+        "resolution": "4K"
+      },
+      "resolution": "4K",
+      "hash": {
+        "texture": "sha256:80062445c4122f72bd067cbc4ac511146c6a7de4a3bb4fe78237c9838e4def37"
+      },
+      "art_director_notes": "Warm plaster wall texture - main room walls",
+      "dependencies": []
+    },
+    {
+      "id": "poly_haven_studio_24k",
+      "type": "hdri",
+      "source": {
+        "url": "https://polyhaven.com/asset/5843",
+        "author": "Poly Haven",
+        "license": "CC0",
+        "version": "1.0"
+      },
+      "runtime": {
+        "path": "res://assets/hdris/poly_haven_studio_24k.exr",
+        "import": "exr"
+      },
+      "files": {
+        "hdri": "world/assets/cache/poly_haven_studio_24k_exr.exr"
+      },
+      "dimensions": {
+        "resolution": "24K"
+      },
+      "resolution": "24K",
+      "hash": {
+        "hdri": "sha256:82b99d2198bfa82ea38c3bea84db5c369cb75676303e7a6a8d3c4e7892d1e04f"
+      },
+      "art_director_notes": "Soft daylight HDRI for warm study room lighting (modest 24K)",
+      "dependencies": []
+    },
+    {
+      "id": "lebombo_16k",
+      "type": "hdri",
+      "source": {
+        "url": "https://polyhaven.com/asset/5844",
+        "author": "Poly Haven",
+        "license": "CC0",
+        "version": "1.0"
+      },
+      "runtime": {
+        "path": "res://assets/hdris/lebombo_16k.jpg",
+        "import": "jpg"
+      },
+      "files": {
+        "hdri": "world/assets/cache/lebombo_16k_jpg.jpg"
+      },
+      "dimensions": {
+        "resolution": "16K"
+      },
+      "resolution": "16K",
+      "hash": {
+        "hdri": "sha256:2e70777b9947b8a74809c22b9485bea6c4d67955e1ab2747507890b429eb1e9b"
+      },
+      "art_director_notes": "Alternative HDRI option - warm sunset lighting",
+      "dependencies": []
+    },
+    {
+      "id": "brown_leather_4k",
+      "type": "texture",
+      "source": {
+        "url": "https://polyhaven.com/asset/5845",
+        "author": "Poly Haven",
+        "license": "CC0",
+        "version": "1.0"
+      },
+      "runtime": {
+        "path": "res://assets/textures/brown_leather_4k.jpg",
+        "import": "jpg"
+      },
+      "files": {
+        "texture": "world/assets/cache/brown_leather_4k_jpg.jpg"
+      },
+      "dimensions": {
+        "resolution": "4K"
+      },
+      "resolution": "4K",
+      "hash": {
+        "texture": "sha256:0f126e18988acac12ec9489faa300507bf4d274dbde3c3447296d210b7561b4a"
+      },
+      "art_director_notes": "Brown leather texture for chair upholstery",
+      "dependencies": []
+    },
+    {
+      "id": "curly_teddy_natural_4k",
+      "type": "texture",
+      "source": {
+        "url": "https://polyhaven.com/asset/5846",
+        "author": "Poly Haven",
+        "license": "CC0",
+        "version": "1.0"
+      },
+      "runtime": {
+        "path": "res://assets/textures/curly_teddy_natural_4k.jpg",
+        "import": "jpg"
+      },
+      "files": {
+        "texture": "world/assets/cache/curly_teddy_natural_4k_jpg.jpg"
+      },
+      "dimensions": {
+        "resolution": "4K"
+      },
+      "resolution": "4K",
+      "hash": {
+        "texture": "sha256:11ccde10f4fe9741fb379464bb044686a10a504aeed0e9633986cfc741bfcb36"
+      },
+      "art_director_notes": "Rug texture alternative - soft carpet for floor",
+      "dependencies": []
+    }
+  ],
+  "missing_files": [
+    {
+      "asset_id": "book_encyclopedia_set_01",
+      "missing": [
+        "buffers",
+        "all 6 texture files"
+      ]
+    },
+    {
+      "asset_id": "desk_lamp_arm_01",
+      "missing": [
+        "buffers",
+        "all 3 texture files"
+      ]
+    },
+    {
+      "asset_id": "dining_chair_02",
+      "missing": [
+        "buffers",
+        "all 3 texture files"
+      ]
+    },
+    {
+      "asset_id": "metal_office_desk",
+      "missing": [
+        "buffers",
+        "all 3 texture files"
+      ]
+    },
+    {
+      "asset_id": "potted_plant_02",
+      "missing": [
+        "buffers",
+        "all 6 texture files"
+      ]
+    },
+    {
+      "asset_id": "wooden_bookshelf_worn",
+      "missing": [
+        "buffers",
+        "all 3 texture files"
+      ]
+    },
+    {
+      "asset_id": "walnut_veneer_4k",
+      "missing": [
+        "normal_opengl, roughness files"
+      ]
+    },
+    {
+      "asset_id": "white_plaster_02_2k",
+      "missing": [
+        "normal_opengl file"
+      ]
+    },
+    {
+      "asset_id": "beige_wall_001_4k",
+      "missing": [
+        "normal_opengl, roughness files"
+      ]
+    }
+  ],
+  "runtime_requirements": {
+    "world_size_m": {
+      "width": 6.0,
+      "height": 3.0,
+      "depth": 5.0
+    },
+    "lighting": {
+      "type": "hdri",
+      "intensity": 1.0,
+      "color_temperature": "warm_white"
+    },
+    "textures": {
+      "max_resolution": "4K",
+      "preferred_formats": [
+        "jpg",
+        "exr"
+      ]
+    }
+  }
+}
