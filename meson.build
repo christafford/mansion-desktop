@@ -36,7 +36,8 @@ relative_ptr_code = custom_target('relative-pointer-code',
     input: relative_ptr_xml, output: 'relative-pointer-protocol.c',
     command: [wayland_scanner, 'private-code', '@INPUT@', '@OUTPUT@'])
 
-sources = files(
+# Source files for the main executable (display layer)
+sources_display = files(
     'src/main.cpp',
     'src/compositor.cpp',
     'src/xdg-shell.cpp',
@@ -46,12 +47,25 @@ sources = files(
     'src/room.cpp',
 )
 
+# Core compositor library (PIC, no GL/display dependencies)
+compositor_core_lib = static_library('compositor-core',
+    'src/compositor-core.cpp',
+    cpp_args: cpp_args + ['-fPIC'],
+    dependencies: [wayland_server],
+    include_directories: include_directories('.'),
+    install: false,
+)
+
+# Public header for core library
+compositor_core_hdr = files('src/compositor-core.h')
+
 mansion_exe = executable('mansion-desktop',
-    sources, xdg_shell_server_h, xdg_shell_code, xdg_shell_client_h,
+    sources_display, xdg_shell_server_h, xdg_shell_code, xdg_shell_client_h,
     relative_ptr_client_h, relative_ptr_code,
     cpp_args: cpp_args,
     dependencies: [wayland_server, wayland_client, wayland_egl, egl, glesv2, xkbcommon],
     include_directories: include_directories('.'),
+    link_with: compositor_core_lib,
     install: true,
 )
 
@@ -164,3 +178,11 @@ host_input_test = executable('test_host_input',
     include_directories: include_directories('.'),
     dependencies: [wayland_server, wayland_client, wayland_egl, egl, glesv2, xkbcommon])
 test('host-input', host_input_test, suite: 'p4', timeout: 5)
+
+# Core library test
+compositor_core_test = executable('test_compositor_core',
+    'tests/test_compositor_core.c',
+    cpp_args: cpp_args,
+    include_directories: [include_directories('src')],
+    link_with: [compositor_core_lib])
+test('compositor-core', compositor_core_test, suite: 'p2', timeout: 10)

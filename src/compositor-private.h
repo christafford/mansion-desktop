@@ -14,6 +14,11 @@ struct MansionFrameCallback {
     struct wl_list link;
 };
 
+/* Callback for display layer to intercept surface commits (e.g., for xdg-shell
+ * configure events). Set by display layer before surface creation. */
+typedef void (*surface_commit_callback)(struct wl_resource* surface_resource,
+                                        void* user_data);
+
 /* Internal surface structure - shared between compositor.cpp, display.cpp and xdg-shell.cpp
  *
  * Only Wayland protocol state lives here.  GPU resources (textures) are owned
@@ -55,6 +60,10 @@ struct MansionSurface {
 
     /* Frame callbacks pending fire-on-render */
     struct wl_list frame_callback_list;
+
+    /* Display layer commit callback (for xdg-shell configure events, etc.) */
+    surface_commit_callback commit_callback;
+    void* commit_callback_user_data;
 };
 
 /* Internal compositor structure - shared between compositor.cpp and display.cpp */

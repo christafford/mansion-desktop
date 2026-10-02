@@ -22,7 +22,7 @@
 #include "compositor.h"
 #include "compositor-private.h"
 #include "renderer-surface.h"
-#include "math.h"
+#include "math3d.h"
 #include "room.h"
 #include "xdg-shell.h"
 #include "input.h"

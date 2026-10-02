@@ -5,7 +5,7 @@
 #include <cstdio>
 #include <cstdlib>
 
-#include "../src/math.h"
+#include "../src/math3d.h"
 
 static int failures = 0;
 
