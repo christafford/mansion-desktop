@@ -55,7 +55,7 @@ position = Vector3(0, 0, 4)
 [node name="Room" type="Node3D" parent="."]
 
 [node name="Floor" type="MeshInstance3D" parent="Room"]
-transform = Transform3D(1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 mesh = SubResource("BoxMesh_floor")
 material_override = [SubResource("Mat_floor")]
 

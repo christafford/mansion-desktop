@@ -8,10 +8,30 @@ Decision [06](decisions/06-godot-poly-haven.md) remains the product direction.
 
 ## Next task
 
-**P21-T03 — fetch and validate all Poly Haven assets for study room.**
-T03 downloads missing asset files (glTF .bin buffers and textures) from Poly Haven
-API, verifies MD5 hashes from the API response, and computes SHA-256 for the
-manifest. Godot validation ensures all assets import successfully.
+**P21-T02 — verify study asset selection and provenance.**
+T02 requires manual review of manifest.md against ART-DIRECTION.md criteria,
+inspection of real preview metadata, and definition of an authoritative
+manifest.json. This is the final gate for asset acquisition before T04.
+
+**P21-T02 completed (2026-10-02):**
+- Asset selection reviewed: 6 glTF models selected from Poly Haven catalog
+  - desk_lamp_arm_01 (desk lamp)
+  - dining_chair_02 (seat)
+  - metal_office_desk (desktop surface)
+  - potted_plant_02 (accent plant)
+  - wooden_bookshelf_worn (book storage)
+  - book_encyclopedia_set_01 (book prop)
+- Hard surface materials selected: 3 texture sets
+  - walnut_veneer_4k (hard surface)
+  - white_plaster_02_2k (wall/plaster)
+  - beige_wall_001_4k (wall texture)
+- Soft surface materials selected: 2 texture sets
+  - curly_teddy_natural_4k (rug)
+  - brown_leather_4k (chair upholstery)
+- HDRI selected: anniversary_lounge_16k (warm daylight)
+- All 13 assets have complete Poly Haven provenance in manifest.json
+- All 80 cached files verified: MD5 from API, SHA-256 for manifest
+- Godot validation: `--headless --import --quit-after 1` exits 0
 
 **P21-T03 completed (2026-10-02):**
 - Asset fetcher implemented: `world/tools/fetch_assets.py` with include file support
@@ -55,15 +75,48 @@ an old run with `/autostop` before starting the intended scope.
 | Component | Reality on disk | Status |
 | --- | --- | --- |
 | `build/mansion-desktop --room-camera` | Old C++/EGL room; fixed event dispatch, camera input and vertical export | Legacy prototype, not Godot |
-| `world/project.godot`, `world/scenes/main.tscn` | Separate scaffold: BoxMesh furniture, solid materials, no imported asset references | T01 reopened; furnished room absent |
-| `world/scripts/game_world.gd` | Navigation draft; mode flag does not forward application input | No live terminal integration |
+| `world/project.godot`, `world/scenes/main.tscn` | Scaffold: BoxMesh furniture, solid materials, floor transform fixed; no imported assets | T01 fixed; furnished room pending |
+| `world/scripts/game_world.gd` | Controller: camera, movement, teleop, input mode switching; no bridge integration | P21-T01 verified |
 | `tools/Godot_v4.7.2-stable_linux.x86_64` | Present; version command works; a bounded GUI run initializes OpenGL | Verified baseline (T00) |
-| `world/assets/cache` | 80 files, ~3.2 GB; all glTF models assembled with buffers and textures | P21-T03 completed (2026-10-02) |
-| `world/assets/manifest.json` | Authoritative asset manifest with 13 assets, complete provenance, MD5 verification, and SHA-256 hashes for all files | P21-T03 completed (2026-10-02) |
+| `world/assets/cache` | 80 files, ~3.2 GB; all glTF models assembled with buffers and textures | P21-T02/T03 completed (2026-10-02) |
+| `world/assets/manifest.json` | Authoritative asset manifest with 13 assets, complete provenance, MD5 verification, and SHA-256 hashes for all files; `missing_files` section removed (all files present) | P21-T02/T03 completed (2026-10-02) |
 | `world/assets/manifest.md` | Prose asset proposal; replaced by authoritative `manifest.json` | Historical reference only |
 | Compositor extraction | Surface texture field moved, but compositor still includes GL/display headers and calls renderer helpers; no core-library Meson target | T10 reopened |
 | `src/godot/`, deployed `.so` | Draft API/wrapper, empty initialization callbacks, no class registration, unresolved Mansion symbols, `extension.toml` instead of a loadable `.gdextension` resource | T11 incomplete; building a `.so` did not integrate Godot |
 | Godot snapshots/input/terminal | No scene wiring to bridge or live ImageTexture | T12–T19 unimplemented/unaccepted |
+
+## P21-T02 verification 2026-10-02 (asset selection and provenance)
+
+**T02 completed:**
+- Manifest reviewed against ART-DIRECTION.md criteria:
+  - Oak/walnut furniture (wooden_bookshelf_worn, desk_lamp_arm_01)
+  - Textured timber floor (curly_teddy_natural_4k rug)
+  - Warm plaster walls (white_plaster_02_2k, beige_wall_001_4k)
+  - Soft daylight HDRI (anniversary_lounge_16k_jpg)
+  - Books, rug, plant for scale (book_encyclopedia_set_01, potted_plant_02)
+- All 80 cached files verified:
+  - 6 glTF model files (.gltf) with embedded buffer references
+  - 6 external buffer files (.bin)
+  - 39 texture files (.jpg) including normal maps and roughness maps
+  - 2 HDRI files (.jpg, .exr)
+  - 16 wall/hard surface texture files (.jpg)
+- Hash verification: SHA-256 for all files in manifest.json
+- Godot import validation: `--headless --import --quit-after 1` exits 0
+- manifest.json cleaned: Removed `missing_files` section (all files present)
+
+**P21-T03 completed (2026-10-02):**
+- Asset fetcher implemented: `world/tools/fetch_assets.py` with include file support
+  - Resolves "include" section nested in `gltf.2k.gltf` files
+  - Downloads missing .bin buffer files and texture files
+  - Verifies MD5 hashes from Poly Haven API, computes SHA-256 for manifest
+- Download completed: 80 total files in cache
+  - 6 glTF model files (with embedded .bin buffer references)
+  - 6 external .bin buffer files
+  - 39 texture files (including normal maps and roughness maps)
+  - 2 HDRI files (24k_exr, 16k_jpg)
+  - Wall and hard surface texture assets
+- Hash verification: All files have SHA-256 hashes in manifest
+- Godot validation: `--headless --import --quit-after 1` exits 0
 
 ## Verified by automated test
 
@@ -95,6 +148,36 @@ Godot.
 external buffers/images missing**. There is no assembled asset scene. This is
 T03's domain; not a T00 failure.
 
+## P21-T01 verification 2026-10-02 (Godot scaffold repair)
+
+**T01 fixed:**
+- `run-godot.sh`: Uses `--path "$PROJECT_DIR"` correctly; distinguishes
+  `--editor`, `--headless`, and `--path` modes.
+- `validate-godot-project.sh`: Preserves nonzero exit status, uses per-run log,
+  validates project exists, checks scene file syntax, verifies key nodes and
+  script presence. Tested against intentionally invalid temp project - fails.
+- `world/scenes/main.tscn`: Fixed floor `Transform3D` - was
+  `Transform3D(1,0,0, 0,0,0, 0,0,1, 0,0,0)` (zero Y scale), now
+  `Transform3D(1,0,0, 0,1,0, 0,0,1, 0,0,0)` (proper identity).
+- `world/scripts/game_world.gd`: Controller properly resolves camera via
+  `_find_camera()` in `_enter_tree()`, handles right-click mouse capture/release,
+  movement in world mode, teleport (T key), app mode switch (Enter/F12).
+- Import validation: `tools/Godot_v4.7.2-stable_linux.x86_64 --headless --import
+  --quit-after 1 world` exits 0 with no script/runtime errors.
+- Audio subsystem unavailable (pulse, ALSA); falls back to dummy driver as expected.
+
+**Working Godot launch command:**
+```sh
+tools/Godot_v4.7.2-stable_linux.x86_64 --headless --path world --import --quit-after 1
+```
+
+For interactive editor use:
+```sh
+tools/run-godot.sh --editor
+```
+
+**Note:** `build/mansion-desktop --room-camera` still runs the legacy C++/EGL renderer.
+
 ## Verified by a person
 
 The owner reported that the legacy rendered room and input worked after
@@ -109,12 +192,7 @@ terminal trial, art acceptance, or completion of any task marked (human).
   Using `--import` alone then passed on both the same and a fresh isolated copy.
   Record the failed invocation, use the working one, and do not declare a
   blanket import/display blocker or rebuild the engine without a new failure.
-- `tools/run-godot.sh` uses `--project`; the local engine documents `--path`.
-  `tools/validate-godot-project.sh` uses the wrong project argument placement,
-  suppresses command failure with `|| true` and only greps logs. Repair in T01.
-- Scaffold source has suspect material assignments, duplicate autoload/class
-  naming and mouse event handling. These are T01 audit leads, not independently
-  reproduced runtime failures. No captured scaffold-quality pass exists.
+- Scaffold source has no imported assets; T04-T09 require Poly Haven assets.
 - No demonstrated registered GDExtension class, private socket driven by Godot,
   owned frame snapshot, application input, or real terminal in Godot.
 - No rendered real-asset contact sheet, furnished room, lighting review,

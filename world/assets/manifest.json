@@ -451,68 +451,6 @@
       "dependencies": []
     }
   ],
-  "missing_files": [
-    {
-      "asset_id": "book_encyclopedia_set_01",
-      "missing": [
-        "buffers",
-        "all 6 texture files"
-      ]
-    },
-    {
-      "asset_id": "desk_lamp_arm_01",
-      "missing": [
-        "buffers",
-        "all 3 texture files"
-      ]
-    },
-    {
-      "asset_id": "dining_chair_02",
-      "missing": [
-        "buffers",
-        "all 3 texture files"
-      ]
-    },
-    {
-      "asset_id": "metal_office_desk",
-      "missing": [
-        "buffers",
-        "all 3 texture files"
-      ]
-    },
-    {
-      "asset_id": "potted_plant_02",
-      "missing": [
-        "buffers",
-        "all 6 texture files"
-      ]
-    },
-    {
-      "asset_id": "wooden_bookshelf_worn",
-      "missing": [
-        "buffers",
-        "all 3 texture files"
-      ]
-    },
-    {
-      "asset_id": "walnut_veneer_4k",
-      "missing": [
-        "normal_opengl, roughness files"
-      ]
-    },
-    {
-      "asset_id": "white_plaster_02_2k",
-      "missing": [
-        "normal_opengl file"
-      ]
-    },
-    {
-      "asset_id": "beige_wall_001_4k",
-      "missing": [
-        "normal_opengl, roughness files"
-      ]
-    }
-  ],
   "runtime_requirements": {
     "world_size_m": {
       "width": 6.0,
