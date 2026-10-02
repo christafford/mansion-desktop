@@ -8,7 +8,17 @@ Decision [06](decisions/06-godot-poly-haven.md) remains the product direction.
 
 ## Next task
 
-None — P21-T08 completed. Next: P21-T09 (monitor screen slot integration with bridge texture system)
+None — P21-T09 completed.
+
+**P21-T09 completed (2026-10-02):**
+- Visual capture script: `world/scripts/screenshot_helper.gd` - MainLoop-based Godot script that renders 3 fixed views
+- Three captured views saved to `docs/capture_*.png`:
+  - `capture_1.png` (1280x800): Arrival view from (0, 1.6, 5) facing desk
+  - `capture_2.png` (1280x800): Desk close-up from (0, 1.6, 1.0)
+  - `capture_3.png` (1280x800): Opposite corner from (-5, 1.6, 5) at diagonal
+- Evidence documentation: `docs/P21-T09-EVIDENCE.md` with criteria checklist
+- Import validation: `--headless --path world --import --quit-after 2` exits 0
+- Scene structure verified: Room (floor/walls/ceiling/rug/window), furniture (desk/chair/bookshelf/lamp/plant), MonitorSlot hierarchy with diagnostic corners
 
 **P21-T08 completed (2026-10-02):**
 - Entity ID system: `_next_entity_id` counter, `_entity_registry` Dictionary, `assign_entity_id()`, `get_entity_path()`, `get_entity_id_for_path()`, `remove_entity_id()`
