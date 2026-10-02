@@ -49,17 +49,17 @@ echo "Validating Godot project: $PROJECT_DIR"
 echo "Godot binary: $GODOT_BIN"
 echo ""
 
-# --headless --editor does not work; instead use --headless --import
+# --headless --editor does not work; instead use --import
 # to validate the project can be imported without errors.
 echo "--- Import validation ---"
-"$GODOT_BIN" --headless --import "$PROJECT_DIR" 2>&1 | tee /tmp/godot-import.log || true
-
-# Check for critical errors in the import log.
-if grep -qi "error:" /tmp/godot-import.log; then
-	echo "ERROR: Import log contains errors."
-	grep -i "error:" /tmp/godot-import.log
+# Use --quit-after 1 to avoid audio device initialization (no runtime needed)
+# The import must succeed with exit code 0
+if ! "$GODOT_BIN" --import --quit-after 1 "$PROJECT_DIR" 2>&1 | tee /tmp/godot-import.log; then
+	echo "ERROR: Import validation failed."
 	exit 1
 fi
+
+echo "Import validation passed."
 
 echo ""
 echo "--- Scene file syntax check ---"

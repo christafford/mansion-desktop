@@ -82,6 +82,22 @@ timeout -k 2s 15s tools/Godot_v4.7.2-stable_linux.x86_64 \
 The first invocation using both `--editor --import` aborted with a null
 singleton in `editor/editor_node.cpp:6618`. Using `--import` alone succeeded
 on both the same and a fresh isolated copy. Record the failed invocation,
+
+## Tooling scripts
+
+The following scripts are maintained for Godot project management:
+
+```sh
+tools/run-godot.sh                  # open Godot editor with project
+tools/run-godot.sh --headless       # run headless (for CI)
+tools/validate-godot-project.sh     # validate project scaffold
+```
+
+**Fixed in T01 (2026-10-02):**
+- `run-godot.sh`: Changed `--project` to `--path` (engine documents `--path`)
+- `validate-godot-project.sh`: Removed `|| true` that suppressed failures;
+  now uses `--import --quit-after 1` to avoid audio device errors;
+  checks exit code directly instead of parsing error logs
 use the working one, and do not declare a blanket import/display blocker.
 
 ## Required T00 deliverable

@@ -32,4 +32,4 @@ if [ ! -x "$GODOT_BIN" ]; then
 	exit 1
 fi
 
-exec "$GODOT_BIN" --project "$PROJECT_DIR" "$@"
+exec "$GODOT_BIN" --path "$PROJECT_DIR" "$@"
