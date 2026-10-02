@@ -16,6 +16,7 @@
 
 #include "compositor.h"
 #include "display.h"
+#include "host-events.h"
 #include "input.h"
 #include "launch.h"
 #include "xdg-shell.h"
@@ -27,19 +28,6 @@ namespace {
  * processed. */
 static struct wl_display* g_client_display = nullptr;
 static struct wl_event_source* g_client_display_source = nullptr;
-
-static int client_display_fd_handler(int /*fd*/, uint32_t /*mask*/, void* data) {
-    struct wl_display* dpy = (struct wl_display*)data;
-    if (wl_display_read_events(dpy) < 0) {
-        if (errno != EAGAIN && errno != EINTR) {
-            /* Connection error — remove the source and let the loop
-             * continue so we can shut down gracefully. */
-            return 1;
-        }
-    }
-    wl_display_dispatch_pending(dpy);
-    return 0;
-}
 
 struct Options {
     std::vector<std::string> launch;
@@ -557,6 +545,13 @@ int main(int argc, char** argv) {
             break;
         }
         wl_display_flush_clients(wl_display);
+
+        if (g_client_display && wl_display_get_error(g_client_display)) {
+            std::cerr << "Host Wayland connection failed: "
+                      << strerror(wl_display_get_error(g_client_display)) << std::endl;
+            status = 1;
+            break;
+        }
 
         if (input_started) input_process();
 

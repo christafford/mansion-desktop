@@ -148,3 +148,9 @@ math_test = executable('test_math',
 )
 
 test('math', math_test, suite: 'p2', timeout: 10)
+
+host_events_test = executable('test_host_events', 'tests/host_events.cpp',
+    cpp_args: cpp_args,
+    include_directories: include_directories('.'),
+    dependencies: [wayland_client, wayland_server])
+test('host-events', host_events_test, suite: 'p4', timeout: 5)

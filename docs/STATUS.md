@@ -10,6 +10,19 @@ running the check that proves it.
 
 ## Next task
 
+**P4-T19 startup-hang repair complete (2026-10-02).** User-requested bounded
+fix against base revision `04ecfe6`: the nested host event handler called
+`wl_display_read_events()` without preparing a read, deadlocking before the
+first frame. It now uses `wl_display_dispatch()` and the main loop checks host
+connection errors. **Verified by automated test:** build succeeds, 29/29 tests
+pass outside the socket-restricted sandbox; the new `host-events` regression
+deadlocks with the original handler and passes with the fix. Agent-run host
+launch with `--room-camera --exit-after-ms 1000` previously required SIGKILL;
+the rebuilt binary renders 18 frames and exits 0. **Not verified:** visual
+quality, interactive input, real-terminal usability. P4-T12 and human gates
+remain open. Details: [host-window handoff](handoffs/04-host-window.md).
+This focused repair does not change the Project 21 continuation below.
+
 **P21-T04 (Convert models and verify PBR imports): blocked.** Requires Godot
 editor to import models, set PBR materials, and render a model/material contact
 sheet. Prerequisites (P21-T01, P21-T03) are complete: scaffold scene exists at

@@ -1,5 +1,35 @@
 # Handoff 04-host-window — Wayland Client Window + Seat Input (2026-09-28)
 
+## P4-T19 startup-hang repair (2026-10-02)
+
+Agent-run evidence against base revision `04ecfe6` plus this repair:
+
+- `timeout -k 2s 8s build/mansion-desktop --room-camera --exit-after-ms 1000`
+  before the fix completed EGL initialization but logged no rendered frames;
+  the timeout had to SIGKILL it (exit 137). After rebuilding, the identical
+  command rendered 18 frames and exited 0. These are process/log observations,
+  not visual or human usability acceptance.
+- Root cause: `client_display_fd_handler` called `wl_display_read_events`
+  without `wl_display_prepare_read`. Libwayland waits indefinitely in this
+  invalid read sequence, blocking the single main thread and its exit timer.
+  Use `wl_display_dispatch` on the readable connection; it handles the read
+  preparation internally. Check `wl_display_get_error` in the main loop so a
+  disconnected host terminates with an error instead of spinning.
+- `tests/host_events.cpp` drives the actual handler through a Wayland event
+  loop with a socket-pair server/client, three sync replies, and disconnect.
+  Compiled with the original handler, its three-second alarm terminates the
+  deadlock (exit 142); the fixed version passes.
+- `meson compile -C build` succeeds and `meson test -C build --print-errorlogs`
+  passes 29/29. Socket operations are denied in the sandbox; the passing suite
+  and desktop reproductions ran with approved execution outside it.
+
+**Not verified:** visual quality, input usability, resize, real-terminal trial.
+P4-T12 remains open. Continue the Project 21 work order in
+[STATUS.md](../STATUS.md); the older hypotheses below are historical and do
+not explain this reproduced startup deadlock.
+
+## Historical record
+
 Renamed from `05.md` on 2026-09-29 so that handoff 05 stays reserved for
 Project 5. Content below is the 2026-09-28 author's record; a615f18 later added
 the `wl_seat.capabilities` handler discussed under "Input not working" and fixed

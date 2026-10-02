@@ -648,6 +648,15 @@ authorize a rewrite. If blocked, continue only independent eligible work.
   it cannot. Record required versions and what remains unobserved; a report alone
   does not mark a native Wayland backend implemented. P4-T16 needs a usable host.
 
+- [x] **P4-T19 Repair nested host startup deadlock.** Prerequisites: P4-T06.
+  User-requested bounded repair, completed 2026-10-02 against base `04ecfe6`.
+  Replace the unprepared host `read_events` call with `wl_display_dispatch`;
+  detect host disconnection in the main loop. **Acceptance:** socket-pair
+  regression covers repeated event delivery and disconnect; original handler
+  times out, fixed handler passes. Build succeeds; 29/29 tests pass. Agent-run
+  `--room-camera --exit-after-ms 1000` renders 18 frames and exits 0 on the host,
+  versus SIGKILL before the fix. Does not complete P4-T12 or human acceptance.
+
 - [ ] **P4-T13 Accelerated buffer import investigation.** Prerequisites: P4-T09.
   Recheck EGL client/display extension strings and extension entry points with
   eglGetProcAddress. Compare EGL Wayland binding and linux-dmabuf import,
