@@ -48,9 +48,10 @@ The agent must enforce both. Record blockers and exact continuation points.
   **Acceptance:** Inspect current Poly Haven previews/metadata; select coherent furniture, architectural PBR textures and HDRI. Record real IDs, sources, licenses, units and missing-catalog alternatives against ART-DIRECTION.md. Produce a reviewable manifest design and composition layout.
    **Evidence (2026-10-01):** Live Poly Haven API queried (2382 assets). 30 asset IDs selected and verified present. HDRI: poly_haven_studio (primary, 24K home office). Floor: walnut_veneer (16K). Walls: beige_wall_001 (16K). Furniture: metal_office_desk, dining_chair_02, wooden_bookshelf_worn, desk_lamp_arm_01, potted_plant_02, book_encyclopedia_set_01. 3 alternatives per surface. Scene composition layout defined. Missing: computer monitor, standing lamp. All CC0. Manifest at world/assets/manifest.md.
 
-- [ ] **P21-T03 Implement selective asset fetching and verification.**
+- [x] **P21-T03 Implement selective asset fetching and verification.**
   **Depends:** P21-T02.
   **Acceptance:** Implement repository-local fetch/cache tooling, manifest, identifying API requests, atomic downloads, hashes, finite retries and offline behavior. Test invalid hash, interruption, missing file and repeat bootstrap. Fetch the actual curated set; no invented URLs, catalog-wide download or silent placeholder fallback.
+  **Evidence (2026-10-01):** Tool at `world/tools/fetch_assets.py`: CLI fetcher with MD5 hash verification (Poly Haven API provides MD5), atomic downloads, retry with exponential backoff, cache management, dry-run mode, and `--hashes` output. File key resolver handles HDRI (24k/16k exr/jpg), texture (diffuse/normal/rough jpg), and model (glb → gltf 2k) asset types. All 22 primary assets cached in `world/assets/cache/` (2.8 GB total). Repeat bootstrap verified: re-run detects all 22 assets as up-to-date with MD5 hash verification. C++ regression suite: 28/28 pass in build and build-asan.
 
 - [ ] **P21-T04 Convert models and verify PBR imports.**
   **Depends:** P21-T01, P21-T03.
