@@ -13,7 +13,7 @@ config/features=PackedStringArray("Compatibility (Vulkan)")
 
 [autoload]
 
-GameWorld="_path_:res://scripts/game_world.gd"
+GameWorld="res://scripts/game_world.gd"
 
 [display]
 
@@ -30,3 +30,7 @@ environment/defaults/default_clear_color=Color(0.15, 0.15, 0.2, 1)
 [devtools]
 
 editor_protocol=1
+
+[gdextension]
+
+extension_list=PackedStringArray("res://addons/mansion_godot")
