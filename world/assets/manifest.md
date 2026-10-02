@@ -1,5 +1,11 @@
 # Mansion Desktop — Study Asset Manifest
 
+> 2026-10-02 audit: this is a **candidate selection**, not a verified runtime
+> manifest. T02/T03 are reopened. All six cached glTF files lack their external
+> buffers/images. Review previews/provenance, complete file dependencies and
+> create `world/assets/manifest.json` before claiming these assets are imported.
+> Follow [the current work order](../../docs/TASKS.md).
+
 > **P21-T02** — Curated Poly Haven asset set for the warm study room.
 > Generated 2026-10-01 from live Poly Haven API data.
 

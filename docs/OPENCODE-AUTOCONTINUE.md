@@ -6,9 +6,10 @@ model/provider is unchanged. No additional agent framework is required.
 
 ## Start the authorized run
 
-Use `/autostop` on any old run and exit OpenCode before applying the five
-patches. Then restart it from this repository and select the new scope. Keep the
-local model server and OpenCode running. Check environment/plugin-option overrides.
+Use `/autostop` on any old run before changing its scope. Start OpenCode from
+this repository and keep it and the local model server running. The 2026-10-02
+audit reopened false completion claims; a saved older scope does not change
+automatically when documentation changes. Check environment/plugin-option overrides.
 
 Before starting OpenCode, set these values in the same shell to make the owner's
 no-deadline preference explicit:
@@ -26,21 +27,31 @@ OpenCode V2 API is retained; its compatibility was historically reported with
 OpenCode 2.0.16. These patches have unit tests, not a new live OpenCode/model run.
 Check the actual installed version and plugin load log if commands are absent.
 
-In OpenCode, issue this ONE command:
+In OpenCode, start the first furnished live-terminal milestone with this exact
+command (keep the scope short so additional project names do not broaden it):
 
 ```text
-/autocontinue Project 21 of docs/TASKS.md. Implement the Godot frontend and Poly Haven workspace authorized by Decision 06. Build an exceptional furnished study with a real live terminal, then the dependent useful two-room workspace. Read AGENTS.md, STATUS.md, TASKS.md, GODOT-INTEGRATION.md, ART-DIRECTION.md and ASSET-PIPELINE.md. Continue through eligible tasks with no arbitrary time deadline. Inspect actual rendered images, fix concrete defects, verify real client input and lifecycle, preserve the C++ core and headless tests, and commit coherent verified changes locally. When one track is blocked, continue another independent eligible task. Keep all evidence honest; never tick missing features or human review. Stop only on completion, a genuine lack of eligible work, user takeover, or the plugin's failure/stall controls.
+/autocontinue P21-T00 through P21-T19
 ```
 
-The plugin supplies its detailed task loop automatically. You do not need to
-repeat this instruction at each turn. Scope parsing recognizes `Project 21`;
-the following descriptive prose does not add another project/task range.
+The plugin supplies its task loop and reads STATUS.md/TASKS.md. Both now point
+at reopened **P21-T00**, then the scaffold, complete asset packages, furnished
+room and working bridge. T00/T01/T02/T03/T10 must be proved again; old checkmarks
+and "blocked on a display server" handoffs are superseded. Follow each task's
+numbered actions and Acceptance line. Do not make the model infer the next task
+from the old chronological status history.
 
-If a smaller first run is useful, use `P21-T00 to P21-T09` for the visual track
-or `P21-T10 to P21-T18` for the bridge after its external prerequisites pass.
-Broad `Projects 1–21` would include unresolved legacy work and is not the intended
-scope. Combining project/range expressions unions them, rather than narrowing
-a project. New task IDs must be unique, numeric, unsuffixed and at column zero.
+The milestone ends only when **a real terminal works in the furnished Godot
+study (T19)**. T09's room alone or a compiled `.so` is not completion. The
+legacy `build/mansion-desktop --room-camera` executable is not the Godot frontend.
+T20–T35 remain later work; start a broader scope only when you intend that work.
+
+Do not use `Projects 1–21`: it includes deferred legacy work. Do not put
+`Project 21` in the same scope string as `P21-T00 through P21-T19`: the parser
+unions scope expressions, so that would select the whole project. New task IDs
+must be unique, numeric, unsuffixed and at column zero. If work is split into
+IDs outside the configured range, expand the scope deliberately; the plugin
+will not infer this change from dependencies.
 
 ## What the agent should accomplish
 
@@ -133,7 +144,7 @@ If the execution environment restricts test subprocesses and supports the flag:
 node --test --test-isolation=none .opencode/tests/*.test.js
 ```
 
-The patch bundle was checked with 62 passing plugin tests, including optional
+The 2026-10-02 documentation audit ran 62 passing plugin tests, including optional
 positive limits, unlimited continuation past the former limits after reload,
 scope rejection, missing/deleted task lists, takeover, failure/stall controls,
 and visibility of the human-dependent final gate. No new product C++/Godot

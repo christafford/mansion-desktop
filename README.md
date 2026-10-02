@@ -3,8 +3,10 @@
 Mansion Desktop is a Linux spatial desktop: real Wayland applications inside a
 persistent first-person environment. Current work is Project 21: a Godot world
 frontend, the retained C++ compositor core, and a furnished Poly Haven study.
-The supplied code still has the basic custom polygon renderer; the Godot bridge
-and finished room are not implemented by the direction/automation patches.
+The runnable `build/mansion-desktop --room-camera` command still uses the legacy
+custom polygon renderer. Godot has a separate placeholder project and incomplete
+bridge; the downloaded models lack dependencies and no furnished room is integrated.
+The [2026-10-02 status audit](docs/STATUS.md) reopens the unfinished prerequisites.
 
 Read [Decision 06](docs/decisions/06-godot-poly-haven.md),
 [the art brief](docs/ART-DIRECTION.md) and [the executable tasks](docs/TASKS.md).

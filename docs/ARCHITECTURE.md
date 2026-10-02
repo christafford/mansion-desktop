@@ -9,14 +9,18 @@ on its owning thread and provides owned CPU frame snapshots plus explicit seat
 and configure commands. See [GODOT-INTEGRATION.md](GODOT-INTEGRATION.md).
 The older snapshot choice in P4-T15 is superseded by P21-T11/T12. Subsequent
 sections describe still-useful ownership boundaries, not an alternate work order.
-No engine project or bridge is implemented by this documentation update.
+Current audit (2026-10-02): a placeholder engine project and draft bridge exist,
+but no functional integration or renderer-independent core library. T10 is
+reopened because compositor source still calls the legacy display/renderer.
+Moving a GPU field out of a header did not complete that boundary.
 
 ## Supplied prototype
 
 Status: target design for incremental changes, not a claim of implementation.
-Current source uses C++20, Meson, libwayland-server, a nested Wayland client
-host window (`wl_egl_window`; it replaced the X11 window on 2026-09-28 and is
-unverified, see handoffs/04-host-window.md), EGL/GLES2, and a headless test path. `src/display.cpp` currently combines host
+Current legacy source uses C++20, Meson, libwayland-server, a nested Wayland
+host window presented by PBuffer readback/shm, EGL/GLES2, and a headless test path.
+The owner confirmed narrow navigation/orientation fixes on 2026-10-02; broader
+terminal usability remains unverified (see handoffs/04-host-window.md). `src/display.cpp` currently combines host
 setup, GPU resources, camera/panel presentation, and room rendering. Separate
 these through bounded tasks; retain working behavior throughout.
 
@@ -78,7 +82,9 @@ the target. Related popups/subsurfaces follow their parent and remain usable.
 
 ## Graphics and assets
 
-Continue with EGL/OpenGL ES. GLES2 remains the baseline until a measured GLES3
+This paragraph describes the legacy renderer only; Decision 06/Godot is the
+current visual implementation target. For legacy maintenance, continue with
+EGL/OpenGL ES. GLES2 remains the baseline until a measured GLES3
 experiment and decision justifies change. Blender exports glTF/GLB; implement a
 documented subset first, with named limits for meshes, materials, textures, and
 lights. Start with ambient/directional lighting. PBR, shadows, skeletal

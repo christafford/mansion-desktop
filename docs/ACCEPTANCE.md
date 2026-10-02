@@ -1,8 +1,18 @@
 # Real-client and visual acceptance
 
-Status: procedures only; no check below has been performed by this documentation
-update. Synthetic tests and screenshots are supporting evidence, not usability
-acceptance. Human tasks in TASKS.md remain unchecked until a person records them.
+Status: procedures unless explicitly recorded as evidence. Synthetic tests and
+screenshots are supporting evidence, not usability acceptance. Human tasks in TASKS.md remain unchecked until a person records them.
+
+## 2026-10-02 audit boundary
+
+The owner confirmed legacy room navigation and the upside-down export fix in
+this conversation after `99fcedb` / `3dfaa26`. This is not a terminal, Godot or
+furnished-room acceptance trial. No human task is ticked from that feedback.
+The audit ran isolated Godot CLI import/runtime checks and inspected source/cache
+contents, not a Godot visual or live-client trial. See
+[the audit handoff](handoffs/11-godot-reality-audit.md) for exact scope/results.
+P21-T00/T01/T02/T03/T10 are reopened. A `.so` build, cache size, or legacy test
+pass cannot satisfy their revised explicit checks in [TASKS.md](TASKS.md).
 
 ## Current Project 21 acceptance
 
@@ -53,9 +63,9 @@ blocker. Do not change host services, global input permissions, or login session
 ## Terminal trial: P1-T10, P4-T04 and recovery P4-T17
 
 Current source presents through a nested Wayland client window and needs the
-host WAYLAND_DISPLAY plus weston-terminal; the X11 host window was removed on
-2026-09-28 and the Wayland window is unverified (reported flicker, no input).
-P4-T12/P4-T16 must record the commands that actually work before this trial.
+host WAYLAND_DISPLAY plus weston-terminal. The owner confirmed basic world
+navigation and upright output on 2026-10-02, but this terminal/input trial has
+not been observed. These remain legacy procedures, not the Project 21 work order.
 
 ```sh
 ./build/mansion-desktop --flat --launch weston-terminal

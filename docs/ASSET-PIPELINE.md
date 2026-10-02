@@ -1,7 +1,10 @@
 # Reproducible Poly Haven asset pipeline
 
-Implement the downloader, manifest and conversion tools during Project 21.
-This document does not download assets or claim the pipeline already exists.
+Complete the downloader, manifest and conversion tools during Project 21.
+The current fetcher caches individual files but omits all 30 external references
+from its six glTF models (2026-10-02 audit). T02/T03 are reopened; cache size is
+not importability. Preserve existing downloads while fetching verified missing
+dependencies. A JSON glTF may import directly; GLB conversion is not mandatory.
 
 ## Select and record
 
@@ -9,7 +12,8 @@ Start with a curated study set: timber flooring, plaster, furniture materials,
 desk/table, chair, lamp, shelves/books, small props and one suitable HDRI.
 Inspect the live [catalog](https://polyhaven.com/all) and candidate previews.
 Use compatible free assets from another documented provider for catalog gaps.
-Keep `assets/manifest.json` authoritative; every used asset records:
+Create and keep `world/assets/manifest.json` authoritative (currently missing).
+Every used asset records:
 
 - stable provider/asset ID, source page, author, license and license URL;
 - exact downloadable files, resolution/format, URLs, bytes and SHA-256 checksums;

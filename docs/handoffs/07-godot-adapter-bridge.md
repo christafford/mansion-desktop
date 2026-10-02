@@ -1,5 +1,12 @@
 # P21-T11: GDExtension Adapter — Handoff
 
+> Historical report, superseded by the [2026-10-02 audit](11-godot-reality-audit.md).
+> Do not use this file's completion/blocker claims to select work. T00/T01/T02/T03/T10
+> are reopened. The core still depends on the renderer; model dependencies are
+> missing; the extension is not registered or load-verified. A local Godot binary
+> and display are available. The `user://project.godot`/GUI-registration claim is
+> incorrect. Follow [current tasks](../TASKS.md) and [status](../STATUS.md).
+
 ## Summary
 
 Written and compiled the GDExtension adapter that bridges Godot to the Wayland

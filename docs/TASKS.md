@@ -4,7 +4,7 @@ This is the executable form of [PROJECT-ROADMAP.md](../PROJECT-ROADMAP.md).
 Autonomous sessions work from this file: take the first eligible unchecked
 task in scope, prove its acceptance, record the evidence, and commit.
 
-## Current execution order (2026-10-01, Decision 06)
+## Current execution order (2026-10-02 audit, Decision 06)
 
 1. Project 21 below: Godot/Poly Haven study and independent compositor bridge.
 2. Its furnished live-terminal gate, then the useful two-room workspace.
@@ -26,97 +26,249 @@ in this scope. Human review is at the end. Prior P4-T12–T28 tasks are deferred
 or superseded as an execution schedule; they remain honest unchecked history.
 P2-T05 GPU import remains open and is not a prerequisite for this CPU bridge.
 
-Every Depends entry requires completed tasks AND their stated evidence. Several
-turns per coherent task are allowed; do not impose a one-turn time deadline.
-If a task needs splitting, add unused numeric IDs at column zero and update all
-dependent tasks. Do not use suffixed IDs or hide subtasks inside prose. The
-continuation plugin checks boxes, not the truth of evidence or dependencies.
-The agent must enforce both. Record blockers and exact continuation points.
+## Instructions for the next autonomous run
 
-- [x] **P21-T00 Baseline and pin the toolchain.**
+Use `/autocontinue P21-T00 through P21-T19` for the first useful product milestone.
+Do not use a broad Projects 1–21 scope: that mixes deferred legacy tasks with
+this work. This document update does not itself start an autonomous run.
+
+1. Read STATUS.md, then the first eligible task below. T00 is next today.
+   T00, T01, T02, T03 and T10 were **reopened** on 2026-10-02. Their previous
+   checkmarks did not meet acceptance; do not restore them from an old handoff.
+2. Execute the numbered steps in that task. Reuse the existing code and caches.
+   Repair implementation; a new plan, empty API, successful compile, downloaded
+   file or screenshot of a primitive is not the requested feature.
+3. Run every listed pass check. Save commands, exit codes, logs and required
+   rendered captures. Read error logs even when the process exits 0. Inspect
+   actual images for visual tasks. Headless mode does not render acceptance
+   pictures; use a working graphical renderer for captures.
+4. Tick only after all checks pass. Update STATUS.md and the current handoff,
+   then commit only that task's files. Do not claim a feature works because an
+   unrelated C++ test suite passes. Do not mark human tasks complete.
+5. If unfinished, leave it unchecked and write `Next: P21-Txx`, the failing
+   command, actual error and exact next code change in STATUS.md. Continue the
+   same task next turn. A task may take many turns; do not skip it for difficulty.
+6. A blocker needs a fresh failed command and a reason no safe local fix exists.
+   Test installed tools before saying they are missing. Do not wait for a GUI
+   settings page to register a GDExtension. If blocked, take another eligible
+   task in scope: T10 needs only T00; T11 also needs T01. If no task is eligible,
+   record all blockers and end with `AUTOCONTINUE_BLOCKED`.
+7. End with `AUTOCONTINUE_DONE` only after every non-human task in the configured
+   scope passes. For the recommended scope this includes T19, not just T09 or
+   a compiled bridge. Otherwise end with `Next: <task id>`.
+
+**Default sequence:** T00 → T01 → T02 → T03 → T04 → T05 → T06 → T07 → T08 →
+T09 → T10 → T11 → T12 → T13 → T14 → T15 → T16 → T17 → T18 → T19.
+The explicit Depends lines control eligibility; the sequence prioritizes a
+visible real-asset room while allowing independent core work if art is blocked.
+T20–T35 retain the later roadmap; do not start them in the recommended scope.
+
+The plugin recognizes only column-zero `- [ ] **P21-T00 ...` task lines and
+numeric IDs. It does **not** enforce Depends or validate evidence. Preserve all
+IDs and dependency edges. Do not hide subtasks in nested checkboxes or use ID
+suffixes. Split only when a task has separate acceptance boundaries; add unused
+numeric IDs and include them in the authorized scope before relying on them.
+
+- [ ] **P21-T00 Repair and verify the toolchain baseline.**
   **Depends:** none.
-  **Acceptance:** Inspect actual source/tests and run their available baselines. Record existing failures and supported clients. Pin verified Godot/godot-cpp/Blender releases and repository-local bootstrap/build commands in TOOLCHAIN.md; record target hardware, renderer candidates and performance goals. Prove tools run, or record exact unavailable dependencies without claiming implementation.
-  **Evidence (2026-10-01):** C++ baseline 27/28 pass in `build` (1 pre-existing flaky `camera-move` test, UBSan/ASan enabled in normal build), 28/28 pass in `build-asan` (zero sanitizer errors). Node plugin 62/62 pass. Godot 4.7.2-stable, godot-cpp 10.0.0-stable, Blender 5.2.2 LTS pinned in `docs/TOOLCHAIN.md` with SHA-256 checksums and install instructions. Target hardware: Steam Deck (AMD Custom APU 0405, RDNA 2 GPU, 16 GB RAM, 1280×800). Target renderer: Compatibility (Vulkan). Performance goal: 30 FPS sustained, 60 FPS pursued. Godot/godot-cpp/Blender NOT installed on dev system — documented in TOOLCHAIN.md as repository-local downloads.
+  **Reopened:** old version/download/checksum claims are not a reproducible toolchain. Local tools and a working import invocation are now identified.
+  **Do:**
 
-- [x] **P21-T01 Create the Godot frontend scaffold.**
+  1. Read TOOLCHAIN.md and handoffs/11-godot-reality-audit.md. Run the existing editor's `--version` and `--help`; record the binary SHA-256 and godot-cpp commit/API version. Do not treat a filename as proof of compatibility or an authentic upstream checksum.
+  2. Verify import on an isolated tiny project and copy of the scaffold without the 2.8 GB cache, using `--headless --path COPY --import`, which passed this audit. The initial combined `--editor --import` invocation aborted; keep that failure recorded without treating all imports as blocked. Do not rebuild/replace the working binary unless a fresh required check fails and diagnosis justifies it. No system installs.
+  3. Prove a tiny project imports, runs headless, and opens a bounded graphical window. Record renderer/driver and return codes. Use Compatibility/OpenGL initially; do not call it Vulkan. Unavailable audio is not a visual blocker; use the supported dummy audio driver for smoke checks.
+  4. Verify godot-cpp targets the engine API actually used. Confirm whether Blender is needed at all: complete glTF can import directly. Pin Blender only if conversion requires it; no invented versions, URLs, hashes or licenses.
+  5. Run `meson compile -C build`, `meson test -C build --print-errorlogs` and the Node plugin tests as this run's baseline. Record failures without relabeling them as passes. Update TOOLCHAIN.md with commands actually tested.
+
+  **Acceptance:** a working local editor/import/runtime configuration with exact identity and provenance, compatible bindings identified, and baseline results recorded. An unavailable optional Blender does not block glTF work; an unresolved mandatory editor/import failure leaves T00 unchecked.
+
+- [ ] **P21-T01 Repair and demonstrate the Godot scaffold.**
   **Depends:** P21-T00.
-  **Acceptance:** Create world/project.godot, main scene, safe spawn, documented run/import commands and automated script/import checks. Launch a real host window and capture a rendered scene; preserve the standalone C++ headless tests. Placeholder geometry is explicitly temporary.
-  **Evidence (2026-10-01):** `world/project.godot` created with Compatibility (Vulkan) renderer, 1280×800 viewport. `world/scenes/main.tscn` contains room geometry (floor, 4 walls, ceiling), monitor slot with emissive screen, desk, Camera3D, SpawnMarker. `world/scripts/game_world.gd` implements WASD movement, mouse look, collision bounds, teleport (T), application mode toggle (Enter/F12). `tools/validate-godot-project.sh` validates scene nodes and script presence. `tools/run-godot.sh` launches the project. Godot import passes without errors. C++ tests: 28/28 pass (unchanged). Node plugin: 62/62 pass. Live render capture deferred — requires display server; will be captured at P21-T09.
+  **Reopened:** files exist, but the old acceptance omitted the required rendered host-window evidence and the validator can hide failure.
+  **Do:**
 
-- [x] **P21-T02 Curate the study asset set.**
+  1. Fix `tools/run-godot.sh` to use the tested `--path` CLI and clearly distinguish run/editor/import modes. Fix `tools/validate-godot-project.sh` to preserve nonzero exit status, use a per-run log, select the correct project and detect script/runtime errors. Test it against an intentionally invalid temporary project; it must fail.
+  2. Inspect `world/project.godot`, `world/scenes/main.tscn` and `world/scripts/game_world.gd`: correct material resource types and zero-scale floor transform; resolve duplicate autoload/class/controller ownership; resolve camera after nodes exist; fix right-button release and mouse-motion API usage if the engine reports errors. Do not assume the draft script is working.
+  3. Run import/script checks, then a real Godot window with a safe visible camera, floor/walls and enough light to see geometry. Capture and inspect the image; exercise movement, mouse release and close. This task permits temporary blockout geometry only.
+  4. Record the exact working Godot launch command in STATUS.md. State that `build/mansion-desktop --room-camera` still runs the legacy renderer.
+
+  **Acceptance:** validator rejects invalid input and accepts the repaired project; an actual Godot render is inspected; basic scene controls/close work. No bridge, real assets or application-mode claims yet. Do not defer this task's capture to T09.
+
+- [ ] **P21-T02 Verify the study asset selection and provenance.**
   **Depends:** P21-T00.
-  **Acceptance:** Inspect current Poly Haven previews/metadata; select coherent furniture, architectural PBR textures and HDRI. Record real IDs, sources, licenses, units and missing-catalog alternatives against ART-DIRECTION.md. Produce a reviewable manifest design and composition layout.
-   **Evidence (2026-10-01):** Live Poly Haven API queried (2382 assets). 30 asset IDs selected and verified present. HDRI: poly_haven_studio (primary, 24K home office). Floor: walnut_veneer (16K). Walls: beige_wall_001 (16K). Furniture: metal_office_desk, dining_chair_02, wooden_bookshelf_worn, desk_lamp_arm_01, potted_plant_02, book_encyclopedia_set_01. 3 alternatives per surface. Scene composition layout defined. Missing: computer monitor, standing lamp. All CC0. Manifest at world/assets/manifest.md.
+  **Reopened:** a prose proposal exists, but reviewable previews/provenance and a complete runtime manifest have not been demonstrated.
+  **Do:**
 
-- [x] **P21-T03 Implement selective asset fetching and verification.**
+  1. Review `world/assets/manifest.md` against ART-DIRECTION.md. Inspect real previews/metadata for the chosen desk, chair, bookcase, lamp, plant/books, floor/wall/ceiling and HDRI. Confirm real catalog IDs; replace unsuitable/unavailable choices without inventing assets.
+  2. Record source pages, authors/licenses, measured units, intended dimensions and composition. Prefer a coherent warm wood/plaster study; a list of arbitrary industrial furniture is not visual acceptance.
+  3. Define authoritative `world/assets/manifest.json` with IDs, exact files/URLs, source and runtime paths, dependency lists, resolution and hash fields filled from actual bytes/metadata. Keep prose as design rationale, not a second conflicting downloader manifest. Missing SHA-256 values remain explicitly pending until T03; never invent them.
+  4. Choose deliberate alternatives for missing monitor/window/rug assets. Keep runtime maps at 1K/2K initially and the HDRI modest. The existing 24K EXR is a source cache, not a required runtime texture or reason to fetch it again.
+
+  **Acceptance:** reviewed preview evidence, coherent layout and traceable curated manifest. An API response or file count alone does not pass. T03 completes acquisition/locking of missing file bytes.
+
+- [ ] **P21-T03 Repair asset fetching and fetch complete model packages.**
   **Depends:** P21-T02.
-  **Acceptance:** Implement repository-local fetch/cache tooling, manifest, identifying API requests, atomic downloads, hashes, finite retries and offline behavior. Test invalid hash, interruption, missing file and repeat bootstrap. Fetch the actual curated set; no invented URLs, catalog-wide download or silent placeholder fallback.
-  **Evidence (2026-10-01):** Tool at `world/tools/fetch_assets.py`: CLI fetcher with MD5 hash verification (Poly Haven API provides MD5), atomic downloads, retry with exponential backoff, cache management, dry-run mode, and `--hashes` output. File key resolver handles HDRI (24k/16k exr/jpg), texture (diffuse/normal/rough jpg), and model (glb → gltf 2k) asset types. All 22 primary assets cached in `world/assets/cache/` (2.8 GB total). Repeat bootstrap verified: re-run detects all 22 assets as up-to-date with MD5 hash verification. C++ regression suite: 28/28 pass in build and build-asan.
+  **Reopened:** 22 cached files are not 22 complete assets. All six glTF models have missing dependencies: 30 external buffer/image references in total.
+  **Do:**
 
-- [ ] **P21-T04 Convert models and verify PBR imports.**
+  1. Audit `world/tools/fetch_assets.py`; use the T02 manifest rather than divergent hard-coded lists. Preserve existing cache bytes. Fetch only selected missing/corrupt files, not all alternates or the whole catalog.
+  2. For each glTF download all external `.bin` and image dependencies using verified provider metadata. Preserve safe relative paths; reject traversal/absolute paths. Parse every URI and require each local dependency to exist. Renaming JSON to `.glb` does not convert it.
+  3. Record upstream hashes when provided and compute a reproducible SHA-256 lock from downloaded bytes. Validate before publishing final cache files. Do not copy or guess a checksum. Include source URLs and license records.
+  4. Make cached/offline verification work without fetching API metadata first. Test repeat run without downloads, offline success, corrupt hash rejection, interrupted download cleanup, missing URI and bounded network retries using local fixtures.
+
+  **Acceptance:** offline structural checks can load every selected model buffer/image dependency, dependency/hash checks pass, repeat bootstrap downloads nothing, and negative-path tests pass. Godot visual import follows in T04. File count/GB totals are not acceptance; no silent primitive fallback.
+
+- [ ] **P21-T04 Import complete models and verify PBR materials.**
   **Depends:** P21-T01, P21-T03.
-  **Acceptance:** Implement reproducible GLB conversion where required and deliberate Godot import/material settings. Render and inspect a model/material contact sheet; verify texture channels, scale, normal orientation and provenance. Retain exact commands and pinned conversion versions.
+  **Do:**
 
-- [ ] **P21-T05 Assemble the furnished study.**
+  1. Import one complete glTF model directly into Godot first. Use Blender only if the format actually requires conversion; verify its pinned exporter on one model before batch work.
+  2. Create reusable runtime model/material scenes under `world/`, with meters, correct orientation, UVs, pivots and map color spaces. Keep large source caches out of routine engine import. Record deterministic import/conversion settings.
+  3. Build a contact-sheet scene showing all selected models and material swatches under useful lighting. Capture with the graphical renderer and inspect texture channels, normal orientation, scale and missing dependencies. Fix defects before continuing.
+
+  **Acceptance:** reproducible import, no missing-resource errors, inspected contact sheet for every runtime asset, provenance and exact commands in ACCEPTANCE.md. Waiting for a manual Project Settings action or saying "no display" without a fresh failure is not a blocker.
+
+- [ ] **P21-T05 Assemble the furnished Godot study.**
   **Depends:** P21-T04.
-  **Acceptance:** Use real furniture and distinct floor/wall/ceiling materials. Place desk/chair/monitor/lamp/shelf/rug/window with believable scale, no major intersections and usable circulation. Render arrival, desk and opposite-corner views and inspect them. Primitives do not pass this task.
+  **Do:**
+
+  1. Replace scaffold furniture with imported desk, chair, lamp, bookcase and props. Add monitor housing, rug and framed window with credible scale. Apply distinct floor, wall and ceiling materials.
+  2. Put the monitor on the desk, leave walkable circulation and fix floating/intersecting objects. Use ART-DIRECTION.md's warm study composition.
+  3. Provide reproducible arrival, desk and opposite-corner camera views. Render and inspect all three; correct visible placement/material defects.
+
+  **Acceptance:** an actual furnished Godot scene and three inspected runtime views. Colored boxes, a concept image or an unused asset folder do not pass. Screen content may be explicitly labelled diagnostic until T13/T18.
 
 - [ ] **P21-T06 Light and refine the study.**
   **Depends:** P21-T05.
-  **Acceptance:** Implement appropriate environment/indirect/practical lighting and tune exposure, contact shadows, reflections and material scale. Compare captured revisions, fix observed defects and pass the applicable art rubric. Record renderer/settings and remaining visual defects honestly.
+  **Do:**
 
-- [ ] **P21-T07 Implement comfortable world movement.**
+  1. Add balanced daylight, environment lighting and a warm practical lamp using features supported by the chosen renderer. Tune exposure, contact shadows, roughness and physical texture scale.
+  2. Capture the same three T05 views, inspect before/after, name concrete defects and fix them. Do not turn every material brown or use an oversized HDRI as a substitute for lighting.
+
+  **Acceptance:** applicable lighting/material criteria in ART-DIRECTION.md pass with recorded settings and images. Defer only the live-application criterion to T19; do not claim it passed here.
+
+- [ ] **P21-T07 Implement comfortable Godot movement.**
   **Depends:** P21-T01, P21-T05.
-  **Acceptance:** Implement camera, host-scoped controls, collision, safe spawn, reduced-motion option and fast return/teleport. Run movement/collision checks and an observed room traversal. No clipping through desk/walls or unavoidable camera bob.
+  **Do:**
+
+  1. Implement host-focused WASD/mouse navigation, released capture on exit/focus loss, safe spawn, collision against walls and furniture, reduced-motion setting and fast return/teleport.
+  2. Test simultaneous keys, releases, focus loss, repeated capture/release, room bounds and blocked movement around the desk. Observe a traversal of the furnished scene.
+
+  **Acceptance:** repeatable control/collision checks and labelled observed traversal; no stuck keys, clipping or unavoidable camera bob. Legacy C++ camera tests do not validate Godot input.
 
 - [ ] **P21-T08 Create stable entities and the monitor screen slot.**
   **Depends:** P21-T05.
-  **Acceptance:** Assign stable entity IDs and parent-relative furniture/monitor/screen transforms independent of runtime nodes. Add ray picking and inspect a labelled diagnostic screen for aspect/orientation. Move/rotate the desk and prove the monitor and panel move with it; do not claim live application support.
+  **Do:**
 
-- [ ] **P21-T09 Review the first room visually.**
+  1. Assign stable entity IDs independent of node paths, PIDs, pointers and GPU objects. Parent the monitor/screen to the desk and define its aspect, UVs and picking surface.
+  2. Add ray picking; render an explicitly diagnostic asymmetric screen with corner labels. Move/rotate the desk and verify screen/picking transforms follow correctly.
+
+  **Acceptance:** automated identity/transform/picking checks and inspected screen orientation/aspect. A diagnostic image is not a live application.
+
+- [ ] **P21-T09 Review the furnished room visually.**
   **Depends:** P21-T06, P21-T07, P21-T08.
-  **Acceptance:** Render and inspect fixed comparison views and record a criterion-by-criterion ART-DIRECTION.md review. Fix defects until the finished-room criteria pass. If image inspection is unavailable, keep this task open with its exact blocker while continuing core tasks.
+  **Do:**
 
-- [x] **P21-T10 Extract the compositor core from presentation.**
+  1. Render the three fixed views and inspect each ART-DIRECTION.md criterion for the room. Record pass/fail with paths and specific defects.
+  2. Fix failed room criteria and repeat captures. Mark application content as pending T19, not passed by a diagnostic texture. If vision is unavailable, record unreviewed captures and continue eligible T10 work.
+
+  **Acceptance:** a coherent furnished study, reviewed materials/light, usable movement and screen slot; no unreviewed visual claims. This passes the room milestone only, not the live-desktop milestone.
+
+- [ ] **P21-T10 Finish extracting a reusable compositor core.**
   **Depends:** P21-T00.
-  **Acceptance:** Separate the reusable protocol/client/seat core from old host GL rendering/input. Keep the headless executable and existing tests working. Prove core start/nonblocking pump/stop and callback ownership without any visible host dependency. Fix reproducible lifetime/commit regressions relevant to reuse.
-  **Evidence (2026-10-01):** GL/EGL removed from protocol core (`compositor-private.h` no longer includes `<GLES2/gl2.h>`, `MansionSurface` no longer carries `gl_texture`). New `renderer-surface.h` bridges layers via `wl_resource*` map. All 28 tests pass in `build` and `build-asan` (zero sanitizer errors). Commit bf76e41.
+  **Reopened:** moving `gl_texture` out of one struct did not remove GL/display dependencies or produce a linkable core library.
+  **Do:**
 
-- [ ] **P21-T11 Build and load the GDExtension adapter.**
+  1. Inspect `src/compositor.cpp`, `src/input.cpp`, renderer helpers and `meson.build`. Separate protocol/client/seat lifetime from old display/camera rendering at one boundary. Preserve legacy and headless paths.
+  2. Build a real reusable PIC core-library target, with no dependency on legacy `display.cpp`, EGL/GLES or host-window globals. Do not link an executable into the extension or replace core behavior with empty stubs.
+  3. Add a core-only executable test: start private socket, pump nonblocking, accept fixture client, flush, disconnect and stop cleanly. Check callback/resource ownership and unresolved symbols. Run normal and relevant sanitizer tests and state whether leak detection was enabled.
+
+  **Acceptance:** core-only library/test links and runs without the legacy renderer; lifecycle and existing regressions pass. Header inspection or historical test counts alone do not pass.
+
+- [ ] **P21-T11 Build and load a functional GDExtension adapter.**
   **Depends:** P21-T01, P21-T10.
-  **Acceptance:** Build a minimal compatible adapter with explicit lifecycle and nonblocking pump. Godot loads it, starts a private socket, accepts a fixture client and shuts down cleanly; extension load/unload and headless regression checks pass. No second blocking loop or arbitrary-thread resource access.
+  **Do:**
+
+  1. Use the compatible bindings from T00 and core library from T10. Replace the draft build/link path; reject unresolved Mansion symbols at link time. The existing `.so` is not proof of loadability.
+  2. Create a real `.gdextension` resource with `[configuration]` entry symbol and `[libraries]` platform paths. Register a callable class/methods during extension initialization. Empty init callbacks and `extension.toml` do not satisfy this.
+  3. Add a Godot smoke scene/script that instantiates the class, starts the compositor, calls a nonblocking pump on its owning thread and shuts it down. Verify the actual private socket path and fixture connection; do not guess socket names from a log string.
+  4. Exercise load/unload/repeated start/stop, callback cleanup and socket removal. Fix all load/link/script errors; no second blocking event loop.
+
+  **Acceptance:** Godot demonstrably invokes the registered adapter and serves a real fixture client; clean shutdown and regression tests pass. No GUI-only registration step is required. Texture export waits for T12/T13.
 
 - [ ] **P21-T12 Implement owned shm frame snapshots.**
   **Depends:** P21-T11.
-  **Acceptance:** Implement tested format/stride/alpha/bounds/scale/transform handling, copied frame revisions and window generations. Test buffer replacement/release/disconnect ownership using asymmetric color fixtures. Snapshots remain valid after source destruction; no raw Wayland pointers escape into GDScript.
+  **Do:**
+
+  1. Copy committed shm pixels into owned snapshots with live-window ID/generation, dimensions, stride/format, scale/transform and revision. Validate bounds/overflow and access lifetime. Expose no raw resource pointers to GDScript.
+  2. Test asymmetric corners/rows, ARGB/XRGB alpha/channel order, padded stride, buffer replacement/destruction and disconnect. Release buffers only after copying; snapshots must survive source destruction.
+
+  **Acceptance:** deterministic pixel and lifetime tests pass, including relevant sanitizers. A raw texture handle, stale screenshot or pending-buffer pointer is not a snapshot.
 
 - [ ] **P21-T13 Display live client textures in Godot.**
   **Depends:** P21-T08, P21-T12.
-  **Acceptance:** Create/recreate/update ImageTexture from copied frames; handle sizes, revisions and invalidated windows. Verify moving real fixture pixels, orientation and monitor UV mapping in runtime captures. Keep client pixels unlit; measure copy/update bytes and cost. Mark this CPU bridge explicitly.
+  **Do:**
 
-- [ ] **P21-T14 Route keyboard and pointer through the seat.**
+  1. Wire adapter snapshots to an ImageTexture on the actual screen slot. Recreate on size/format change, update on revision, and clear on invalidation. Keep client pixels unlit.
+  2. Run a fixture that changes its pixels over time through the private Wayland socket. Capture multiple frames in Godot; verify orientation, aspect, UV corners and continuing updates. Measure copy/upload bytes and time.
+
+  **Acceptance:** moving fixture pixels visibly arrive through the real CPU bridge, with resize/invalidation tests. Static files, replayed captures and a texture allocated but never updated do not pass.
+
+- [ ] **P21-T14 Route Godot keyboard and pointer through the seat.**
   **Depends:** P21-T11, P21-T13.
-  **Acceptance:** Implement explicit Godot physical-key to seat/XKB mapping, modifiers/repeat and surface-local pointer mapping. Test keys and corners/center under letterboxing, scale and transforms. Input only enters while the Godot host owns focus; no /dev/input access.
+  **Do:**
+
+  1. Map physical Godot keys explicitly to evdev/XKB codes; deliver press/release, modifiers and repeat only to the focused client. Convert pointer coordinates through screen/letterbox transforms to surface-local coordinates.
+  2. Have the fixture record actual received input. Test printable keys, simultaneous keys, releases, modifiers, buttons, scrolling and corners/center at multiple aspect ratios. Check host-focus loss and block background input.
+
+  **Acceptance:** client-received event assertions pass and the Godot host controls the visible fixture. No `/dev/input`, keycode guessing or camera-only test substitutes.
 
 - [ ] **P21-T15 Implement world/application focus transitions.**
   **Depends:** P21-T07, P21-T14.
-  **Acceptance:** Use one live binding in both world panel and readable application view. Test reserved return shortcut, host-focus loss, held keys/buttons and repeated mode changes. Ordinary app keys reach the client and world controls do not steal them; no stuck input.
+  **Do:**
+
+  1. Show the same live client binding on the world monitor and in a readable application view. Implement selection/activation and document one reserved return shortcut.
+  2. Test five enter/return cycles, ordinary application typing, held keys/buttons, host focus loss and client destruction. Release held input; restore correct pointer coordinates and camera state.
+
+  **Acceptance:** live client survives transitions and only the intended target receives input. Setting an `input_mode` string without seat/presentation effects does not pass.
 
 - [ ] **P21-T16 Implement configure and resize behavior.**
   **Depends:** P21-T12, P21-T15.
-  **Acceptance:** Test configure/ack/commit ordering, host/application size changes, remap and coordinate mapping at several aspect ratios. Verify client content actually changes size rather than merely stretching a stale buffer; record unsupported protocol cases.
+  **Do:**
+
+  1. Connect requested size to configure/ack/commit handling and snapshot/texture recreation. Preserve geometry and input transforms across host/application resize and remap.
+  2. Test several aspect ratios, repeated resize, invalid/old serials and newly submitted client buffer dimensions. Capture changed content dimensions and verify pointer corners.
+
+  **Acceptance:** clients actually resize and present new buffers; stretching the old image does not pass. Document unsupported protocol cases.
 
 - [ ] **P21-T17 Harden window and client lifecycle.**
   **Depends:** P21-T16.
-  **Acceptance:** Test map/unmap/remap/destroy/relaunch, focus invalidation, texture cleanup, socket cleanup and shutdown. Repeated disconnect cycles pass relevant sanitizers; report whether leak detection was enabled. No stale content or callback touches destroyed state.
+  **Do:**
 
-- [ ] **P21-T18 Run a real native terminal through the bridge.**
+  1. Test map/unmap/remap/destroy/relaunch, abrupt disconnect, focus invalidation, textures/snapshots, callbacks and socket cleanup in the Godot adapter.
+  2. Repeat connect/disconnect cycles under relevant sanitizers. Report leak detection settings accurately; do not call `detect_leaks=0` a leak check.
+
+  **Acceptance:** no stale live content, dangling callbacks, stuck focus or leftover owned processes/sockets. Legacy-only lifecycle tests are insufficient.
+
+- [ ] **P21-T18 Run a real native terminal through Godot.**
   **Depends:** P21-T17.
-  **Acceptance:** Implement/document a native software-rendered terminal launch onto the private socket and repeatable integration checks. Observe changing output, typed command, modifiers, pointer/scroll, resize, five mode switches, host-focus loss and close/relaunch. Capture evidence with environment/revision; a fixture, mock or host terminal is insufficient.
+  **Do:**
+
+  1. Identify an installed native Wayland terminal and record version/software-rendering invocation. Launch it on the adapter's actual private socket. Never let it fall back to the host X/Wayland session.
+  2. Observe changing output, a typed command, modifiers, pointer selection/scroll, resize, five mode switches, host-focus loss and close/relaunch. Save captures/logs with exact commands and observer.
+  3. Fix missing protocol/input/lifecycle behavior that blocks this one terminal. If no suitable terminal is available and local setup cannot supply one safely, record the precise dependency blocker; do not substitute the fixture.
+
+  **Acceptance:** an actual terminal performs the complete trial in Godot. Compilation, a static texture or an external host terminal does not pass.
 
 - [ ] **P21-T19 Accept the furnished live-terminal demonstration.**
   **Depends:** P21-T09, P21-T18.
-  **Acceptance:** Run the full GODOT-INTEGRATION.md convergence trial in the furnished study, capture world and application views, inspect them and record measured responsiveness. Fix integration and visual defects before passing. Label agent-observed evidence; this is an automated/agent gate, not personal acceptance or general desktop compatibility.
+  **Do:**
+
+  1. Run the real terminal in the furnished study, using the same tested controls and binding. Capture arrival, desk, opposite corner and readable application views; inspect the art rubric and live interaction together.
+  2. Repeat typing, pointer/scroll, resize, focus loss, five world/application transitions, close/relaunch and movement. Measure responsiveness on the named hardware and fix any integration defects.
+  3. Update README/run instructions and STATUS with the actual Godot launch command; make the distinction from the legacy `--room-camera` command explicit. Record exact supported terminal, renderer, environment, images/logs and remaining limits in ACCEPTANCE.md.
+
+  **Acceptance:** furnished scene plus a working real terminal in that scene, with all trial checks and visual criteria passed. This completes the recommended autocontinue scope. It is an agent-observed product gate, not owner acceptance, GPU import or general application compatibility.
 
 - [ ] **P21-T20 Implement multiple live windows and surface trees.**
   **Depends:** P21-T19.
