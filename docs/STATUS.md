@@ -16,11 +16,11 @@ and needs a running Godot editor to download GLB/OBJ models, convert textures,
 and place them in the scene. Godot is NOT installed on dev system — blocked until
 display server available or local install. P21-T10 is complete (compositor core
 extracted from presentation). P21-T11 (GDExtension adapter) is partially complete
-— code written and compiles cleanly; blocked on libgodot.so (Godot engine build in
-progress). P21-T11 depends on P21-T10 being complete. Decision 06 authorizes the
-Godot world frontend and Poly Haven assets; world art and compositor extraction are
-independently eligible. P21-T19 is the furnished live-terminal gate; P21-T34 is
-the final personal review.
+— code written, extension .so built (98 KB), all 13 symbols exported; blocked on
+Godot editor build (target=editor) in progress. P21-T11 depends on P21-T10 being
+complete. Decision 06 authorizes the Godot world frontend and Poly Haven assets;
+world art and compositor extraction are independently eligible. P21-T19 is the
+furnished live-terminal gate; P21-T34 is the final personal review.
 
 **P21-T02 completed 2026-10-01.** Asset manifest at `world/assets/manifest.md`.
 Live Poly Haven API queried (2382 assets: 997 HDRIs, 864 textures, 521 models).
@@ -261,7 +261,7 @@ Full reconciliation completed. Handoff at
   (28/28, zero sanitizer errors). (2026-10-01, this session)
 
 - **P21-T11 GDExtension adapter — partially verified (2026-10-01, this session).**
-  Code written and compiles cleanly:
+  Code written, compiles cleanly, and .so built (98 KB, 13 symbols):
   - `src/godot/mansion_bridge.h` — C-facing bridge API header (no GL/EGL includes)
   - `src/godot/mansion_bridge.cpp` — C++ implementation connecting GDExtension to
     compositor core (compositor, seat, xdg-shell, launch). No threads spawned; all
@@ -270,14 +270,17 @@ Full reconciliation completed. Handoff at
     `gdextension_interface.h` (no godot-cpp dependency for compilation). Exports
     `godot_gdnative_init`, `godot_gdnative_exit`, `godot_extension_get_library_symbol`.
   - `src/godot/CMakeLists.txt` — build configuration for GDExtension
-  - `tools/build-mansion-extension.sh` — build script for verification
+  - `src/godot/extension.toml` — Godot extension manifest
+  - `tools/build-mansion-extension.sh` — build script (standalone .so, no libgodot.so)
   Compilation: `mansion_bridge.cpp` compiles against mansion core headers
   (compositor.h, compositor-private.h, xdg-shell.h, input.h, launch.h) with
   zero warnings. `mansion_extension.cpp` compiles against GDExtension interface
   with zero warnings.
-  **Blocker:** `libgodot.so` not yet available. Godot engine source build in
-  progress at `tools/godot-4.7.2-stable/` (SCons, template_debug target).
-  Full linking and Godot load/unload test deferred until libgodot.so is built.
+  Extension built: `build-godot-ext/libmansion_godot.so` (98 KB, 13 symbols
+  verified via `nm -D`).
+  **Blocker:** Godot editor build in progress (target=editor) — needed for
+  load/unload testing. template_debug build completed (772 MB library target).
+  Full linking and Godot load/unload test deferred until editor binary is built.
   No regressions to existing test suite: 28/28 pass in `build` and `build-asan`.
 
 - **P4-T08 Resource and list lifetimes.** `MansionXdgShell` gains
