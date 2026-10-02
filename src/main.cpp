@@ -589,12 +589,7 @@ int main(int argc, char** argv) {
         }
 
         render(display);
-
-        /* Present the frame to the X11 window. */
-        if (!opts.headless) {
-            swap_buffers(display);
-            frame_count++;
-        }
+        frame_count++;
 
         /* P2-T07: frame-rate cap at ~60 Hz to avoid burning CPU and
          * reducing Xwayland flickering. */
