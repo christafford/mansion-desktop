@@ -10,6 +10,21 @@ running the check that proves it.
 
 ## Next task
 
+**P4-T29 host-navigation repair complete (2026-10-02).** Follow-up to the
+user's report that the rendered view still ignored input, against `a5ba64a`.
+Live host movement was never applied to the camera, WASD keycodes were wrong,
+and each key event cleared other held keys. Fixed all three; host focus loss
+clears movement, mouse look preserves fractional deltas and has an ordinary
+pointer fallback. Nested input now uses only the host seat, with no global
+`/dev/input` scanning. Seat listeners register at bind time; the previously
+unregistered xdg ping handler now answers host pings.
+**Verified by automated test:** build and 30/30 tests pass, including direct
+host-listener movement, mouse-look, focus-loss and mode-isolation assertions.
+Agent-run eight-second launch renders 274 frames and exits 0; protocol log
+shows keyboard focus and matching ping/pong. **Not verified:** physical input
+usability, pointer capture, application typing/click routing, or human gates.
+This repair is limited to world navigation; P4-T12 remains open.
+
 **P4-T19 startup-hang repair complete (2026-10-02).** User-requested bounded
 fix against base revision `04ecfe6`: the nested host event handler called
 `wl_display_read_events()` without preparing a read, deadlocking before the
@@ -108,7 +123,7 @@ until the foundation and presentable-room gates pass.
 | Legacy foundation gate | Unaccepted; superseded as current work order | Relevant regressions and live-terminal evidence now required by P21-T10–T19 |
 | GPU client import | Not verified; PBuffer/readback/shm is fallback evidence | Later direct-import scope; leave P2-T05 open, not a prerequisite for the CPU bridge |
 | Legacy native Wayland host | PBuffer/shm export (cd2da8a); real-session behavior unverified | Godot takes over the visible host window in P21-T01/T11; retain any needed core headless behavior |
-| Host input path | Supplied windowed code scans `/dev/input`; headless opens no devices | P21-T14/T15 use only focused Godot host input; global evdev is prohibited in the new frontend |
+| Host input path | P4-T29 removes global evdev; nested navigation uses the focused host seat | P21-T14/T15 use only focused Godot host input; global evdev is prohibited in the new frontend |
 | Lifetimes and surface commits | xdg_surface/xdg_toplevel tracked and freed on disconnect; orphaned surface cap at 10 — P4-T08 done | P4-T09–P4-T11 regressions and sanitizer evidence |
 | Automation | New count/time defaults are unlimited; invalid scopes/task lists rejected; 62 Node tests passed during patch preparation | Check actual OpenCode load locally; no new live Qwen/OpenCode run is claimed |
 | First furnished Godot study | Not implemented/accepted | P21-T01–T09 independently eligible; converges with bridge at P21-T19 |

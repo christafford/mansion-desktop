@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cerrno>
 #include <chrono>
 #include <csignal>
@@ -521,6 +522,7 @@ int main(int argc, char** argv) {
               << (opts.screenshot.empty() ? "" : " [screenshot: " + opts.screenshot + "]")
               << std::endl;
 
+    auto previous_frame = clock::now();
     while (running) {
         if (opts.exit_after_ms >= 0) {
             auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(clock::now() - start).count();
@@ -528,6 +530,9 @@ int main(int argc, char** argv) {
         }
 
         auto frame_start = clock::now();
+        double live_delta_ms = std::chrono::duration<double, std::milli>(
+            frame_start - previous_frame).count();
+        previous_frame = frame_start;
 
         // Process Wayland client events (windowed mode only).
         if (!opts.headless && display) {
@@ -553,7 +558,10 @@ int main(int argc, char** argv) {
             break;
         }
 
-        if (input_started) input_process();
+        if (input_started) {
+            input_process();
+            input_wayland_apply_movement(display, std::min(live_delta_ms, 100.0));
+        }
 
         /* Execute next script command, if any. */
         if (script) {

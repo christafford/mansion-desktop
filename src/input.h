@@ -101,5 +101,7 @@ int input_process_wayland_client(struct MansionDisplay* m_display);
 
 /* Wayland seat input callbacks — called from the Wayland client
  * display event handlers to drive camera movement in windowed mode. */
-void input_wayland_key(bool w, bool a, bool s, bool d);
-void input_wayland_pointer_motion(int32_t dx, int32_t dy);
+void input_wayland_focus(bool focused);
+void input_wayland_key(uint32_t key, bool pressed);
+void input_wayland_pointer_motion(double dx, double dy);
+void input_wayland_apply_movement(struct MansionDisplay* display, double delta_ms);

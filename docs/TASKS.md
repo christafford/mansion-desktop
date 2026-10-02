@@ -657,6 +657,17 @@ authorize a rewrite. If blocked, continue only independent eligible work.
   `--room-camera --exit-after-ms 1000` renders 18 frames and exits 0 on the host,
   versus SIGKILL before the fix. Does not complete P4-T12 or human acceptance.
 
+- [x] **P4-T29 Repair live host camera input.** Prerequisites: P4-T19.
+  User-requested follow-up completed 2026-10-02 against `a5ba64a`.
+  Apply live movement each frame, correct physical WASD codes, preserve held
+  combinations and fractional mouse deltas, clear input on focus/mode changes,
+  register seat and ping listeners before events arrive, and remove global
+  evdev input. **Acceptance:** 30/30 tests pass, including actual host listener
+  callbacks driving camera state and focus/mode isolation. Eight-second host
+  launch renders 274 frames and exits 0; protocol log shows focus and ping/pong.
+  Physical input usability and application routing remain unverified; this
+  bounded world-navigation repair does not complete P4-T12 or human gates.
+
 - [ ] **P4-T13 Accelerated buffer import investigation.** Prerequisites: P4-T09.
   Recheck EGL client/display extension strings and extension entry points with
   eglGetProcAddress. Compare EGL Wayland binding and linux-dmabuf import,

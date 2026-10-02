@@ -170,12 +170,20 @@ struct host_window_state {
     int width;
     int height;
     bool configured;
+    bool pointer_inside = false;
+    double pointer_x = 0, pointer_y = 0;
     struct MansionDisplay *display;     /* back-pointer for size sync */
 };
 
 /* ─── wl_registry global ───────────────────────────────────────────────────── */
 
 static struct host_window_state *g_hws = nullptr;
+
+static void seat_capabilities(void*, struct wl_seat*, uint32_t);
+static void seat_name(void*, struct wl_seat*, const char*) {}
+static constexpr wl_seat_listener host_seat_listener = {seat_capabilities, seat_name};
+static void wm_base_ping(void*, struct xdg_wm_base*, uint32_t);
+static constexpr xdg_wm_base_listener wm_base_listener = {wm_base_ping};
 
 static void registry_global(void *data, struct wl_registry *registry,
                             uint32_t id, const char *interface,
@@ -189,6 +197,7 @@ static void registry_global(void *data, struct wl_registry *registry,
             (struct xdg_wm_base *)wl_registry_bind(registry, id,
                                                    &xdg_wm_base_interface,
                                                    1);
+        xdg_wm_base_add_listener(hws->wm_base, &wm_base_listener, hws);
     }
     if (strcmp(interface, "wl_compositor") == 0 && g_hws &&
         !hws->compositor) {
@@ -207,6 +216,7 @@ static void registry_global(void *data, struct wl_registry *registry,
         hws->seat =
             (struct wl_seat *)wl_registry_bind(registry, id,
                                                 &wl_seat_interface, 7);
+        wl_seat_add_listener(hws->seat, &host_seat_listener, hws);
     }
     if (strcmp(interface, "zwp_relative_pointer_manager_v1") == 0 &&
         !hws->rel_ptr_mgr) {
@@ -233,18 +243,14 @@ static constexpr struct wl_registry_listener registry_listener = {
 
 static void wm_base_ping(void *data, struct xdg_wm_base *wm, uint32_t serial)
 {
-    (void)wm;
+    (void)data;
     xdg_wm_base_pong(wm, serial);
 }
-
-static constexpr struct xdg_wm_base_listener wm_base_listener = {
-    .ping = wm_base_ping,
-};
 
 static void xdg_surface_configure(void *data, struct xdg_surface *surface,
                                   uint32_t serial)
 {
-    (void)surface;
+    (void)data;
     xdg_surface_ack_configure(surface, serial);
     g_hws->configure_serial = serial;
     g_hws->configured = true;
@@ -304,8 +310,9 @@ static constexpr struct xdg_toplevel_listener toplevel_listener = {
 static void keyboard_keymap(void *data, struct wl_keyboard *keyboard,
                             uint32_t format, int32_t fd, uint32_t size)
 {
-    (void)data; (void)keyboard; (void)format; (void)fd; (void)size;
-    /* No XKB keymap parsing — Mansion Desktop maps WASD manually. */
+    (void)data; (void)keyboard; (void)format; (void)size;
+    /* Navigation uses physical evdev keycodes; we do not retain the keymap. */
+    close(fd);
 }
 
 static void keyboard_enter(void *data, struct wl_keyboard *keyboard,
@@ -314,12 +321,14 @@ static void keyboard_enter(void *data, struct wl_keyboard *keyboard,
 {
     (void)data; (void)keyboard; (void)serial; (void)surface;
     (void)keys;
+    input_wayland_focus(true);
 }
 
 static void keyboard_leave(void *data, struct wl_keyboard *keyboard,
                            uint32_t serial, struct wl_surface *surface)
 {
     (void)data; (void)keyboard; (void)serial; (void)surface;
+    input_wayland_focus(false);
 }
 
 static void keyboard_key(void *data, struct wl_keyboard *keyboard,
@@ -327,13 +336,7 @@ static void keyboard_key(void *data, struct wl_keyboard *keyboard,
                          uint32_t state)
 {
     (void)data; (void)keyboard; (void)serial; (void)time;
-    /* Map keys to WASD: w=26, a=38, s=39, d=40 (Linux keycode). */
-    bool w = false, a = false, s = false, d = false;
-    if (key == 26 && state == WL_KEYBOARD_KEY_STATE_PRESSED) w = true;
-    if (key == 38 && state == WL_KEYBOARD_KEY_STATE_PRESSED) a = true;
-    if (key == 39 && state == WL_KEYBOARD_KEY_STATE_PRESSED) s = true;
-    if (key == 40 && state == WL_KEYBOARD_KEY_STATE_PRESSED) d = true;
-    input_wayland_key(w, a, s, d);
+    input_wayland_key(key, state == WL_KEYBOARD_KEY_STATE_PRESSED);
 }
 
 static void keyboard_modifiers(void *data, struct wl_keyboard *keyboard,
@@ -367,17 +370,25 @@ static void pointer_enter(void *data, struct wl_pointer *pointer,
                           uint32_t serial, struct wl_surface *surface,
                           wl_fixed_t surface_x, wl_fixed_t surface_y)
 { (void)data; (void)pointer; (void)serial; (void)surface;
-  (void)surface_x; (void)surface_y; }
+  g_hws->pointer_inside = true;
+  g_hws->pointer_x = wl_fixed_to_double(surface_x);
+  g_hws->pointer_y = wl_fixed_to_double(surface_y); }
 
 static void pointer_leave(void *data, struct wl_pointer *pointer,
                           uint32_t serial, struct wl_surface *surface)
-{ (void)data; (void)pointer; (void)serial; (void)surface; }
+{ (void)data; (void)pointer; (void)serial; (void)surface;
+  g_hws->pointer_inside = false; }
 
 static void pointer_motion(void *data, struct wl_pointer *pointer,
                            uint32_t time, wl_fixed_t surface_x,
                            wl_fixed_t surface_y)
 {
-    (void)pointer; (void)time; (void)surface_x; (void)surface_y;
+    (void)data; (void)pointer; (void)time;
+    double x = wl_fixed_to_double(surface_x), y = wl_fixed_to_double(surface_y);
+    if (g_hws->pointer_inside && !g_hws->rel_ptr)
+        input_wayland_pointer_motion(x - g_hws->pointer_x, y - g_hws->pointer_y);
+    g_hws->pointer_x = x;
+    g_hws->pointer_y = y;
 }
 
 static void pointer_button(void *data, struct wl_pointer *pointer,
@@ -438,11 +449,9 @@ static void relative_pointer_motion(void *data,
                                      wl_fixed_t dx_unaccel, wl_fixed_t dy_unaccel)
 {
     (void)data; (void)rel_ptr; (void)time_hi; (void)time_lo;
-    int32_t ddx = wl_fixed_to_int(dx_unaccel);
-    int32_t ddy = wl_fixed_to_int(dy_unaccel);
-    if (ddx != 0 || ddy != 0) {
-        input_wayland_pointer_motion(ddx, ddy);
-    }
+    (void)dx; (void)dy;
+    input_wayland_pointer_motion(wl_fixed_to_double(dx_unaccel),
+                                 wl_fixed_to_double(dy_unaccel));
 }
 
 static constexpr struct zwp_relative_pointer_v1_listener relative_pointer_listener = {
@@ -451,15 +460,26 @@ static constexpr struct zwp_relative_pointer_v1_listener relative_pointer_listen
 
 /* ─── wl_seat capabilities handler ───────────────────────────────────────────
  *
- * Called by the compositor when seat capabilities change (hotplug, focus
- * changes, etc.).  This replaces the nullptr that caused KWin to suppress
- * pointer and keyboard events.
+ * Create devices only after the host advertises their capabilities, and
+ * release them if the capability disappears. Focus arrives on the devices.
  */
 static void seat_capabilities(void *data, struct wl_seat *seat,
                               uint32_t capabilities)
 {
     struct host_window_state *hws =
         (struct host_window_state *)data;
+    if (!(capabilities & WL_SEAT_CAPABILITY_KEYBOARD) && hws->keyboard) {
+        input_wayland_focus(false);
+        wl_keyboard_release(hws->keyboard);
+        hws->keyboard = nullptr;
+    }
+    if (!(capabilities & WL_SEAT_CAPABILITY_POINTER) && hws->pointer) {
+        if (hws->rel_ptr) zwp_relative_pointer_v1_destroy(hws->rel_ptr);
+        hws->rel_ptr = nullptr;
+        wl_pointer_release(hws->pointer);
+        hws->pointer = nullptr;
+        hws->pointer_inside = false;
+    }
     if (capabilities & WL_SEAT_CAPABILITY_POINTER && !hws->pointer) {
         hws->pointer = (struct wl_pointer *)
             wl_seat_get_pointer(seat);
@@ -572,69 +592,6 @@ bool setup_wayland_client_window(struct MansionDisplay* display)
     wl_display_roundtrip(wl_client);
     fprintf(stderr, "[mansion] roundtrip done, configured=%d, size=%dx%d\n",
             hws->configured, hws->width, hws->height);
-
-    /* ─── Set up seat / keyboard / pointer input ──────────────────── */
-    /*
-     * On Wayland, the compositor sends seat.capabilities events when
-     * input devices become available.  We must handle this event (not
-     * leave it nullptr) or the compositor may not deliver pointer/
-     * keyboard events to our window.
-     */
-
-    if (hws->seat) {
-        /* Helper: set up keyboard, pointer, and relative pointer. */
-        auto setup_input = [&](struct wl_seat *seat) {
-            hws->keyboard = (struct wl_keyboard *)
-                wl_seat_get_keyboard(seat);
-            if (hws->keyboard) {
-                wl_proxy_add_listener(
-                    (struct wl_proxy *)hws->keyboard,
-                    (void (**)(void))&keyboard_listener,
-                    nullptr);
-            }
-            hws->pointer = (struct wl_pointer *)
-                wl_seat_get_pointer(seat);
-            if (hws->pointer) {
-                wl_proxy_add_listener(
-                    (struct wl_proxy *)hws->pointer,
-                    (void (**)(void))&pointer_listener,
-                    nullptr);
-                /* Request relative pointer motion for smooth camera look. */
-                if (hws->rel_ptr_mgr) {
-                    hws->rel_ptr = (struct zwp_relative_pointer_v1 *)
-                        zwp_relative_pointer_manager_v1_get_relative_pointer(
-                            hws->rel_ptr_mgr, hws->pointer);
-                    if (hws->rel_ptr) {
-                        wl_proxy_add_listener(
-                            (struct wl_proxy *)hws->rel_ptr,
-                            (void (**)(void))&relative_pointer_listener,
-                            nullptr);
-                    }
-                }
-            }
-        };
-
-        /*
-         * Initial setup (compositor likely already sent capabilities
-         * during the roundtrip above).
-         */
-        setup_input(hws->seat);
-
-        /*
-         * Register the seat capabilities listener (defined at file
-         * scope) so the compositor knows we handle input capability
-         * changes.  This replaces the nullptr that caused KWin to
-         * suppress pointer/keyboard events.
-         */
-        static constexpr struct wl_seat_listener seat_listener = {
-            .capabilities = seat_capabilities,
-            .name         = nullptr,
-        };
-
-        wl_proxy_add_listener((struct wl_proxy *)hws->seat,
-                              (void (**)(void))&seat_listener,
-                              hws);
-    }
 
     /* The configure callback will fill in width/height.
      * If we haven't received one yet (shouldn't happen), use defaults. */

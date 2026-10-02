@@ -1,5 +1,44 @@
 # Handoff 04-host-window — Wayland Client Window + Seat Input (2026-09-28)
 
+## P4-T29 host-navigation repair (2026-10-02)
+
+Follow-up against `a5ba64a`: the user reported a rendered but unresponsive view.
+An agent-run four-second launch exited after 120 frames, distinguishing a
+static camera from the prior event-loop deadlock. Source inspection found:
+
+- `live_w/a/s/d` and mouse deltas had no consumer; only input scripts moved
+  the camera. The main loop now applies host state using frame elapsed time.
+- The key handler used 26/38/39/40 instead of Linux `KEY_W/A/S/D` and reset all
+  held keys on every event. It now updates only the affected movement key.
+- Keyboard leave did not clear held movement. Focus and mode changes now clear
+  state; application mode does not receive world camera actions.
+- Ordinary pointer motion was ignored; it now supplies deltas if the host lacks
+  relative-pointer support. Relative motion retains fractional values.
+- Seat listeners were installed after the startup roundtrips; they now register
+  at bind time, with capability-based device creation/removal. The xdg ping
+  callback existed but was never registered; it now answers pings.
+- Removed global evdev scanning/forwarding so background device activity cannot
+  duplicate or bypass focused host input. No device permissions were changed.
+
+**Verified by automated test:** `meson compile -C build` and
+`meson test -C build --print-errorlogs`: 30/30 pass. `host-input` calls the actual
+private host listeners and asserts camera translation, simultaneous keys,
+independent releases, ordinary/fractional relative mouse look, one-time delta
+consumption, focus loss/re-entry, and application-mode isolation.
+
+Agent-run command:
+`WAYLAND_DEBUG=1 timeout -k 2s 15s build/mansion-desktop --room-camera --exit-after-ms 8000`.
+It exits 0 after 274 frames; the host sends seat capabilities and keyboard
+enter, and ping serial 5443 receives pong 5443. This proves host protocol
+progress, not physical-input or visual usability.
+
+**Not verified:** human keyboard/mouse usability, application typing/clicks,
+unlimited mouse look (no pointer lock), resizing, real terminal acceptance.
+For manual navigation: launch `build/mansion-desktop --room-camera`, focus its
+window, hold WASD and move the pointer inside it; releasing keys stops movement,
+and switching to another window clears held navigation. Do not tick P4-T12 or
+human tasks from the synthetic tests. Continue Project 21 per STATUS.md.
+
 ## P4-T19 startup-hang repair (2026-10-02)
 
 Agent-run evidence against base revision `04ecfe6` plus this repair:

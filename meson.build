@@ -154,3 +154,13 @@ host_events_test = executable('test_host_events', 'tests/host_events.cpp',
     include_directories: include_directories('.'),
     dependencies: [wayland_client, wayland_server])
 test('host-events', host_events_test, suite: 'p4', timeout: 5)
+
+host_input_test = executable('test_host_input',
+    'tests/host_input.cpp', 'src/input.cpp', 'src/compositor.cpp',
+    'src/xdg-shell.cpp', 'src/room.cpp', 'src/launch.cpp',
+    xdg_shell_server_h, xdg_shell_client_h, xdg_shell_code,
+    relative_ptr_client_h, relative_ptr_code,
+    cpp_args: cpp_args,
+    include_directories: include_directories('.'),
+    dependencies: [wayland_server, wayland_client, wayland_egl, egl, glesv2, xkbcommon])
+test('host-input', host_input_test, suite: 'p4', timeout: 5)

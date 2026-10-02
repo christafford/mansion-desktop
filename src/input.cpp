@@ -7,10 +7,7 @@
 #include <iostream>
 #include <fcntl.h>
 #include <unistd.h>
-#include <poll.h>
-#include <sys/ioctl.h>
 #include <linux/input.h>
-#include <dirent.h>
 
 #include <wayland-server-protocol.h>
 #include <xkbcommon/xkbcommon.h>
@@ -45,15 +42,12 @@ static int g_tab_key = 23;
 static constexpr double MOVEMENT_SPEED = 0.01;
 static constexpr double MOUSE_SENSITIVITY = 0.002;
 
-/* Evdev file descriptors (opened at startup, closed at teardown). */
-static int evdev_kb_fd = -1;
-static int evdev_pt_fd = -1;
-
-/* P5: live camera movement state — updated from evdev keys/mouse. */
-static bool live_w = false, live_a = false, live_s = false, live_d = false;
-static int32_t live_mouse_x = 0, live_mouse_y = 0;
+/* Input belongs to the focused nested host window, never global devices. */
+static MovementState live_movement;
+static bool live_focused = false;
 
 void input_mode_set(InputMode mode) {
+    if (mode != g_input_mode) live_movement = {};
     g_input_mode = mode;
 }
 
@@ -127,71 +121,8 @@ struct MansionSeat {
     InputMode stored_mode_when_focus_lost = InputMode::World;
 };
 
-int input_init(void) {
-    /* Scan /dev/input/ for keyboard and pointer evdev devices. */
-    DIR* dir = opendir("/dev/input");
-    if (!dir) return 0;  /* no input devices — fine for headless */
-
-    struct dirent* ent;
-    while ((ent = readdir(dir)) != nullptr) {
-        if (ent->d_name[0] == '.') continue;
-
-        char path[256];
-        snprintf(path, sizeof(path), "/dev/input/%s", ent->d_name);
-
-        int fd = open(path, O_RDWR | O_CLOEXEC | O_NONBLOCK);
-        if (fd < 0) continue;
-
-        /* Check capability mask. */
-        uint64_t bits = 0;
-        if (ioctl(fd, EVIOCGBIT(0, sizeof(bits)), &bits) < 0) {
-            close(fd);
-            continue;
-        }
-
-        bool has_ev_key = bits & (1ULL << EV_KEY);
-        bool has_ev_rel = bits & (1ULL << EV_REL);
-
-        if (has_ev_key && !has_ev_rel) {
-            /* Potential keyboard — check for movement keys. */
-            uint8_t key_bits[KEY_MAX / 8 + 1] = {};
-            if (ioctl(fd, EVIOCGBIT(EV_KEY, sizeof(key_bits)), key_bits) >= 0) {
-                if ((key_bits[KEY_W / 8] & (1 << (KEY_W % 8))) ||
-                    (key_bits[KEY_S / 8] & (1 << (KEY_S % 8)))) {
-                    if (evdev_kb_fd < 0) {
-                        evdev_kb_fd = fd;
-                        closedir(dir);
-                        return 0;
-                    }
-                }
-            }
-        }
-
-        if (has_ev_rel) {
-            /* Potential pointer — check for REL_X/REL_Y. */
-            uint8_t rel_bits[REL_MAX / 8 + 1] = {};
-            if (ioctl(fd, EVIOCGBIT(EV_REL, sizeof(rel_bits)), rel_bits) >= 0) {
-                if ((rel_bits[REL_X / 8] & (1 << (REL_X % 8))) &&
-                    (rel_bits[REL_Y / 8] & (1 << (REL_Y % 8)))) {
-                    if (evdev_pt_fd < 0) {
-                        evdev_pt_fd = fd;
-                        closedir(dir);
-                        return 0;
-                    }
-                }
-            }
-        }
-
-        close(fd);
-    }
-    closedir(dir);
-    return 0;
-}
-
-void input_destroy(void) {
-    if (evdev_kb_fd >= 0) { close(evdev_kb_fd); evdev_kb_fd = -1; }
-    if (evdev_pt_fd >= 0) { close(evdev_pt_fd); evdev_pt_fd = -1; }
-}
+int input_init(void) { return 0; }
+void input_destroy(void) { input_wayland_focus(false); }
 
 /* P3-T06: Clear all seat-level focus pointers to prevent dangling references
  * when a focused surface is destroyed. */
@@ -399,110 +330,7 @@ static void pointer_check_focus(uint32_t serial) {
     }
 }
 
-void input_process(void) {
-    /* Process evdev input for camera movement (keyboard + pointer).
-     * This runs in the main loop and updates live_w/a/s/d,
-     * live_mouse_x/y for the camera look system. */
-    if (evdev_kb_fd < 0 && evdev_pt_fd < 0) return;
-
-    struct input_event ev;
-    struct pollfd pfds[2];
-    int nfds = 0;
-
-    if (evdev_kb_fd >= 0) {
-        pfds[nfds].fd = evdev_kb_fd;
-        pfds[nfds].events = POLLIN;
-        nfds++;
-    }
-    if (evdev_pt_fd >= 0) {
-        pfds[nfds].fd = evdev_pt_fd;
-        pfds[nfds].events = POLLIN;
-        nfds++;
-    }
-
-    int rc = poll(pfds, nfds, 0);  /* non-blocking */
-    if (rc <= 0) return;
-
-    for (int i = 0; i < nfds; i++) {
-        if (pfds[i].revents & POLLIN) {
-            int fd = pfds[i].fd;
-            while (read(fd, &ev, sizeof(ev)) == sizeof(ev)) {
-                if (ev.type == EV_KEY) {
-                    bool is_button = (ev.code >= BTN_LEFT && ev.code <= BTN_MISC) ||
-                                     ev.code == BTN_TOUCH ||
-                                     ev.code == BTN_MOUSE;
-                    uint32_t state = (ev.value == 1) ?
-                        WL_KEYBOARD_KEY_STATE_PRESSED :
-                        WL_KEYBOARD_KEY_STATE_RELEASED;
-
-                    if (is_button) {
-                        /* Mouse button — forward to Wayland clients. */
-                        uint32_t button = 0;
-                        if (ev.code == BTN_LEFT)    button = BTN_LEFT;
-                        else if (ev.code == BTN_RIGHT)  button = BTN_RIGHT;
-                        else if (ev.code == BTN_MIDDLE) button = BTN_MIDDLE;
-
-                        if (button) {
-                            if (state == WL_KEYBOARD_KEY_STATE_PRESSED)
-                                g_seat->grab_surface_resource = g_seat->pointer_surface_resource;
-                            else
-                                g_seat->grab_surface_resource = nullptr;
-
-                            uint32_t serial = ++g_seat->serial;
-                            send_pointer_button(serial, 0, button, state);
-                        }
-                    } else {
-                        /* Keyboard key — camera movement + forward to clients. */
-                        /* P5: live camera movement from evdev keys. */
-                        if (ev.value == 1) {
-                            if (ev.code == KEY_W)  live_w  = true;
-                            if (ev.code == KEY_A)  live_a  = true;
-                            if (ev.code == KEY_S)  live_s = true;
-                            if (ev.code == KEY_D)  live_d = true;
-                        }
-                        if (ev.value == 0) {
-                            if (ev.code == KEY_W)  live_w  = false;
-                            if (ev.code == KEY_A)  live_a  = false;
-                            if (ev.code == KEY_S)  live_s = false;
-                            if (ev.code == KEY_D)  live_d = false;
-                        }
-
-                        /* Update xkb state and forward to Wayland clients. */
-                        if (g_seat && g_seat->xkbstate && state) {
-                            xkb_state_update_key(g_seat->xkbstate,
-                                ev.code + 8,
-                                state == WL_KEYBOARD_KEY_STATE_PRESSED ?
-                                    XKB_KEY_DOWN : XKB_KEY_UP);
-                        }
-
-                        uint32_t serial = ++g_seat->serial;
-                        SeatKeyboardClient *kc, *kc_next;
-                        wl_list_for_each_safe(kc, kc_next,
-                            &g_seat->keyboard_clients, seat_link) {
-                            if (kc->resource)
-                                wl_keyboard_send_key(kc->resource,
-                                    serial, 0, ev.code, state);
-                        }
-                        send_keymap_modifiers(serial);
-                    }
-
-                } else if (ev.type == EV_REL) {
-                    /* Relative pointer motion — accumulate delta for camera look. */
-                    if (ev.code == REL_X)  live_mouse_x += ev.value;
-                    if (ev.code == REL_Y)  live_mouse_y += ev.value;
-
-                    /* Also forward pointer motion to Wayland clients. */
-                    if (g_seat) {
-                        uint32_t serial = ++g_seat->serial;
-                        pointer_check_focus(serial);
-                        send_pointer_motion(0);
-                        send_pointer_axis_done(0);
-                    }
-                }
-            }
-        }
-    }
-}
+void input_process(void) {}
 
 /* Window close state for Wayland client (xdg_toplevel.close). */
 static bool g_window_closed = false;
@@ -528,16 +356,26 @@ void input_handle_window_close(void) {
 
 /* Wayland seat input callbacks — update live camera movement state.
  * Called from the Wayland client display event handlers in display.cpp. */
-void input_wayland_key(bool w, bool a, bool s, bool d) {
-    live_w  = w;
-    live_a  = a;
-    live_s  = s;
-    live_d  = d;
+void input_wayland_focus(bool focused) {
+    live_focused = focused;
+    live_movement = {};
 }
 
-void input_wayland_pointer_motion(int32_t dx, int32_t dy) {
-    live_mouse_x += dx;
-    live_mouse_y += dy;
+void input_wayland_key(uint32_t key, bool pressed) {
+    if (!live_focused || input_mode_get() != InputMode::World) return;
+    switch (key) {
+        case KEY_W: live_movement.w = pressed; break;
+        case KEY_A: live_movement.a = pressed; break;
+        case KEY_S: live_movement.s = pressed; break;
+        case KEY_D: live_movement.d = pressed; break;
+        default: break;
+    }
+}
+
+void input_wayland_pointer_motion(double dx, double dy) {
+    if (!live_focused || input_mode_get() != InputMode::World) return;
+    live_movement.mouseX += dx;
+    live_movement.mouseY += dy;
 }
 
 /* ---------- Input script execution (P1-T06-E) ---------- */
@@ -555,7 +393,7 @@ struct InputScript* input_script_init(const char* filename) {
 
 static void apply_movement(MansionDisplay* display, double delta_ms,
                            MovementState* ms) {
-    if (!display || !ms || !display->renderer || delta_ms <= 0) return;
+    if (!display || !ms || delta_ms <= 0) return;
     if (display->flat_mode) return;
 
     auto* cam = &display->camera;
@@ -590,7 +428,7 @@ static void apply_movement(MansionDisplay* display, double delta_ms,
 
 static void apply_mouse_look(MansionDisplay* display,
                              MovementState* ms) {
-    if (!display || !ms || !display->renderer || display->flat_mode) return;
+    if (!display || !ms || display->flat_mode) return;
     /* Zero delta means no motion — no need for a button gate. */
 
     auto* cam = &display->camera;
@@ -604,6 +442,15 @@ static void apply_mouse_look(MansionDisplay* display,
 
     ms->mouseX = 0;
     ms->mouseY = 0;
+}
+
+void input_wayland_apply_movement(MansionDisplay* display, double delta_ms) {
+    if (!live_focused || input_mode_get() != InputMode::World) {
+        live_movement = {};
+        return;
+    }
+    apply_movement(display, delta_ms, &live_movement);
+    apply_mouse_look(display, &live_movement);
 }
 
 /* ── P5-T02: keyboard focus cycling ──────────────────────────────────────── */
