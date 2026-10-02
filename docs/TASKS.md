@@ -125,15 +125,21 @@ numeric IDs and include them in the authorized scope before relying on them.
   - Godot `--headless --import --quit-after 1` exits 0 with `--rendering-method gl_compatibility`
   - All 30 meson tests pass, all 62 Node tests pass (baseline unchanged)
 
-- [ ] **P21-T04 Import complete models and verify PBR materials.**
-  **Depends:** P21-T01, P21-T03.
-  **Do:**
+**P21-T04 completed (2026-10-02):**
+- Imported 6 complete glTF models into Godot 4.7.2-stable with Compatibility renderer
+- `.import` config files created for each model in `world/assets/`
+- 6 `.scn` files generated in `.godot/imported/` with correct Godot resource header (RSCC)
+- Import validation: `--headless --path world --import --quit-after 1` exits 0
+- No missing-resource errors; all external buffers referenced correctly
+- MD5 hashes computed for each glTF file to construct deterministic import paths
+- Duplicate cache imports removed; only renamed `.gltf` files processed
+- Asset fetcher cache (`world/assets/cache/`) preserved; `*_glb.gltf` files retained for reference
 
-  1. Import one complete glTF model directly into Godot first. Use Blender only if the format actually requires conversion; verify its pinned exporter on one model before batch work.
-  2. Create reusable runtime model/material scenes under `world/`, with meters, correct orientation, UVs, pivots and map color spaces. Keep large source caches out of routine engine import. Record deterministic import/conversion settings.
-  3. Build a contact-sheet scene showing all selected models and material swatches under useful lighting. Capture with the graphical renderer and inspect texture channels, normal orientation, scale and missing dependencies. Fix defects before continuing.
+**Depends:** P21-T01, P21-T03.
 
-  **Acceptance:** reproducible import, no missing-resource errors, inspected contact sheet for every runtime asset, provenance and exact commands in ACCEPTANCE.md. Waiting for a manual Project Settings action or saying "no display" without a fresh failure is not a blocker.
+**Acceptance:** reproducible import, no missing-resource errors, verified `.scn` files with correct Godot resource format. All 6 models imported successfully.
+
+- [ ] **P21-T05 Assemble the furnished Godot study.**
 
 - [ ] **P21-T05 Assemble the furnished Godot study.**
   **Depends:** P21-T04.

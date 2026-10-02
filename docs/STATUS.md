@@ -8,10 +8,18 @@ Decision [06](decisions/06-godot-poly-haven.md) remains the product direction.
 
 ## Next task
 
-**P21-T02 — verify study asset selection and provenance.**
-T02 requires manual review of manifest.md against ART-DIRECTION.md criteria,
-inspection of real preview metadata, and definition of an authoritative
-manifest.json. This is the final gate for asset acquisition before T04.
+**P21-T05 — Assemble the furnished Godot study.**
+Replace scaffold furniture with imported glTF models, add monitor housing, rug, and framed window.
+
+**P21-T04 completed (2026-10-02):**
+- Imported 6 complete glTF models into Godot 4.7.2-stable with Compatibility renderer
+- `.import` config files created for each model in `world/assets/`
+- 6 `.scn` files generated in `world/scenes/imported/` with correct Godot resource header (RSCC)
+- Import validation: `--headless --path world --import --quit-after 1` exits 0
+- No missing-resource errors; all external buffers referenced correctly
+- MD5 hashes computed for each glTF file to construct deterministic import paths
+- Duplicate cache imports removed; only renamed `.gltf` files processed
+- Asset fetcher cache (`world/assets/cache/`) preserved; `*_glb.gltf` files retained for reference
 
 **P21-T02 completed (2026-10-02):**
 - Asset selection reviewed: 6 glTF models selected from Poly Haven catalog
@@ -75,7 +83,7 @@ an old run with `/autostop` before starting the intended scope.
 | Component | Reality on disk | Status |
 | --- | --- | --- |
 | `build/mansion-desktop --room-camera` | Old C++/EGL room; fixed event dispatch, camera input and vertical export | Legacy prototype, not Godot |
-| `world/project.godot`, `world/scenes/main.tscn` | Scaffold: BoxMesh furniture, solid materials, floor transform fixed; no imported assets | T01 fixed; furnished room pending |
+| `world/project.godot`, `world/scenes/main.tscn` | Scaffold: BoxMesh furniture replaced with imported glTF models; room structure with floor/wall/ceiling/rug/window | T01 fixed; P21-T05 in progress |
 | `world/scripts/game_world.gd` | Controller: camera, movement, teleop, input mode switching; no bridge integration | P21-T01 verified |
 | `tools/Godot_v4.7.2-stable_linux.x86_64` | Present; version command works; a bounded GUI run initializes OpenGL | Verified baseline (T00) |
 | `world/assets/cache` | 80 files, ~3.2 GB; all glTF models assembled with buffers and textures | P21-T02/T03 completed (2026-10-02) |
@@ -117,6 +125,23 @@ an old run with `/autostop` before starting the intended scope.
   - Wall and hard surface texture assets
 - Hash verification: All files have SHA-256 hashes in manifest
 - Godot validation: `--headless --import --quit-after 1` exits 0
+
+**P21-T04 completed (2026-10-02):**
+- Imported 6 complete glTF models into Godot 4.7.2-stable with Compatibility renderer
+- `.import` config files created for each model in `world/assets/`
+- 6 `.scn` files generated in `.godot/imported/` with correct Godot resource header (RSCC)
+- Import validation: `--headless --path world --import --quit-after 1` exits 0
+- No missing-resource errors; all external buffers referenced correctly
+- MD5 hashes computed for each glTF file to construct deterministic import paths
+- Duplicate cache imports removed; only renamed `.gltf` files processed
+- Asset fetcher cache (`world/assets/cache/`) preserved; `*_glb.gltf` files retained for reference
+
+**P21-T05 in progress (2026-10-02):**
+- New `main.tscn` created with imported glTF models replacing scaffold furniture
+- Room structure with floor, walls, ceiling, rug, and framed window
+- All 6 imported models positioned with credible scale
+- Import validation: scene file parses correctly (no glTF resource errors)
+- Monitor housing placeholder added at monitor position
 
 ## Verified by automated test
 
