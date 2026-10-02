@@ -10,13 +10,29 @@ running the check that proves it.
 
 ## Next task
 
-**P21-T02: curate the study asset set.** P21-T01 is complete (Godot scaffold
-with validated project, scene, script, and automation). P21-T02 is independently
-eligible — it does not require Godot to be installed, only catalog inspection.
-Decision 06 authorizes the Godot world frontend and Poly Haven assets; world art
-and compositor extraction are independently eligible. No deadline or default
-continuation-count limit applies. P21-T19 is the furnished live-terminal gate;
-P21-T34 is the final personal review.
+**P21-T03: import and place assets in the Godot scene.** P21-T02 is complete
+(asset manifest with 30 verified Poly Haven assets). P21-T03 depends on P21-T02
+and needs a running Godot editor to download GLB/OBJ models, convert textures,
+and place them in the scene. Godot is NOT installed on dev system — blocked until
+display server available or local install. P21-T10 (compositor core extraction)
+is independently eligible as an alternative parallel track. Decision 06
+authorizes the Godot world frontend and Poly Haven assets; world art and
+compositor extraction are independently eligible. P21-T19 is the furnished
+live-terminal gate; P21-T34 is the final personal review.
+
+**P21-T02 completed 2026-10-01.** Asset manifest at `world/assets/manifest.md`.
+Live Poly Haven API queried (2382 assets: 997 HDRIs, 864 textures, 521 models).
+All 30 referenced asset IDs verified present. HDRI: `poly_haven_studio` (primary,
+24K home office with natural daylight + down lights). Floor: `walnut_veneer`
+(16K smooth warm timber). Walls: `beige_wall_001` (16K smooth beige plaster).
+Furniture: `metal_office_desk` (desk), `dining_chair_02` (chair),
+`wooden_bookshelf_worn` (bookcase), `desk_lamp_arm_01` (desk lamp),
+`potted_plant_02` (plant), `book_encyclopedia_set_01` (decorative books).
+Missing: computer monitor, standing lamp — documented as primitives for P21-T02.
+Scene composition layout defined: ~4.5m × 5m × 2.8m room, bookcase on left wall,
+desk on back wall with monitor slot, chair, rug under desk area. Material
+assignment plan with 3 alternatives per surface. Total download estimate:
+~770 MB EXR / ~220 MB JPEG. All CC0.
 
 **P21-T00 completed 2026-10-01.** Baselines recorded: C++ 28/28 pass in normal
 build (camera-move test now passing), 28/28 in build-asan (zero sanitizer errors).

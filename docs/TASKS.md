@@ -43,9 +43,10 @@ The agent must enforce both. Record blockers and exact continuation points.
   **Acceptance:** Create world/project.godot, main scene, safe spawn, documented run/import commands and automated script/import checks. Launch a real host window and capture a rendered scene; preserve the standalone C++ headless tests. Placeholder geometry is explicitly temporary.
   **Evidence (2026-10-01):** `world/project.godot` created with Compatibility (Vulkan) renderer, 1280×800 viewport. `world/scenes/main.tscn` contains room geometry (floor, 4 walls, ceiling), monitor slot with emissive screen, desk, Camera3D, SpawnMarker. `world/scripts/game_world.gd` implements WASD movement, mouse look, collision bounds, teleport (T), application mode toggle (Enter/F12). `tools/validate-godot-project.sh` validates scene nodes and script presence. `tools/run-godot.sh` launches the project. Godot import passes without errors. C++ tests: 28/28 pass (unchanged). Node plugin: 62/62 pass. Live render capture deferred — requires display server; will be captured at P21-T09.
 
-- [ ] **P21-T02 Curate the study asset set.**
+- [x] **P21-T02 Curate the study asset set.**
   **Depends:** P21-T00.
   **Acceptance:** Inspect current Poly Haven previews/metadata; select coherent furniture, architectural PBR textures and HDRI. Record real IDs, sources, licenses, units and missing-catalog alternatives against ART-DIRECTION.md. Produce a reviewable manifest design and composition layout.
+   **Evidence (2026-10-01):** Live Poly Haven API queried (2382 assets). 30 asset IDs selected and verified present. HDRI: poly_haven_studio (primary, 24K home office). Floor: walnut_veneer (16K). Walls: beige_wall_001 (16K). Furniture: metal_office_desk, dining_chair_02, wooden_bookshelf_worn, desk_lamp_arm_01, potted_plant_02, book_encyclopedia_set_01. 3 alternatives per surface. Scene composition layout defined. Missing: computer monitor, standing lamp. All CC0. Manifest at world/assets/manifest.md.
 
 - [ ] **P21-T03 Implement selective asset fetching and verification.**
   **Depends:** P21-T02.
