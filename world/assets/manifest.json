@@ -37,7 +37,17 @@
       "resolution": "2K",
       "hash": {
         "gltf": "sha256:6c8c76560ca8e3c28516c0831545db903111bea069ce569579c2848a2e781bed",
-        "textures": {}
+        "textures": {
+          "book_encyclopedia_set_01_cover_arm_2k.jpg": "a8586332a573a522619b65ac709f4f513660878d543510c7adf634736cf8dfa9",
+          "book_encyclopedia_set_01_cover_diff_2k.jpg": "b75dd3ba7b39bc57cc3c7118b24c18f2b99a298c72c1955084bc5845ac6f4092",
+          "book_encyclopedia_set_01_cover_nor_gl_2k.jpg": "7585385f842380949303eba7250d2ffc23aeeb7e3928dff567d532e9b9452276",
+          "book_encyclopedia_set_01_paper_diff_2k.jpg": "507a75738825e1d9dd78dfc8f32441db67c0b1e7b116c044b47c7b9116194241",
+          "book_encyclopedia_set_01_paper_nor_gl_2k.jpg": "5fdcfc21365bb9ef26e0822cdb27b5add3b4a55fe36a975a2f0fce3d061219d3",
+          "book_encyclopedia_set_01_paper_roughness_2k.jpg": "8415728143b9270913ae3d79351400fbd5295bb56e6571ea8c829b68792d9ae4"
+        },
+        "buffers": {
+          "book_encyclopedia_set_01.bin": "bbc726698b6e40ab5537b73e082f7bb4db97b9e6f978f52cdaf763dddc85d9ba"
+        }
       },
       "art_director_notes": "Bookset for display on shelf",
       "dependencies": []
@@ -72,7 +82,14 @@
       "resolution": "2K",
       "hash": {
         "gltf": "sha256:b3f03ff2c7c186ec73682f7447b3594db2362cbfc0d72a89d2d8967111d2a2b6",
-        "textures": {}
+        "textures": {
+          "desk_lamp_arm_01_arm_2k.jpg": "d2d55bb3d929ab583d4068adc3dce4e45d29852fd37602ddbb992183a9471b79",
+          "desk_lamp_arm_01_diff_2k.jpg": "c5f8c5be367a40585f89ce0aeac0224e36146eef63c12864222af080a9784869",
+          "desk_lamp_arm_01_nor_gl_2k.jpg": "289e2b9a9d0dcbc02dd8d8dbe612380c13dc48fb7c4484fb39c303f6cf822379"
+        },
+        "buffers": {
+          "desk_lamp_arm_01.bin": "07f34e32abecbaa63d28b9d12d6a0eb82b775a0f50c92327655909d72ff8489b"
+        }
       },
       "art_director_notes": "Warm desk lamp with emissive light source (emissiveFactor: 1, 0.98, 0.65 - warm white)",
       "dependencies": []
@@ -107,7 +124,14 @@
       "resolution": "2K",
       "hash": {
         "gltf": "sha256:c73342e0930615ea147237e1a640dd64eafa8d43662d1befad8ac896af87b129",
-        "textures": {}
+        "textures": {
+          "dining_chair_02_arm_2k.jpg": "48a766aff4587319218e42ad8b115fbe764b86ae513560d97700af519c424329",
+          "dining_chair_02_diff_2k.jpg": "823eeddb981acc8afbf3a04c8b8fd9152c2b1f776d14786e97116494aceabab8",
+          "dining_chair_02_nor_gl_2k.jpg": "ded8fb83951b189b43448746f34e4bfd6ab63d7cc9fb03c281d3eff4bcb5dfa1"
+        },
+        "buffers": {
+          "dining_chair_02.bin": "c7f1ef858f73815176d2ab304472a69ccf6097e971e5258eb924a75f841d4af5"
+        }
       },
       "art_director_notes": "Upholstered dining chair - suitable for study workspace",
       "dependencies": []
@@ -142,7 +166,14 @@
       "resolution": "2K",
       "hash": {
         "gltf": "sha256:4323f2e6cae9abb82146449b45445ee9446068c5a9b2ca23e018503b3b0af035",
-        "textures": {}
+        "textures": {
+          "metal_office_desk_arm_2k.jpg": "23c94b99aec8c9b105ff4d843ac41f229b0effb97abe921f0f8b506ccfd76952",
+          "metal_office_desk_diff_2k.jpg": "3f5854edc8a7979ed4576b914c184bda64d7e6ee9969357738703be49118da30",
+          "metal_office_desk_nor_gl_2k.jpg": "25392e7682c43ca07abbbbe717388b9e6d40bbca663836916204f99ac0378d34"
+        },
+        "buffers": {
+          "metal_office_desk.bin": "65b558f41a75ad4822e31cc2a97eb34ed359199279a6bfbd650deb27cef78767"
+        }
       },
       "art_director_notes": "Metal office desk with drawers - main workspace surface",
       "dependencies": []
@@ -180,7 +211,17 @@
       "resolution": "2K",
       "hash": {
         "gltf": "sha256:80ab49cb61737244f50b805ddde3dd64e461b2a244817f8882e95a97c916d158",
-        "textures": {}
+        "textures": {
+          "potted_plant_02_leaves_diff_2k.jpg": "f70de9a4b735b740e79d4e7720a47eae5e2bb4a289880cdae5905d156223bd7d",
+          "potted_plant_02_leaves_nor_gl_2k.jpg": "2ae648b12ea457fb720f9adc6f8dc9feb8d5409e43f3b9f2ce7f089b3eef12f6",
+          "potted_plant_02_leaves_rough_2k.jpg": "399e61a82069b3e344cece76c128f84a664dd44719331450877b671906e01e27",
+          "potted_plant_02_pot_diff_2k.jpg": "21672040b5de49e7dae07452431b4fe5cf401494f5ab5157b5f54a146cc68383",
+          "potted_plant_02_pot_nor_gl_2k.jpg": "8e8c2e96de90e793712a9db8a6cea7a38f7fd5ec489b8134b586a42ebbbfcb11",
+          "potted_plant_02_pot_rough_2k.jpg": "c1f341bfa5e610dab2fd31aad4068fa20cf957b098912da5949bca996d7649bf"
+        },
+        "buffers": {
+          "potted_plant_02.bin": "9c9812482c78a59789ed32fa842b4cbd9365e09c900c31ebb998e5efe627fe97"
+        }
       },
       "art_director_notes": "Potted plant for visual warmth and natural element in study",
       "dependencies": []
@@ -215,7 +256,14 @@
       "resolution": "2K",
       "hash": {
         "gltf": "sha256:32a03942722d9e9d754e15e4239a81bf34e04170891a2ed871c4eb09cd02c658",
-        "textures": {}
+        "textures": {
+          "wooden_bookshelf_worn_arm_2k.jpg": "e61cb355df38ab67feaf9df9e898703cb99d93e33b86028c87d0947f2b7664c0",
+          "wooden_bookshelf_worn_diff_2k.jpg": "2a6b9d7bff3a02aaa07cb9de30f57673bdc4b8c43ed50c95f4bb7eeaed3a5468",
+          "wooden_bookshelf_worn_nor_gl_2k.jpg": "90f575dc0623901240c54a1b617833584f1f18e56b6f1ddd11a6a04e84c62b07"
+        },
+        "buffers": {
+          "wooden_bookshelf_worn.bin": "170758113b50132380ab46943f6eab18f2714460dead065aae37241a94abf0f9"
+        }
       },
       "art_director_notes": "Worn wooden bookshelf - stores books and displays items",
       "dependencies": []

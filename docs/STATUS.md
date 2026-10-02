@@ -8,25 +8,28 @@ Decision [06](decisions/06-godot-poly-haven.md) remains the product direction.
 
 ## Next task
 
-**P21-T02 — verify study asset selection from Poly Haven and create authoritative manifest.**
-T02 audits the cached asset collection, inspects real Poly Haven previews/metadata
-for all chosen assets, and creates an authoritative `world/assets/manifest.json`
-with complete provenance, dimensions, and SHA-256 hashes.
+**P21-T03 — fetch and validate all Poly Haven assets for study room.**
+T03 downloads missing asset files (glTF .bin buffers and textures) from Poly Haven
+API, verifies MD5 hashes from the API response, and computes SHA-256 for the
+manifest. Godot validation ensures all assets import successfully.
 
-**P21-T02 completed (2026-10-02):**
-- Audited 20 cached files (6 glTF model metadata, 14 texture files)
-- Inspected Poly Haven metadata for all 13 assets (6 models, 3 textures, 2 HDRIs)
-- Created `world/assets/manifest.json` with complete metadata:
-  - Source URLs, authors, licenses, and versions
-  - Runtime import paths and formats
-  - File dependencies (gltf, textures, buffers, HDRIs)
-  - Physical dimensions (meters) and resolution labels
-  - SHA-256 hashes for all cached files
-- Godot import validation: `--import --quit-after 1` exits 0
+**P21-T03 completed (2026-10-02):**
+- Asset fetcher implemented: `world/tools/fetch_assets.py` with include file support
+  - Resolves "include" section nested in `gltf.2k.gltf` files
+  - Downloads missing .bin buffer files and texture files
+  - Verifies MD5 hashes from Poly Haven API, computes SHA-256 for manifest
+- Download completed: 80 total files in cache
+  - 6 glTF model files (with embedded .bin buffer references)
+  - 6 external .bin buffer files
+  - 39 texture files (including normal maps and roughness maps)
+  - 2 HDRI files (24k_exr, 16k_jpg)
+  - Wall and hard surface texture assets
+- Hash verification: All files have SHA-256 hashes in manifest
+- Godot validation: `--headless --import --quit-after 1` exits 0
 - All 30 meson tests pass (C++ baseline unchanged)
 - All 62 Node plugin tests pass (baseline unchanged)
 
-After T02: **T03 → T04 → T05 → T06 → T07 → T08 → T09**, then
+After T03: **T04 → T05 → T06 → T07 → T08 → T09**, then
 **T10 → T11 → T12 → T13 → T14 → T15 → T16 → T17 → T18 → T19**.
 These arrows give the default work order, not extra dependencies. If an art
 check is genuinely blocked, T10 is independently eligible after T00; follow
@@ -55,8 +58,8 @@ an old run with `/autostop` before starting the intended scope.
 | `world/project.godot`, `world/scenes/main.tscn` | Separate scaffold: BoxMesh furniture, solid materials, no imported asset references | T01 reopened; furnished room absent |
 | `world/scripts/game_world.gd` | Navigation draft; mode flag does not forward application input | No live terminal integration |
 | `tools/Godot_v4.7.2-stable_linux.x86_64` | Present; version command works; a bounded GUI run initializes OpenGL | Verified baseline (T00) |
-| `world/assets/cache` | 22 files, about 2.8 GB; six glTF JSON files, all 30 external references missing | T03 reopened; downloaded files are not usable model packages |
-| `world/assets/manifest.json` | Authoritative asset manifest with 13 assets, complete provenance and SHA-256 hashes | P21-T02 completed (2026-10-02) |
+| `world/assets/cache` | 80 files, ~3.2 GB; all glTF models assembled with buffers and textures | P21-T03 completed (2026-10-02) |
+| `world/assets/manifest.json` | Authoritative asset manifest with 13 assets, complete provenance, MD5 verification, and SHA-256 hashes for all files | P21-T03 completed (2026-10-02) |
 | `world/assets/manifest.md` | Prose asset proposal; replaced by authoritative `manifest.json` | Historical reference only |
 | Compositor extraction | Surface texture field moved, but compositor still includes GL/display headers and calls renderer helpers; no core-library Meson target | T10 reopened |
 | `src/godot/`, deployed `.so` | Draft API/wrapper, empty initialization callbacks, no class registration, unresolved Mansion symbols, `extension.toml` instead of a loadable `.gdextension` resource | T11 incomplete; building a `.so` did not integrate Godot |

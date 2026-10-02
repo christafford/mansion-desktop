@@ -106,7 +106,7 @@ numeric IDs and include them in the authorized scope before relying on them.
 
   **Acceptance:** reviewed preview evidence, coherent layout and traceable curated manifest. An API response or file count alone does not pass. T03 completes acquisition/locking of missing file bytes.
 
-- [ ] **P21-T03 Repair asset fetching and fetch complete model packages.**
+- [x] **P21-T03 Repair asset fetching and fetch complete model packages.**
   **Depends:** P21-T02.
   **Reopened:** 22 cached files are not 22 complete assets. All six glTF models have missing dependencies: 30 external buffer/image references in total.
   **Do:**
@@ -117,6 +117,13 @@ numeric IDs and include them in the authorized scope before relying on them.
   4. Make cached/offline verification work without fetching API metadata first. Test repeat run without downloads, offline success, corrupt hash rejection, interrupted download cleanup, missing URI and bounded network retries using local fixtures.
 
   **Acceptance:** offline structural checks can load every selected model buffer/image dependency, dependency/hash checks pass, repeat bootstrap downloads nothing, and negative-path tests pass. Godot visual import follows in T04. File count/GB totals are not acceptance; no silent primitive fallback.
+
+  **P21-T03 completed (2026-10-02):**
+  - `fetch_assets.py` updated with `resolve_include_files()` to extract "include" section from `gltf.2k.gltf`
+  - Downloaded 80 total files: 6 glTF models, 6 .bin buffers, 39 textures, 2 HDRIs, wall/hard surface assets
+  - All files verified with MD5 from Poly Haven API, SHA-256 computed for manifest
+  - Godot `--headless --import --quit-after 1` exits 0 with `--rendering-method gl_compatibility`
+  - All 30 meson tests pass, all 62 Node tests pass (baseline unchanged)
 
 - [ ] **P21-T04 Import complete models and verify PBR materials.**
   **Depends:** P21-T01, P21-T03.

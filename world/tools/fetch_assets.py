@@ -42,6 +42,8 @@ from pathlib import Path
 from typing import Optional
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import shutil
 
 logger = logging.getLogger("mansion.fetch")
 
@@ -49,8 +51,7 @@ logger = logging.getLogger("mansion.fetch")
 
 # Curated asset set from P21-T02 manifest.
 # Format: (asset_id, file_key, priority, file_type)
-# file_key maps to resolution/format hints used by the API resolver.
-# file_type: "hdr", "texture", or "model" (inferred from key if omitted).
+# file_key maps to resolution/form
 ASSET_LIST: list[tuple[str, str, str]] = [
     # HDRI
     ("poly_haven_studio", "24k_exr", "primary"),
@@ -70,7 +71,7 @@ ASSET_LIST: list[tuple[str, str, str]] = [
     ("curly_teddy_natural", "4k_normal_opengl", "primary"),
     ("brown_leather", "4k_jpg", "primary"),
     ("brown_leather", "4k_normal_opengl", "primary"),
-    # Models (GLB not provided by API; falls back to GLTF)
+    # Models (GLB not provided by API; falls back to GLTF with .bin buffers)
     ("metal_office_desk", "glb", "primary"),
     ("dining_chair_02", "glb", "primary"),
     ("wooden_bookshelf_worn", "glb", "primary"),
@@ -81,7 +82,6 @@ ASSET_LIST: list[tuple[str, str, str]] = [
 
 # Expected MD5 hashes for verification.
 # Populated from the first successful download pass (P21-T03).
-# Regenerate with: python3 fetch_assets.py --hashes
 # Format: (asset_id, file_key) -> md5_hex
 EXPECTED_HASHES: dict[tuple[str, str], str] = {
     ("anniversary_lounge", "16k_jpg"): "3df39e24797865650d33278341d77847",
@@ -355,6 +355,34 @@ def resolve_file_url(api_data: dict, file_key: str) -> Optional[str]:
     return None
 
 
+def resolve_include_files(api_data: dict, file_key: str) -> Optional[dict]:
+    """Resolve a file key to its included files from API data.
+    
+    For glTF models, returns the 'include' dict with .bin and texture files.
+    For other formats, returns None.
+    """
+    # Only glTF models have includes
+    if file_key != "glb":
+        return None
+        
+    path = resolve_model_key(file_key, api_data)
+    if not path:
+        return None
+        
+    # Navigate the nested dict to get the glTF entry
+    current = api_data
+    for key in path.split("."):
+        if isinstance(current, dict) and key in current:
+            current = current[key]
+        else:
+            return None
+    
+    # The 'include' is inside this entry
+    if isinstance(current, dict):
+        return current.get("include")
+    return None
+
+
 def _get_nested(data: dict, dotted_path: str) -> Optional[str]:
     """Get a value from a nested dict using a dotted path like 'a.b.c'.
     Handles special keys like '16k+' and 'tonemapped'.
@@ -459,6 +487,64 @@ def atomic_download(url: str, dest: Path, dry_run: bool = False,
                 return False
 
     return False
+
+
+def download_included_files(api_data: dict, base_path: Path, file_key: str,
+                            dry_run: bool = False, quiet: bool = False) -> list[tuple[Path, str, DownloadStatus]]:
+    """
+    Download all files referenced by a glTF asset's 'include' section.
+    
+    Returns list of (path, md5_hash, status) tuples.
+    """
+    results = []
+    include = resolve_include_files(api_data, file_key)
+    if not include:
+        return results
+    
+    for rel_path, file_info in include.items():
+        url = file_info.get("url")
+        md5_hash = file_info.get("md5", "")
+        
+        if not url:
+            continue
+        
+        dest_path = base_path / rel_path
+        
+        # Check if already cached and valid
+        if dest_path.exists():
+            if md5_hash and verify_md5(dest_path, md5_hash):
+                if not quiet:
+                    print(f"  ✓ {rel_path} — cached", flush=True)
+                results.append((dest_path, md5_hash, DownloadStatus.UP_TO_DATE))
+                continue
+        
+        # Download the file
+        if not dry_run:
+            if not quiet:
+                print(f"  ↓ {rel_path} ...", end=" ", flush=True)
+            
+            success = atomic_download(url, dest_path)
+            
+            if success:
+                if md5_hash and verify_md5(dest_path, md5_hash):
+                    if not quiet:
+                        print("✓", flush=True)
+                    results.append((dest_path, md5_hash, DownloadStatus.SUCCESS))
+                else:
+                    if not quiet:
+                        print("✗ (hash mismatch)", flush=True)
+                    dest_path.unlink(missing_ok=True)
+                    results.append((dest_path, md5_hash, DownloadStatus.HASH_MISMATCH))
+            else:
+                if not quiet:
+                    print("✗", flush=True)
+                results.append((dest_path, md5_hash, DownloadStatus.FAILED))
+        else:
+            if not quiet:
+                print(f"  → {rel_path} ({url})", flush=True)
+            results.append((dest_path, md5_hash, DownloadStatus.DOWNLOADING))
+    
+    return results
 
 
 # ─── Main Fetcher ────────────────────────────────────────────────────
@@ -567,7 +653,7 @@ def fetch_all(cache_dir: str, download_dir: str, all_assets: bool,
                 asset.status = DownloadStatus.HASH_MISMATCH
                 # Will be re-downloaded below.
 
-        # Download (or dry run).
+        # Download main file (or dry run).
         if dry_run:
             asset.status = DownloadStatus.DOWNLOADING
             if not quiet:
@@ -586,7 +672,7 @@ def fetch_all(cache_dir: str, download_dir: str, all_assets: bool,
                     if verify_md5(asset.local_path, expected):
                         asset.status = DownloadStatus.SUCCESS
                         if not quiet:
-                            print("✓ (hash verified)")
+                            print("✓ (hash verified)", flush=True)
                     else:
                         asset.status = DownloadStatus.HASH_MISMATCH
                         hash_actual = compute_md5(asset.local_path)
@@ -597,16 +683,34 @@ def fetch_all(cache_dir: str, download_dir: str, all_assets: bool,
                             expected[:8], hash_actual[:8],
                         )
                         asset.local_path.unlink(missing_ok=True)
+                        if not quiet:
+                            print("✗", flush=True)
                 else:
                     asset.status = DownloadStatus.SUCCESS
                     if not quiet:
-                        print("✓")
+                        print("✓", flush=True)
             else:
                 asset.status = DownloadStatus.FAILED
                 if not quiet:
-                    print("✗")
+                    print("✗", flush=True)
 
         results.append(asset)
+
+        # For model files, also download included files (.bin buffers and textures)
+        if asset.file_key == "glb":
+            if not quiet:
+                print(f"  [{i}/{len(assets)}] ↓ {asset.asset_id} includes ...", flush=True)
+            
+            include_results = download_included_files(
+                api_data, asset.local_path.parent, asset.file_key,
+                dry_run=dry_run, quiet=quiet
+            )
+            
+            # Update overall status if any includes failed
+            for path, md5, status in include_results:
+                if status in (DownloadStatus.FAILED, DownloadStatus.HASH_MISMATCH):
+                    asset.status = status
+                    break
 
     if not quiet:
         summary = _print_summary(results)
