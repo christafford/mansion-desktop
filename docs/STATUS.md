@@ -10,13 +10,15 @@ running the check that proves it.
 
 ## Next task
 
+**P21-T04 (Convert models and verify PBR imports): blocked.** Requires Godot
+editor to import models, set PBR materials, and render a model/material contact
+sheet. Prerequisites (P21-T01, P21-T03) are complete: scaffold scene exists at
+`world/scenes/main.tscn`, 22 assets cached in `world/assets/cache/` (2.8 GB).
+Blocked until display server available or local Godot install.
+
 **P21-T03 (fetcher): complete.** Tool at `world/tools/fetch_assets.py` with MD5
 hash verification, atomic downloads, retry/backoff, cache management. All 22
 primary assets cached (2.8 GB).
-
-**P21-T03 (Godot import): blocked.** Importing cached assets into the Godot scene
-and P21-T04 (model conversion/PBR verification) require a running Godot editor —
-blocked until display server available or local install.
 
 **P21-T11 (GDExtension adapter): blocked.** Code written, extension .so built and
 deployed to world/addons/mansion_godot/, all 13 symbols exported, Godot editor
@@ -252,6 +254,18 @@ Full reconciliation completed. Handoff at
   been removed rather than fixed.
 
 ## Verified by automated test
+
+- **P21-T04 Convert models and verify PBR imports — blocked (2026-10-01, this session).**
+  Prerequisites verified: P21-T01 scaffold exists at `world/scenes/main.tscn` with
+  room geometry, monitor slot, desk, Camera3D, SpawnMarker. P21-T03 cached 22 primary
+  assets in `world/assets/cache/` (2.8 GB: HDRI, textures, models). Manifest at
+  `world/assets/manifest.md` documents 30 Poly Haven assets with IDs, resolutions,
+  texture maps, and material assignment plan. Model assets (metal_office_desk,
+  dining_chair_02, wooden_bookshelf_worn, desk_lamp_arm_01, potted_plant_02,
+  book_encyclopedia_set_01) downloaded as GLTF from Poly Haven API — require GLB or
+  Godot import for PBR verification. **Blocker:** Requires Godot editor (or Blender
+  headless + headless Godot render) for model import, material assignment, and contact
+  sheet rendering. No display server available. P21-T05 through P21-T09 blocked.
 
 - **P21-T10 Compositor core extraction.** GL/EGL dependency removed from the
   protocol core: `compositor-private.h` no longer includes `<GLES2/gl2.h>` and
