@@ -57,10 +57,7 @@ static void surface_destroy_callback(struct wl_resource* resource) {
             MansionSurface* oldest = wl_container_of(
                 surface->compositor->orphaned_surfaces.next, oldest, link);
             wl_list_remove(&oldest->link);
-            if (oldest->gl_texture) {
-                (void)glDeleteTextures(1, &oldest->gl_texture);
-                oldest->gl_texture = 0;
-            }
+            destroy_renderer_surface(oldest);
             delete oldest;
         }
     }
@@ -316,7 +313,8 @@ static void compositor_create_surface(struct wl_client* client, struct wl_resour
     surface->pending_buffer_resource = nullptr;
     wl_list_init(&surface->buffer_destroy_listener.link);
     surface->buffer_destroyed = false;
-    surface->gl_texture = 0;
+    /* P21-T10: GL texture is now owned by the renderer layer */
+    ensure_renderer_surface(surface);
     surface->has_pending_position = false;
     surface->has_current_position = false;
     surface->width = 0;
@@ -408,10 +406,7 @@ void destroy_compositor(struct MansionCompositor* compositor) {
     /* Clean up orphaned surfaces (surfaces that survived client disconnect). */
     wl_list_for_each_safe(surface, next, &compositor->orphaned_surfaces, link) {
         wl_list_remove(&surface->link);
-        if (surface->gl_texture) {
-            (void)glDeleteTextures(1, &surface->gl_texture);
-            surface->gl_texture = 0;
-        }
+        destroy_renderer_surface(surface);
         delete surface;
     }
 

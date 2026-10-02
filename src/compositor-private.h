@@ -1,6 +1,5 @@
 #pragma once
 
-#include <GLES2/gl2.h>
 #include <wayland-server.h>
 
 struct MansionXdgSurface;
@@ -15,7 +14,11 @@ struct MansionFrameCallback {
     struct wl_list link;
 };
 
-/* Internal surface structure - shared between compositor.cpp, display.cpp and xdg-shell.cpp */
+/* Internal surface structure - shared between compositor.cpp, display.cpp and xdg-shell.cpp
+ *
+ * Only Wayland protocol state lives here.  GPU resources (textures) are owned
+ * by the rendering layer (renderer-surface.h) and accessed via
+ * display.h accessor functions. */
 struct MansionSurface {
     struct wl_resource* resource;
     struct wl_list link;
@@ -32,9 +35,7 @@ struct MansionSurface {
     struct wl_listener buffer_destroy_listener;        /* notified when pending_buffer is destroyed */
     bool buffer_destroyed;
 
-    /* GL texture for the current buffer (0 = no texture) */
-    GLuint gl_texture;
-
+    /* Surface position (from configure/commit) */
     int32_t pending_x, pending_y;
     bool has_pending_position;
     int32_t current_x, current_y;

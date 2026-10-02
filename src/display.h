@@ -5,6 +5,8 @@
 #include <wayland-client.h>
 #include <wayland-egl.h>
 
+#include "renderer-surface.h"
+
 struct MansionCompositor;
 struct MansionRenderer;
 
@@ -92,3 +94,32 @@ void log_camera_position(struct MansionDisplay* display);
 
 /* P4-T02: teleport camera to stored viewpoint facing the monitor. */
 void input_teleport(struct MansionDisplay* display);
+
+/* ─── Renderer surface accessors (P21-T10: separate protocol from presentation) ───
+ *
+ * The rendering layer owns GPU textures per surface.  These accessors
+ * let display.cpp (and code included from it) query and update the
+ * renderer-side surface state without the compositor core depending
+ * on GL/EGL at all.
+ *
+ * get_renderer_surface() returns the rendering-layer surface struct
+ * for a given protocol surface, or nullptr if no renderer surface
+ * has been allocated yet.
+ *
+ * ensure_renderer_surface() allocates a renderer surface on demand
+ * (used during surface creation).
+ *
+ * set_renderer_surface_texture() stores a GL texture ID on the
+ * renderer surface (called after texture upload completes).
+ */
+struct MansionRendererSurface* get_renderer_surface(
+    struct MansionSurface* surface);
+struct MansionRendererSurface* ensure_renderer_surface(
+    struct MansionSurface* surface);
+void set_renderer_surface_texture(
+    struct MansionSurface* surface, GLuint texture);
+
+/* destroy_renderer_surface() frees the GL texture and removes the
+ * mapping for a surface that is being destroyed (orphaned).
+ * Only called from compositor.cpp during surface destruction. */
+void destroy_renderer_surface(struct MansionSurface* surface);

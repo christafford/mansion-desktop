@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -20,10 +21,25 @@
 #include "display.h"
 #include "compositor.h"
 #include "compositor-private.h"
+#include "renderer-surface.h"
 #include "math.h"
 #include "room.h"
 #include "xdg-shell.h"
 #include "input.h"
+
+/* ─── Display lifetime helper (P21-T10: compositor-core API) ───────────────────
+ *
+ * A global pointer so compositor.cpp can access the current display to
+ * create renderer surfaces during surface creation.  Set in create_display
+ * and cleared in destroy_display. */
+static struct MansionDisplay* g_current_display = nullptr;
+
+/* Renderer-surface mapping: protocol surface resource pointer ->
+ * renderer-surface.  Key is the raw wl_resource* cast to a size_t. */
+static std::unordered_map<size_t, MansionRendererSurface>& surface_renderer_map() {
+    static std::unordered_map<size_t, MansionRendererSurface> map;
+    return map;
+}
 
 /* ─── MansionRenderer definition ───────────────────────────────────────────── */
 
@@ -818,6 +834,8 @@ struct MansionDisplay* create_display(struct MansionCompositor* compositor,
     mansion_display->wl_client_display = nullptr;
     mansion_display->wl_surface = nullptr;
 
+    g_current_display = mansion_display;
+
     /* Create the host window using native Wayland client + EGL. */
     if (!create_egl_and_window(mansion_display)) {
         std::cerr << "Warning: Failed to create Wayland window + EGL, running headless"
@@ -845,6 +863,8 @@ struct MansionDisplay* create_display_headless(struct MansionCompositor* composi
     mansion_display->window_width = 1024;
     mansion_display->window_height = 768;
     mansion_display->renderer = nullptr;
+
+    g_current_display = mansion_display;
 
     /* Try to set up EGL with surfaceless Mesa for offscreen rendering.
      * If EGL is unavailable, keep running without a renderer and still
@@ -973,6 +993,13 @@ void destroy_display(struct MansionDisplay* display) {
     if (!display) return;
 
     destroy_renderer(display);
+
+    /* P21-T10: release the renderer-surface mapping and clear the
+     * global pointer so compositor.cpp no longer finds a display. */
+    if (g_current_display == display) {
+        surface_renderer_map().clear();
+        g_current_display = nullptr;
+    }
 
     /* Clean up Wayland client window. */
     if (display->wl_client_display || display->wl_surface) {
@@ -1127,7 +1154,7 @@ static void render_panel(struct MansionDisplay* display) {
     if (!target) {
         struct MansionSurface *s;
         wl_list_for_each(s, &compositor->surface_list, link) {
-            if (s->gl_texture || s->buffer_resource) {
+            if (get_renderer_surface(s)->gl_texture || s->buffer_resource) {
                 target = s;
                 break;
             }
@@ -1136,7 +1163,7 @@ static void render_panel(struct MansionDisplay* display) {
     if (!target) {
         struct MansionSurface *s;
         wl_list_for_each_reverse(s, &compositor->orphaned_surfaces, link) {
-            if (s->gl_texture || s->buffer_resource) {
+            if (get_renderer_surface(s)->gl_texture || s->buffer_resource) {
                 target = s;
                 break;
             }
@@ -1202,16 +1229,16 @@ static void render_panel(struct MansionDisplay* display) {
                                 GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D,
                                 GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-                if (target->gl_texture)
-                    glDeleteTextures(1, &target->gl_texture);
-                target->gl_texture = tex;
+                if (get_renderer_surface(target)->gl_texture)
+                    glDeleteTextures(1, &get_renderer_surface(target)->gl_texture);
+                get_renderer_surface(target)->gl_texture = tex;
             }
             wl_shm_buffer_end_access(shm_buf);
             target->needs_upload = false;
         }
     }
 
-    if (!target->gl_texture) {
+    if (!get_renderer_surface(target)->gl_texture) {
         release_buffer();
         return;
     }
@@ -1252,7 +1279,7 @@ static void render_panel(struct MansionDisplay* display) {
     glUniformMatrix4fv(renderer->mvp_uniform, 1, GL_FALSE, mvp.m);
 
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, target->gl_texture);
+    glBindTexture(GL_TEXTURE_2D, get_renderer_surface(target)->gl_texture);
     glUniform1i(renderer->tex_3d_uniform, 0);
     /* P3-T05: green tint when panel is targeted. */
     if (display->panel_targeted) {
@@ -1503,13 +1530,13 @@ void render_surface(struct MansionDisplay* display, struct wl_resource* surface,
                     static_cast<long long>(w) * h * 4;
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-                surface_data->gl_texture = tex;
+                get_renderer_surface(surface_data)->gl_texture = tex;
             }
             wl_shm_buffer_end_access(shm_buf);
         }
     }
 
-    if (surface_data->gl_texture) {
+    if (get_renderer_surface(surface_data)->gl_texture) {
         /* Render textured surface. */
         GLfloat attrib_data[] = {
             static_cast<GLfloat>(sx),      static_cast<GLfloat>(sy),      0.0f, 0.0f,
@@ -1527,7 +1554,7 @@ void render_surface(struct MansionDisplay* display, struct wl_resource* surface,
                               4 * sizeof(float), &attrib_data[2]);
 
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, surface_data->gl_texture);
+        glBindTexture(GL_TEXTURE_2D, get_renderer_surface(surface_data)->gl_texture);
         glUniform1i(renderer->tex_uniform, 0);
         glUniform4f(renderer->color_uniform, 1.0f, 1.0f, 1.0f, 0.0f);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
@@ -1620,16 +1647,16 @@ static void render_application_fullscreen(struct MansionDisplay* display) {
                                 GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D,
                                 GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-                if (surface_data->gl_texture)
-                    glDeleteTextures(1, &surface_data->gl_texture);
-                surface_data->gl_texture = tex;
+                if (get_renderer_surface(surface_data)->gl_texture)
+                    glDeleteTextures(1, &get_renderer_surface(surface_data)->gl_texture);
+                get_renderer_surface(surface_data)->gl_texture = tex;
             }
             wl_shm_buffer_end_access(shm_buf);
             surface_data->needs_upload = false;
         }
     }
 
-    if (!surface_data->gl_texture) return;
+    if (!get_renderer_surface(surface_data)->gl_texture) return;
 
     glUseProgram(renderer->program);
     if (renderer->viewport_uniform >= 0) {
@@ -1655,7 +1682,7 @@ static void render_application_fullscreen(struct MansionDisplay* display) {
                           4 * sizeof(float), &attrib_data[2]);
 
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, surface_data->gl_texture);
+    glBindTexture(GL_TEXTURE_2D, get_renderer_surface(surface_data)->gl_texture);
     glUniform1i(renderer->tex_uniform, 0);
     /* color.a == 0 → shader samples texture; a != 0 → outputs color directly. */
     glUniform4f(renderer->color_uniform, 1.0f, 1.0f, 1.0f, 0.0f);
@@ -1701,7 +1728,7 @@ void render_surface_from_data(struct MansionDisplay* display, struct MansionSurf
 
     /* Orphaned surfaces have no buffer_resource, but may still have gl_texture
        from a previous render. Draw with it. */
-    if (surface_data->gl_texture) {
+    if (get_renderer_surface(surface_data)->gl_texture) {
         GLfloat attrib_data[] = {
             static_cast<GLfloat>(sx),      static_cast<GLfloat>(sy),      0.0f, 0.0f,
             static_cast<GLfloat>(sx) + sw, static_cast<GLfloat>(sy),      1.0f, 0.0f,
@@ -1718,7 +1745,7 @@ void render_surface_from_data(struct MansionDisplay* display, struct MansionSurf
                               4 * sizeof(float), &attrib_data[2]);
 
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, surface_data->gl_texture);
+        glBindTexture(GL_TEXTURE_2D, get_renderer_surface(surface_data)->gl_texture);
         glUniform1i(renderer->tex_uniform, 0);
         glUniform4f(renderer->color_uniform, 1.0f, 1.0f, 1.0f, 0.0f);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
@@ -1883,4 +1910,50 @@ void input_teleport(struct MansionDisplay* display) {
     display->camera.z    = display->teleport_z;
     display->camera.yaw  = display->teleport_yaw;
     display->camera.pitch = display->teleport_pitch;
+}
+
+/* ─── Renderer surface accessors (P21-T10) ─────────────────────────────────── */
+
+struct MansionRendererSurface* get_renderer_surface(struct MansionSurface* surface) {
+    if (!surface) return nullptr;
+    size_t key = reinterpret_cast<size_t>(surface->resource);
+    auto& map = surface_renderer_map();
+    auto it = map.find(key);
+    return it != map.end() ? &it->second : nullptr;
+}
+
+struct MansionRendererSurface* ensure_renderer_surface(struct MansionSurface* surface) {
+    if (!surface || !g_current_display) return nullptr;
+    size_t key = reinterpret_cast<size_t>(surface->resource);
+    auto& map = surface_renderer_map();
+    auto [it, inserted] = map.emplace(key, MansionRendererSurface{});
+    return &it->second;
+}
+
+void set_renderer_surface_texture(struct MansionSurface* surface, GLuint texture) {
+    if (!surface) return;
+    size_t key = reinterpret_cast<size_t>(surface->resource);
+    auto& map = surface_renderer_map();
+    auto it = map.find(key);
+    if (it != map.end()) {
+        if (it->second.gl_texture) {
+            glDeleteTextures(1, &it->second.gl_texture);
+        }
+        it->second.gl_texture = texture;
+    }
+}
+
+/* Delete the GL texture for an orphaned surface (called from destructor). */
+void destroy_renderer_surface(struct MansionSurface* surface) {
+    if (!surface) return;
+    size_t key = reinterpret_cast<size_t>(surface->resource);
+    auto& map = surface_renderer_map();
+    auto it = map.find(key);
+    if (it != map.end()) {
+        if (it->second.gl_texture) {
+            glDeleteTextures(1, &it->second.gl_texture);
+            it->second.gl_texture = 0;
+        }
+        map.erase(it);
+    }
 }
