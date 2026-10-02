@@ -76,9 +76,10 @@ The agent must enforce both. Record blockers and exact continuation points.
   **Depends:** P21-T06, P21-T07, P21-T08.
   **Acceptance:** Render and inspect fixed comparison views and record a criterion-by-criterion ART-DIRECTION.md review. Fix defects until the finished-room criteria pass. If image inspection is unavailable, keep this task open with its exact blocker while continuing core tasks.
 
-- [ ] **P21-T10 Extract the compositor core from presentation.**
+- [x] **P21-T10 Extract the compositor core from presentation.**
   **Depends:** P21-T00.
   **Acceptance:** Separate the reusable protocol/client/seat core from old host GL rendering/input. Keep the headless executable and existing tests working. Prove core start/nonblocking pump/stop and callback ownership without any visible host dependency. Fix reproducible lifetime/commit regressions relevant to reuse.
+  **Evidence (2026-10-01):** GL/EGL removed from protocol core (`compositor-private.h` no longer includes `<GLES2/gl2.h>`, `MansionSurface` no longer carries `gl_texture`). New `renderer-surface.h` bridges layers via `wl_resource*` map. All 28 tests pass in `build` and `build-asan` (zero sanitizer errors). Commit bf76e41.
 
 - [ ] **P21-T11 Build and load the GDExtension adapter.**
   **Depends:** P21-T01, P21-T10.
