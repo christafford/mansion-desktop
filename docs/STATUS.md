@@ -14,6 +14,14 @@ and repairs the tooling scripts that were found to be broken during T00's
 investigation. See TOOLCHAIN.md for verified commands; T01 adds the upstream
 URLs, tags, build commands, and fixed scripts.
 
+**P21-T01 completed (2026-10-02):**
+- `run-godot.sh`: Changed `--project` to `--path` (engine documents `--path`)
+- `validate-godot-project.sh`: Uses `--import --quit-after 1` to avoid audio
+  device errors; checks exit code directly instead of parsing error logs
+- TOOLCHAIN.md updated with tooling scripts section
+- All 30 meson tests pass (C++ baseline verified)
+- All 62 Node plugin tests pass (baseline verified)
+
 After T01: **T02 → T03 → T04 → T05 → T06 → T07 → T08 → T09**, then
 **T10 → T11 → T12 → T13 → T14 → T15 → T16 → T17 → T18 → T19**.
 These arrows give the default work order, not extra dependencies. If an art
