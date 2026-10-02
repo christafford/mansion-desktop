@@ -10,23 +10,24 @@ running the check that proves it.
 
 ## Next task
 
-**P21-T03: import and place assets in the Godot scene.** The asset fetcher tool
-is complete (`world/tools/fetch_assets.py`): CLI fetcher with MD5 hash
-verification, atomic downloads, retry with exponential backoff, and cache
-management. All 22 primary assets from the P21-T02 manifest are downloaded and
-cached in `world/assets/cache/` (2.8 GB total). Import and placement in the
-Godot scene still needs a running Godot editor — blocked until display server
-available or local install. P21-T10 is complete (compositor core extracted from
-presentation). P21-T11 (GDExtension adapter) is partially complete — code
-written, extension .so built and deployed to world/addons/mansion_godot/,
-all 13 symbols exported, Godot editor build complete (1.07 GB), project loads
-cleanly (zero errors); blocked on display server to register extension via
-Project Settings > General > Extensions (Godot 4.x stores extension list in
-user://project.godot, not in project's project.godot). P21-T11 depends on
-P21-T01, P21-T10 being complete. Decision 06 authorizes the Godot world frontend
-and Poly Haven assets; world art and compositor extraction are independently
-eligible. P21-T19 is the furnished live-terminal gate; P21-T34 is the final
-personal review.
+**P21-T03 (fetcher): complete.** Tool at `world/tools/fetch_assets.py` with MD5
+hash verification, atomic downloads, retry/backoff, cache management. All 22
+primary assets cached (2.8 GB).
+
+**P21-T03 (Godot import): blocked.** Importing cached assets into the Godot scene
+and P21-T04 (model conversion/PBR verification) require a running Godot editor —
+blocked until display server available or local install.
+
+**P21-T11 (GDExtension adapter): blocked.** Code written, extension .so built and
+deployed to world/addons/mansion_godot/, all 13 symbols exported, Godot editor
+build complete (1.07 GB), project loads cleanly (zero errors); blocked on display
+server to register extension via Project Settings > General > Extensions (Godot
+4.x stores extension list in user://project.godot, not in project's
+project.godot). P21-T11 depends on P21-T01, P21-T10 being complete.
+
+Decision 06 authorizes the Godot world frontend and Poly Haven assets; world art
+and compositor extraction are independently eligible. P21-T19 is the furnished
+live-terminal gate; P21-T34 is the final personal review.
 
 **P21-T03 completed 2026-10-01.** Asset fetcher tool at
 `world/tools/fetch_assets.py`: CLI fetcher with MD5 hash verification (API
