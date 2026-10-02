@@ -186,3 +186,28 @@ compositor_core_test = executable('test_compositor_core',
     include_directories: [include_directories('src')],
     link_with: [compositor_core_lib])
 test('compositor-core', compositor_core_test, suite: 'p2', timeout: 10)
+
+# GDExtension adapter for Godot integration
+# Note: godot-cpp must be built first at tools/godot-cpp/build/
+godot_cpp_include = include_directories('tools/godot-cpp/include', 'tools/godot-cpp/build/gen/include')
+
+# GDExtension source files - use compositor-core API, not old bridge
+gdextension_sources = files(
+    'src/godot/mansion_extension.cpp',
+    'src/godot/mansion_gdextension_adapter.cpp',
+)
+
+# GDExtension shared library
+# The .gdextension resource file references this .so by name
+# Note: GDExtension libraries load symbols at runtime via godot_extension_get_library_symbol
+# We link against compositor-core static library for the protocol layer,
+# but NOT against libgodot-cpp.a (symbols resolve at runtime)
+# Note: wayland-client is needed for wl_display_dispatch_pending used in pump()
+mansion_gdextension = shared_library('mansion_godot',
+    gdextension_sources,
+    cpp_args: cpp_args + ['-fPIC', '-std=c++17'],
+    include_directories: [include_directories('src'), godot_cpp_include],
+    dependencies: [wayland_server, wayland_client],
+    link_with: [compositor_core_lib],
+    install: false,
+)
