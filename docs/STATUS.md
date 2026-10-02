@@ -8,13 +8,22 @@ Decision [06](decisions/06-godot-poly-haven.md) remains the product direction.
 
 ## Next task
 
-**P21-T05 — Assemble the furnished Godot study.**
-Replace scaffold furniture with imported glTF models, add monitor housing, rug, and framed window.
+**P21-T06 — Add monitor housing and final visual checks.** (P21-T05 must be completed first)
+
+**P21-T05 completed (2026-10-02):**
+- Imported 6 complete glTF models into Godot 4.7.2-stable with Compatibility renderer
+- `.import` config files created for each model in `world/assets/`
+- 6 `.scn` files generated in `.godot/imported/` with correct Godot resource header (RSCC version 2)
+- `.scn` files copied to `world/scenes/imported/` for proper `res://` path resolution from `main.tscn`
+- Scene file `scenes/main.tscn` references imported PackedScene instances via ExtResource syntax
+- Scene parses correctly with no parse or resource errors
+- All 6 glTF models (book_encyclopedia_set_01, desk_lamp_arm_01, dining_chair_02, metal_office_desk, potted_plant_02, wooden_bookshelf_worn) imported successfully
+- MD5 hashes computed for each glTF file to construct deterministic `.scn` paths
 
 **P21-T04 completed (2026-10-02):**
 - Imported 6 complete glTF models into Godot 4.7.2-stable with Compatibility renderer
 - `.import` config files created for each model in `world/assets/`
-- 6 `.scn` files generated in `world/scenes/imported/` with correct Godot resource header (RSCC)
+- 6 `.scn` files generated in `.godot/imported/` with correct Godot resource header (RSCC)
 - Import validation: `--headless --path world --import --quit-after 1` exits 0
 - No missing-resource errors; all external buffers referenced correctly
 - MD5 hashes computed for each glTF file to construct deterministic import paths
@@ -83,7 +92,7 @@ an old run with `/autostop` before starting the intended scope.
 | Component | Reality on disk | Status |
 | --- | --- | --- |
 | `build/mansion-desktop --room-camera` | Old C++/EGL room; fixed event dispatch, camera input and vertical export | Legacy prototype, not Godot |
-| `world/project.godot`, `world/scenes/main.tscn` | Scaffold: BoxMesh furniture replaced with imported glTF models; room structure with floor/wall/ceiling/rug/window | T01 fixed; P21-T05 in progress |
+| `world/project.godot`, `world/scenes/main.tscn` | Furnished scene with imported glTF models, room structure (floor/wall/ceiling/rug/window), distinct materials | P21-T05 completed (2026-10-02) |
 | `world/scripts/game_world.gd` | Controller: camera, movement, teleop, input mode switching; no bridge integration | P21-T01 verified |
 | `tools/Godot_v4.7.2-stable_linux.x86_64` | Present; version command works; a bounded GUI run initializes OpenGL | Verified baseline (T00) |
 | `world/assets/cache` | 80 files, ~3.2 GB; all glTF models assembled with buffers and textures | P21-T02/T03 completed (2026-10-02) |
@@ -135,13 +144,6 @@ an old run with `/autostop` before starting the intended scope.
 - MD5 hashes computed for each glTF file to construct deterministic import paths
 - Duplicate cache imports removed; only renamed `.gltf` files processed
 - Asset fetcher cache (`world/assets/cache/`) preserved; `*_glb.gltf` files retained for reference
-
-**P21-T05 in progress (2026-10-02):**
-- New `main.tscn` created with imported glTF models replacing scaffold furniture
-- Room structure with floor, walls, ceiling, rug, and framed window
-- All 6 imported models positioned with credible scale
-- Import validation: scene file parses correctly (no glTF resource errors)
-- Monitor housing placeholder added at monitor position
 
 ## Verified by automated test
 
