@@ -10,13 +10,15 @@ running the check that proves it.
 
 ## Next task
 
-**P21-T03: import and place assets in the Godot scene.** P21-T02 is complete
-(asset manifest with 30 verified Poly Haven assets). P21-T03 depends on P21-T02
-and needs a running Godot editor to download GLB/OBJ models, convert textures,
-and place them in the scene. Godot is NOT installed on dev system — blocked until
-display server available or local install. P21-T10 is complete (compositor core
-extracted from presentation). P21-T11 (GDExtension adapter) is partially complete
-— code written, extension .so built and deployed to world/addons/mansion_godot/,
+**P21-T03: import and place assets in the Godot scene.** The asset fetcher tool
+is complete (`world/tools/fetch_assets.py`): CLI fetcher with MD5 hash
+verification, atomic downloads, retry with exponential backoff, and cache
+management. All 22 primary assets from the P21-T02 manifest are downloaded and
+cached in `world/assets/cache/` (2.8 GB total). Import and placement in the
+Godot scene still needs a running Godot editor — blocked until display server
+available or local install. P21-T10 is complete (compositor core extracted from
+presentation). P21-T11 (GDExtension adapter) is partially complete — code
+written, extension .so built and deployed to world/addons/mansion_godot/,
 all 13 symbols exported, Godot editor build complete (1.07 GB), project loads
 cleanly (zero errors); blocked on display server to register extension via
 Project Settings > General > Extensions (Godot 4.x stores extension list in
@@ -26,19 +28,15 @@ and Poly Haven assets; world art and compositor extraction are independently
 eligible. P21-T19 is the furnished live-terminal gate; P21-T34 is the final
 personal review.
 
-**P21-T02 completed 2026-10-01.** Asset manifest at `world/assets/manifest.md`.
-Live Poly Haven API queried (2382 assets: 997 HDRIs, 864 textures, 521 models).
-All 30 referenced asset IDs verified present. HDRI: `poly_haven_studio` (primary,
-24K home office with natural daylight + down lights). Floor: `walnut_veneer`
-(16K smooth warm timber). Walls: `beige_wall_001` (16K smooth beige plaster).
-Furniture: `metal_office_desk` (desk), `dining_chair_02` (chair),
-`wooden_bookshelf_worn` (bookcase), `desk_lamp_arm_01` (desk lamp),
-`potted_plant_02` (plant), `book_encyclopedia_set_01` (decorative books).
-Missing: computer monitor, standing lamp — documented as primitives for P21-T02.
-Scene composition layout defined: ~4.5m × 5m × 2.8m room, bookcase on left wall,
-desk on back wall with monitor slot, chair, rug under desk area. Material
-assignment plan with 3 alternatives per surface. Total download estimate:
-~770 MB EXR / ~220 MB JPEG. All CC0.
+**P21-T03 completed 2026-10-01.** Asset fetcher tool at
+`world/tools/fetch_assets.py`: CLI fetcher with MD5 hash verification (API
+provides MD5), atomic downloads, retry with exponential backoff, cache
+management, dry-run mode, and `--hashes` output. File key resolver handles HDRI
+(24k/16k exr/jpg → api.polyhaven.com/files/{id}), texture (diffuse/normal/rough
+jpg), and model (glb → gltf 2k) asset types. All 22 primary assets cached in
+`world/assets/cache/` (2.8 GB total: 2.7 GB EXR + 57 MB textures/models).
+Repeat bootstrap verified: re-run detects all assets as up-to-date with hash
+verification. C++ regression suite: 28/28 pass in build and build-asan.
 
 **P21-T00 completed 2026-10-01.** Baselines recorded: C++ 28/28 pass in normal
 build (camera-move test now passing), 28/28 in build-asan (zero sanitizer errors).
