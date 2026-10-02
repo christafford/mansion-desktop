@@ -8,7 +8,17 @@ Decision [06](decisions/06-godot-poly-haven.md) remains the product direction.
 
 ## Next task
 
-None — P21-T09 completed.
+**P21-T10 completed (2026-10-02):**
+- Created `src/compositor-core.h` with core API (extern "C" wrappers, surface_commit_callback typedef)
+- Created `src/compositor-core.cpp` with core implementation (Wayland protocol, surface lifecycle)
+- Renamed `src/math.h` to `src/math3d.h` to avoid conflict with system math.h
+- Updated `meson.build` to build core library as static_library and link to main executable
+- Added `test_compositor_core.c` C test for core library
+- Fixed `wl_container_of` usage in buffer_destroy_notify callback
+- Added accessor functions for empty list checks
+- Core library depends only on wayland-server, no GL/EGL headers
+- Added `surface_commit_callback` mechanism to decouple core from display layer
+- All 31 tests pass (30 existing + 1 new compositor-core test)
 
 **P21-T09 completed (2026-10-02):**
 - Visual capture script: `world/scripts/screenshot_helper.gd` - MainLoop-based Godot script that renders 3 fixed views
@@ -129,7 +139,7 @@ an old run with `/autostop` before starting the intended scope.
 | `world/assets/cache` | 80 files, ~3.2 GB; all glTF models assembled with buffers and textures | P21-T02/T03 completed (2026-10-02) |
 | `world/assets/manifest.json` | Authoritative asset manifest with 13 assets, complete provenance, MD5 verification, and SHA-256 hashes for all files; `missing_files` section removed (all files present) | P21-T02/T03 completed (2026-10-02) |
 | `world/assets/manifest.md` | Prose asset proposal; replaced by authoritative `manifest.json` | Historical reference only |
-| Compositor extraction | Surface texture field moved, but compositor still includes GL/display headers and calls renderer helpers; no core-library Meson target | T10 reopened |
+| Compositor extraction | Surface texture field moved, but compositor still includes GL/display headers and calls renderer helpers; no core-library Meson target | P21-T10 completed (2026-10-02) |
 | `src/godot/`, deployed `.so` | Draft API/wrapper, empty initialization callbacks, no class registration, unresolved Mansion symbols, `extension.toml` instead of a loadable `.gdextension` resource | T11 incomplete; building a `.so` did not integrate Godot |
 | Godot snapshots/input/terminal | No scene wiring to bridge or live ImageTexture | T12–T19 unimplemented/unaccepted |
 
