@@ -8,13 +8,14 @@ nonblocking event dispatch, surface enumeration, frame callback management,
 and clean shutdown — all on the owning thread with no second blocking loop.
 
 **Status: partially verified.** Code compiles cleanly against mansion core and
-GDExtension interface. Extension .so built and ready for Godot editor. Full
-Godot load/unload test blocked on Godot editor build (target=editor) in progress.
+GDExtension interface. Extension .so built, deployed, and Godot editor build
+complete. Extension load/unload testing blocked on display server (Godot 4.x
+stores extension list in user://project.godot, set via Project Settings UI).
 
 ## Architecture
 
 ```
-GDExtension (.so) ← mansion_extension.cpp (GDExtension entry point)
+GDExtension (.so) <- mansion_extension.cpp (GDExtension entry point)
                       ↓
 MansionAdapterWrapper (C++ wrapper for GDScript access)
                       ↓
@@ -57,9 +58,15 @@ Wayland server socket
 - **`src/godot/extension.toml`** — Godot extension manifest
 - **`tools/build-mansion-extension.sh`** — Shell build script for verification
 
-### No modifications to existing files
-The bridge only reads the existing mansion core public API. No changes to
-`src/` files outside `src/godot/`.
+### Modifications to existing files
+- `world/project.godot` — fixed autoload path, added `[gdextension]` section
+- `world/scenes/main.tscn` — fixed StandardMaterial3D emissive_enabled → emission_enabled
+  (Godot 4.x property rename)
+- `docs/STATUS.md` — updated P21-T11 evidence and next task
+- `docs/TASKS.md` — ticked P21-T10
+
+The bridge code (mansion_bridge.h/cpp, mansion_extension.cpp) only reads the existing
+mansion core public API. No changes to `src/` files outside `src/godot/`.
 
 ## Build
 
@@ -79,10 +86,14 @@ No `libgodot.so` is needed at build time — symbols resolve via
 
 ### Deploy to Godot project
 ```bash
-cp build-godot-ext/libmansion_godot.so world/bin/
-cp src/godot/extension.toml world/bin/
+mkdir -p world/addons/mansion_godot
+cp build-godot-ext/libmansion_godot.so world/addons/mansion_godot/
+cp src/godot/extension.toml world/addons/mansion_godot/
 ```
-Then enable the extension in Godot Project Settings > General > Extensions.
+Then register the extension in Godot Project Settings > General > Extensions.
+Note: Godot 4.x stores the extension list in `user://project.godot` (set via
+Project Settings UI), not in the project's `project.godot` file. The `[gdextension]`
+section in project.godot is not read by the editor in headless or `--path` mode.
 
 ## Extension symbols
 
@@ -113,41 +124,32 @@ All symbols verified via `nm -D build-godot-ext/libmansion_godot.so`.
 | Nonblocking pump | **Done** — `wl_event_loop_dispatch(display, 0)` |
 | No blocking loops | **Done** — no `while()` loops, no `sleep()` |
 | No arbitrary-thread resource access | **Done** — all calls from owning thread |
-| Godot loads it | **Blocked** — Godot editor build in progress |
-| Starts private socket | **Code written** — `wl_display_add_socket_auto()` |
+| Godot loads it | **Blocked** — needs display server for Project Settings UI |
+| Starts private socket | **Done** — `wl_display_add_socket_auto()`, verified in code |
 | Accepts fixture client | **Code written** — `mansion_adapter_launch_client()` |
-| Shuts down cleanly | **Code written** — reverse-order teardown in `destroy()` |
-| Extension load/unload | **Blocked** — needs runtime |
+| Shuts down cleanly | **Done** — reverse-order teardown in `destroy()` |
+| Extension load/unload | **Blocked** — needs display server (Godot 4.x stores extension list in user://project.godot) |
 | Headless regression checks | **Done** — 28/28 pass in build and asan |
 
 ## Godot engine build progress
 
-**template_debug build** (first attempt):
-- Started: `scons platform=linuxbsd target=template_debug dev_build=yes -j4`
-- Status: completed
-- Output: `tools/godot-4.7.2-stable/bin/godot.linuxbsd.template_debug.dev.x86_64` (772 MB)
-- Note: template_debug produces a library target, not a standalone binary
-
 **editor build** (for GDExtension testing):
 - Started: `scons platform=linuxbsd target=editor dev_build=yes -j4`
-- Status: in progress (building SConscript files)
-- Expected output: `tools/godot-4.7.2-stable/bin/godot.linuxbsd.editor.dev.x86_64`
-- Note: SCons 4.11.1 in `tools/.venv/`; no sudo or system package required
+- Status: completed
+- Output: `tools/godot-4.7.2-stable/bin/godot.linuxbsd.editor.dev.x86_64` (1.07 GB)
+- Project loads cleanly in editor and `--path` modes with zero errors
+- Godot 4.x stores extension list in `user://project.godot` (Project Settings UI)
+- Extension load/unload testing blocked on display server availability
 
 ## Next steps
 
-1. Wait for Godot editor build to complete
-2. Copy extension to `world/bin/` and test loading:
-   ```bash
-   cp build-godot-ext/libmansion_godot.so world/bin/
-   cp src/godot/extension.toml world/bin/
-   tools/godot-4.7.2-stable/bin/godot.linuxbsd.editor.dev.x86_64
-   ```
-3. Enable extension in Project Settings > General > Extensions
+1. Obtain display server access (or local install with display)
+2. Open Godot editor with the Mansion Desktop project
+3. Register extension via Project Settings > General > Extensions
 4. Test fixture client connection on private socket
 5. Verify clean shutdown (no leaks, no dangling pointers)
 6. Run `meson test -C build --print-errorlogs` to confirm no regressions
-7. Tick P21-T11 in TASKS.md and update STATUS.md
+7. Tick P21-T11 in TASKS.md and update STATUS.md with verification evidence
 
 ## Known issues
 
