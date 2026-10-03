@@ -28,11 +28,12 @@ P2-T05 GPU import remains open and is not a prerequisite for this CPU bridge.
 
 ## Instructions for the next autonomous run
 
-Use `/autocontinue P21-T00 through P21-T19` for the first useful product milestone.
+Current recovery is bounded to T36/T37; do not start a broad autocontinue run.
+The eventual first useful product milestone ends at T19.
 Do not use a broad Projects 1–21 scope: that mixes deferred legacy tasks with
 this work. This document update does not itself start an autonomous run.
 
-1. Read STATUS.md, then the first eligible task below. T00 is next today.
+1. Read STATUS.md, then the first eligible task below. Follow the recovery checkpoint in STATUS.md.
    T00, T01, T02, T03 and T10 were **reopened** on 2026-10-02. Their previous
    checkmarks did not meet acceptance; do not restore them from an old handoff.
 2. Execute the numbered steps in that task. Reuse the existing code and caches.
@@ -57,7 +58,7 @@ this work. This document update does not itself start an autonomous run.
    scope passes. For the recommended scope this includes T19, not just T09 or
    a compiled bridge. Otherwise end with `Next: <task id>`.
 
-**Default sequence:** T00 → T01 → T02 → T03 → T04 → T05 → T06 → T07 → T08 →
+**Original full milestone sequence (resume after recovery):** T00 → T01 → T02 → T03 → T04 → T05 → T06 → T07 → T08 →
 T09 → T10 → T11 → T12 → T13 → T14 → T15 → T16 → T17 → T18 → T19.
 The explicit Depends lines control eligibility; the sequence prioritizes a
 visible real-asset room while allowing independent core work if art is blocked.
@@ -68,6 +69,33 @@ numeric IDs. It does **not** enforce Depends or validate evidence. Preserve all
 IDs and dependency edges. Do not hide subtasks in nested checkboxes or use ID
 suffixes. Split only when a task has separate acceptance boundaries; add unused
 numeric IDs and include them in the authorized scope before relying on them.
+
+### Bounded recovery authorized on 2026-10-03
+
+Run these small recovery tasks before resuming the original milestone sequence.
+They do not silently check off broader art, toolchain or live-terminal tasks.
+Do not launch another broad overnight range before the new boundaries pass.
+
+- [x] **P21-T36 Recover a visible Godot frontend using existing assets.**
+  **Depends:** none (bounded recovery using the installed tool/cache).
+  Preserve existing work; isolate the crashing addon; stage complete glTF sources;
+  render real textured furniture with light; implement collision-based walking,
+  mouse look/release and focus cleanup; repair the validator's failure detection.
+  **Acceptance:** inspected GPU-rendered views, graphical controller/collision
+  smoke, successful import/runtime validation, and rejected invalid-script fixture.
+  Evidence: [recovery handoff](handoffs/14-godot-frontend-recovery.md).
+  This is a frontend preview, not finished art or a live desktop.
+
+- [ ] **P21-T37 Prove a minimal standard godot-cpp binding.**
+  **Depends:** P21-T36.
+  Use the installed compatible godot-cpp and official initialization pattern.
+  Build one isolated extension class with one callable method. Run repeated
+  instantiate/call/free and clean process shutdown. Keep the old crashing addon
+  isolated; no Wayland, pixel pointers or legacy renderer in this probe.
+  **Acceptance:** actual Godot script assertions pass through the C++ class;
+  record exact engine/bindings/build identities and commands. This is a binding
+  prerequisite only, not completion of the compositor adapter in T11.
+
 
 - [ ] **P21-T00 Repair and verify the toolchain baseline.**
   **Depends:** none.
@@ -106,9 +134,9 @@ numeric IDs and include them in the authorized scope before relying on them.
 
   **Acceptance:** reviewed preview evidence, coherent layout and traceable curated manifest. An API response or file count alone does not pass. T03 completes acquisition/locking of missing file bytes.
 
-- [x] **P21-T03 Repair asset fetching and fetch complete model packages.**
+- [ ] **P21-T03 Repair asset fetching and fetch complete model packages.**
   **Depends:** P21-T02.
-  **Reopened:** 22 cached files are not 22 complete assets. All six glTF models have missing dependencies: 30 external buffer/image references in total.
+  **Reopened:** 22 cached files are not 22 complete assets. The 2026-10-02 audit found 30 missing references. Those local dependencies now exist and pass staging hash checks; downloader acceptance remains open.
   **Do:**
 
   1. Audit `world/tools/fetch_assets.py`; use the T02 manifest rather than divergent hard-coded lists. Preserve existing cache bytes. Fetch only selected missing/corrupt files, not all alternates or the whole catalog.
@@ -118,28 +146,23 @@ numeric IDs and include them in the authorized scope before relying on them.
 
   **Acceptance:** offline structural checks can load every selected model buffer/image dependency, dependency/hash checks pass, repeat bootstrap downloads nothing, and negative-path tests pass. Godot visual import follows in T04. File count/GB totals are not acceptance; no silent primitive fallback.
 
-  **P21-T03 completed (2026-10-02):**
+  **Historical P21-T03 claims (2026-10-02; reopened 2026-10-03):**
+  Downloads exist, but offline acquisition/negative-path acceptance is not established.
   - `fetch_assets.py` updated with `resolve_include_files()` to extract "include" section from `gltf.2k.gltf`
   - Downloaded 80 total files: 6 glTF models, 6 .bin buffers, 39 textures, 2 HDRIs, wall/hard surface assets
   - All files verified with MD5 from Poly Haven API, SHA-256 computed for manifest
   - Godot `--headless --import --quit-after 1` exits 0 with `--rendering-method gl_compatibility`
   - All 30 meson tests pass, all 62 Node tests pass (baseline unchanged)
 
-**P21-T04 completed (2026-10-02):**
-- Imported 6 complete glTF models into Godot 4.7.2-stable with Compatibility renderer
-- `.import` config files created for each model in `world/assets/`
-- 6 `.scn` files generated in `.godot/imported/` with correct Godot resource header (RSCC)
-- Import validation: `--headless --path world --import --quit-after 1` exits 0
-- No missing-resource errors; all external buffers referenced correctly
-- MD5 hashes computed for each glTF file to construct deterministic import paths
-- Duplicate cache imports removed; only renamed `.gltf` files processed
-- Asset fetcher cache (`world/assets/cache/`) preserved; `*_glb.gltf` files retained for reference
-
-**Depends:** P21-T01, P21-T03.
-
-**Acceptance:** reproducible import, no missing-resource errors, verified `.scn` files with correct Godot resource format. All 6 models imported successfully.
-
-- [ ] **P21-T05 Assemble the furnished Godot study.**
+- [ ] **P21-T04 Demonstrate reproducible model imports.**
+  **Depends:** P21-T01, P21-T03.
+  **Reopened 2026-10-03:** generated cache headers did not prove rendering.
+  Import complete source glTF packages, never copied `.godot/imported` scenes.
+  Verify from a clean generated cache, inspect a rendered contact sheet for all
+  six models, and record texture, orientation and scale checks.
+  **Acceptance:** complete repeatable imports and inspected rendered models.
+  T36 provides working rendering evidence but does not pass the unverified
+  fresh-machine asset/bootstrap prerequisites.
 
 - [ ] **P21-T05 Assemble the furnished Godot study.**
   **Depends:** P21-T04.

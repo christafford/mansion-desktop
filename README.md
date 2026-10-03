@@ -4,9 +4,15 @@ Mansion Desktop is a Linux spatial desktop: real Wayland applications inside a
 persistent first-person environment. Current work is Project 21: a Godot world
 frontend, the retained C++ compositor core, and a furnished Poly Haven study.
 The runnable `build/mansion-desktop --room-camera` command still uses the legacy
-custom polygon renderer. Godot has a separate placeholder project and incomplete
-bridge; the downloaded models lack dependencies and no furnished room is integrated.
-The [2026-10-02 status audit](docs/STATUS.md) reopens the unfinished prerequisites.
+custom polygon renderer. The separate Godot study now renders textured furniture
+and supports collision-based movement. The live terminal bridge is still unfinished.
+See [current status](docs/STATUS.md) and [Godot launch instructions](world/README.md).
+
+```sh
+python3 world/tools/prepare_study_assets.py
+tools/validate-godot-project.sh
+tools/run-godot.sh --audio-driver Dummy
+```
 
 Read [Decision 06](docs/decisions/06-godot-poly-haven.md),
 [the art brief](docs/ART-DIRECTION.md) and [the executable tasks](docs/TASKS.md).
@@ -56,6 +62,5 @@ terminal such as `weston-terminal`):
 
 Agents (OpenCode with the bundled auto-continue plugin, or any other) follow
 [AGENTS.md](AGENTS.md) and work through `docs/TASKS.md` one task at a time,
-proving the task's actual acceptance before ticking and committing it. Start at
-P4-T06; distinguish automated checks, real-client evidence and human product
+proving the task's actual acceptance before ticking and committing it. Use the current Next task in `docs/STATUS.md`; distinguish automated checks, real-client evidence and human product
 gates. Follow the recovery ranges in docs/OPENCODE-AUTOCONTINUE.md.

@@ -1,72 +1,54 @@
-# Mansion Desktop — Godot world frontend
+# Godot study frontend
 
-## Quick start
+The study renders six imported Poly Haven furniture models, a textured room,
+lighting and a collision-based first-person controller. The monitor explicitly
+shows an inactive preview; it is **not a live terminal** yet.
+
+From the repository root, using the existing local tool/cache:
 
 ```sh
-# Validate the project scaffold (no display required)
+python3 world/tools/prepare_study_assets.py
 tools/validate-godot-project.sh
-
-# Open the Godot editor
-tools/run-godot.sh
-
-# Run headless (for CI / scripted testing)
-tools/run-godot.sh --headless --quit
+tools/run-godot.sh --audio-driver Dummy
 ```
 
-## Project structure
+The preparation step verifies model/dependency SHA-256 values and copies complete
+source glTF packages into the import directory. Missing or corrupt dependencies
+fail explicitly. It does not download missing assets. Fresh-machine tool and
+asset bootstrap remains unfinished; see [status](../docs/STATUS.md).
 
-```
-world/
-├── project.godot          # Godot project config (Compatibility/Vulkan renderer)
-├── scenes/
-│   └── main.tscn          # Main scene: room, monitor slot, spawn point
-└── scripts/
-    └── game_world.gd      # Camera movement, collision, input modes, teleport
-```
+`tools/run-godot.sh --editor` opens the editor. The default command runs the
+study. `build/mansion-desktop --room-camera` is the separate legacy renderer.
+Godot uses the Compatibility/OpenGL renderer, not Vulkan.
 
-## Run commands
+| Control | Action |
+| --- | --- |
+| W/A/S/D | Walk, relative to camera yaw |
+| Hold right mouse | Look; release restores the pointer |
+| Escape | Release pointer and clear held movement |
+| Home | Return to the safe arrival position |
+| M | Toggle slow walking |
+| Shift | Walk slowly while held |
 
-| Command | Purpose |
-|---|---|
-| `tools/run-godot.sh` | Open Godot editor with the world project |
-| `tools/run-godot.sh --headless --quit` | Validate project loads without GUI |
-| `tools/validate-godot-project.sh` | Automated validation (scene nodes, scripts, import) |
-| `GODOT_BINARY=<path> tools/run-godot.sh` | Use a specific Godot binary |
+There is no camera bob. Losing window focus clears held input and releases the
+pointer. Close using the host window close control.
 
-## Import commands
+## Verification
 
 ```sh
-# Re-import the project (refreshes .godot folder and cached resources)
-tools/Godot_v4.7.2-stable_linux.x86_64 --headless --import world/
-
-# Or from the Godot editor:
-#   File → Project → Clear Project Cache → Reimport All
+# Import and runtime errors must both fail this command.
+tools/validate-godot-project.sh
+# Requires a display: tests real mouse capture, movement and wall collision.
+tools/run-godot.sh --audio-driver Dummy --script res://tests/study_smoke.gd
+# Three actual GPU-rendered views. Use an absolute output directory.
+tools/run-godot.sh --audio-driver Dummy -- --capture=/tmp/mansion-study
 ```
 
-## Input (P21-T01 scaffold)
+The smoke test injects input into the controller; it is not a human usability
+trial. Headless display drivers cannot verify pointer capture. Visual acceptance
+requires opening the captured images, not merely creating them.
 
-| Key | Action |
-|---|---|
-| W/A/S/D, Arrow keys | Move camera |
-| Right mouse button | Look around (capture mode) |
-| T | Teleport to monitor slot |
-| Enter | Enter application mode |
-| F12 | Return to world mode from application mode |
-
-## P21-T01 acceptance
-
-- ✅ `world/project.godot` — project config with Compatibility renderer
-- ✅ `world/scenes/main.tscn` — main scene with room geometry, monitor slot, spawn point
-- ✅ `world/scripts/game_world.gd` — camera controller with collision bounds and input modes
-- ✅ `tools/validate-godot-project.sh` — automated import and scene validation
-- ✅ `tools/run-godot.sh` — documented run command
-- ✅ C++ headless tests preserved (28/28 pass, unchanged)
-- ⚠️  Live render capture — requires a display server; not possible in headless container.
-     Rendered scene will be captured once P21-T07 (movement) and P21-T09 (visual review)
-     are complete.
-
-## Next tasks
-
-- **P21-T02**: Curate Poly Haven asset set (independent, no Godot needed)
-- **P21-T07**: Implement comfortable world movement (depends on P21-T01)
-- **P21-T11**: Build GDExtension adapter (depends on P21-T01)
+The old native bridge is preserved under `addons/mansion_godot/`, excluded from
+Godot discovery by `.gdignore` because initialization crashes. Before reenabling
+it, prove the replacement binding loads, is callable and shuts down cleanly in
+an isolated project. Never remove the ignore file just to claim integration.

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Mansion Desktop — Run the Godot world frontend.
-# P21-T01 scaffold: launches the Godot editor with the world project.
+# Launch the study. The legacy C++ executable remains a separate frontend.
 #
 # Usage:
-#   tools/run-godot.sh                  # open Godot editor
-#   tools/run-godot.sh --editor         # same (explicit)
+#   tools/run-godot.sh                  # run the study
+#   tools/run-godot.sh --editor         # open the editor
 #   tools/run-godot.sh --headless       # run without GUI (for CI)
 #
 # Environment:

@@ -103,3 +103,10 @@ world/.godot/
 .tools/
 assets/.cache/
 assets/source/
+
+# Godot runtime copies prepared from the verified source cache.
+world/assets/*.gltf
+world/assets/*.gltf.import
+world/assets/textures/
+world/assets/cache/*.import
+world/assets/cache/textures/*.import
