@@ -6,7 +6,8 @@
 namespace mansion {
 void MansionCompositorSession::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("surface_handles"), &MansionCompositorSession::surface_handles);
-    godot::ClassDB::bind_method(godot::D_METHOD("snapshot", "handle"), &MansionCompositorSession::snapshot);
+    godot::ClassDB::bind_method(godot::D_METHOD("toplevel_handles"), &MansionCompositorSession::toplevel_handles);
+    godot::ClassDB::bind_method(godot::D_METHOD("snapshot", "handle", "after_revision"), &MansionCompositorSession::snapshot, DEFVAL(0));
     godot::ClassDB::bind_method(godot::D_METHOD("start", "runtime_directory"), &MansionCompositorSession::start);
     godot::ClassDB::bind_method(godot::D_METHOD("pump"), &MansionCompositorSession::pump);
     godot::ClassDB::bind_method(godot::D_METHOD("stop"), &MansionCompositorSession::stop);
@@ -24,10 +25,16 @@ godot::PackedInt64Array MansionCompositorSession::surface_handles() const {
     return handles;
 }
 
-godot::Dictionary MansionCompositorSession::snapshot(int64_t handle) const {
+godot::PackedInt64Array MansionCompositorSession::toplevel_handles() const {
+    godot::PackedInt64Array handles;
+    for (auto handle : runtime_.toplevel_handles()) handles.push_back(handle);
+    return handles;
+}
+
+godot::Dictionary MansionCompositorSession::snapshot(int64_t handle, int64_t after_revision) const {
     auto frame = runtime_.snapshot(handle);
     godot::Dictionary result;
-    if (!frame) return result;
+    if (!frame || (after_revision >= 0 && frame->revision <= static_cast<uint64_t>(after_revision))) return result;
     result["handle"] = frame->handle;
     result["revision"] = static_cast<int64_t>(frame->revision);
     result["mapped"] = frame->mapped;

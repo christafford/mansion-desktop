@@ -1,5 +1,7 @@
-## Renderable study using source glTF packages. The monitor is explicitly inactive.
+## Furnished study with a live, unlit Wayland terminal screen.
 extends Node3D
+
+var terminal_screen: Node
 
 var furniture: Array[Node3D] = []
 
@@ -87,13 +89,27 @@ func _ready() -> void:
 	box("Housing", Vector3(0.94, 0.55, 0.045), Vector3(0, 0.4, 0), dark, false, monitor)
 	var screen_material := material(Color(0.04, 0.075, 0.09))
 	screen_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	box("Screen", Vector3(0.885, 0.495, 0.006), Vector3(0, 0.4, 0.026), screen_material, false, monitor)
+	box("ScreenBackground", Vector3(0.885, 0.495, 0.006), Vector3(0, 0.4, 0.026), screen_material, false, monitor)
+	var screen := MeshInstance3D.new()
+	screen.name = "Screen"
+	screen.mesh = QuadMesh.new()
+	(screen.mesh as QuadMesh).size = Vector2(0.885, 0.495)
+	screen.material_override = preload("res://scripts/screen_material.gd").create()
+	screen.visible = false
+	monitor.add_child(screen)
+	screen.position = Vector3(0, 0.4, 0.031)
 	var text := Label3D.new()
-	text.text = "MANSION\n\nFrontend preview\nTerminal not connected"
+	text.text = "Starting terminal…"
 	text.font_size = 32
 	text.pixel_size = 0.001
 	text.position = Vector3(0, 0.4, 0.031)
 	monitor.add_child(text)
+	terminal_screen = load("res://scripts/terminal_screen.gd").new()
+	terminal_screen.name = "TerminalScreen"
+	terminal_screen.screen = screen
+	terminal_screen.status = text
+	add_child(terminal_screen)
+	get_tree().auto_accept_quit = false
 	var environment := WorldEnvironment.new()
 	var env := Environment.new()
 	env.background_mode = Environment.BG_SKY
@@ -106,7 +122,10 @@ func _ready() -> void:
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = Color(0.78, 0.83, 0.91)
 	env.ambient_light_energy = 0.55
+	# Screen material inverts this fixed curve; its GPU color test guards changes.
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	env.tonemap_exposure = 1.0
+	env.tonemap_white = 1.0
 	environment.environment = env
 	add_child(environment)
 	var sun := DirectionalLight3D.new()
@@ -129,7 +148,7 @@ func _ready() -> void:
 	add_child(lamp)
 	var ui := CanvasLayer.new()
 	var help := Label.new()
-	help.text = "WASD walk   •   Hold right mouse to look   •   Esc release   •   Home return   •   M slow walk\nGodot study preview — terminal bridge not connected"
+	help.text = "WASD walk   •   Hold right mouse to look   •   Esc release   •   Home return   •   M slow walk\nLive terminal output preview — keyboard control comes next"
 	help.position = Vector2(22, 20)
 	help.add_theme_font_size_override("font_size", 16)
 	help.add_theme_color_override("font_shadow_color", Color.BLACK)
@@ -158,4 +177,10 @@ func capture_views(directory: String) -> void:
 		var path := directory.path_join("study-%d.png" % i)
 		assert(image.save_png(path) == OK, "Could not save " + path)
 		print("CAPTURE ", path)
+	await terminal_screen.shutdown()
 	get_tree().quit()
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST and terminal_screen != null:
+		await terminal_screen.shutdown()
+		get_tree().quit()

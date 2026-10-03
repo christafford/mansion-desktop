@@ -112,3 +112,6 @@ world/assets/cache/*.import
 world/assets/cache/textures/*.import
 tests/godot-binding/.godot/
 tests/godot-binding/bin/
+world/addons/mansion_runtime/*.so
+world/addons/mansion_runtime/*.so.tmp
+world/addons/mansion_runtime/*.uid

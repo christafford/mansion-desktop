@@ -16,7 +16,8 @@ protected:
 
 public:
     godot::PackedInt64Array surface_handles() const;
-    godot::Dictionary snapshot(int64_t handle) const;
+    godot::PackedInt64Array toplevel_handles() const;
+    godot::Dictionary snapshot(int64_t handle, int64_t after_revision = 0) const;
     bool start(const godot::String& runtime_directory);
     bool pump() { return runtime_.pump(); }
     bool stop() { return runtime_.stop(); }

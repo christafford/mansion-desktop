@@ -8,7 +8,8 @@ The standard binding probe (P21-T37) is isolated under `tests/godot-binding/`.
 The standard binding serves real wl_compositor/shm clients (T38), including
 xdg-shell configure/ack/commit and seat v1/v4 keyboard setup (T39).
 Owned frame transport now passes exact client-byte tests through Godot (T40).
-T41 connects those frames to the study; the scene does not start this server yet. See [STATUS.md](STATUS.md).
+The study now starts that server and displays real Weston terminal output (T41).
+Input and application mode remain open. See [STATUS.md](STATUS.md).
 
 ## Build and ownership
 
@@ -25,6 +26,16 @@ camera dependencies. Legacy input policy remains in `input.cpp`; its global
 seat wrapper is separate from each runtime's seat. See
 [protocol handoff](handoffs/18-godot-window-protocol.md) and
 [frame contract](handoffs/19-godot-owned-frames.md) for ownership and limits.
+
+`tools/build-godot-runtime.sh` stages the same tested library in the world's
+`addons/mansion_runtime/`; the run/import helpers invoke it automatically.
+`terminal_screen.gd` owns a session and its one launched terminal process.
+It chooses from `toplevel_handles()` and calls `snapshot(handle, after_revision)`
+to avoid unchanged pixel copies. The monitor applies inverse buffer transforms,
+fits the logical aspect ratio, and clears content on detach/destruction.
+The unshaded screen shader compensates for the study's fixed Filmic tone curve;
+this is tested for Compatibility at exposure/white 1, not a general renderer
+color-management solution. See [live output handoff](handoffs/20-godot-live-terminal.md).
 
 Godot owns the visible host window and frame loop. GDExtension owns one compositor
 instance with explicit start/pump/stop. Use a nonblocking pump on the owning

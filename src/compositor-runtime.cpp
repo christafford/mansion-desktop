@@ -117,6 +117,15 @@ std::vector<int64_t> CompositorRuntime::surface_handles() const {
     return result;
 }
 
+std::vector<int64_t> CompositorRuntime::toplevel_handles() const {
+    std::vector<int64_t> result;
+    if (!compositor_) return result;
+    MansionSurface* surface;
+    wl_list_for_each(surface, &compositor_->surface_list, link)
+        if (xdg_surface_has_toplevel(surface->xdg_surface)) result.push_back(surface->core_frame->handle);
+    return result;
+}
+
 OwnedFrame CompositorRuntime::snapshot(int64_t handle) const {
     if (!compositor_ || handle <= 0) return {};
     MansionSurface* surface;

@@ -76,6 +76,9 @@ func run() -> void:
 					break
 				var f: Dictionary = session.snapshot(handles[0])
 				verify(f, stage)
+				check(session.toplevel_handles() == handles, "Only frame fixture toplevel enumerated")
+				check(session.snapshot(handles[0], f.revision).is_empty(), "Unchanged revision skipped")
+				check(session.snapshot(handles[0], f.revision - 1).revision == f.revision, "New revision delivered")
 				check(f.handle == handles[0], "Snapshot handle")
 				if stage == "initial":
 					check(f.handle != old_handle, "Handle changed across restart")
@@ -103,6 +106,7 @@ func run() -> void:
 		for i in range(3):
 			await tick()
 		check(session.surface_handles().is_empty() and session.snapshot(old_handle).is_empty(), "Destroyed handle invalidated")
+		check(session.toplevel_handles().is_empty(), "Destroyed toplevel removed")
 		check(retained.pixels == PackedByteArray(ARGB), "Snapshot survives disconnect")
 		check(session.stop(), "Stop")
 		for stage in STAGES:

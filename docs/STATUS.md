@@ -7,13 +7,14 @@ is historical; its extension/visual completion claims were contradicted by tests
 
 ## Next task
 
-**P21-T41: present live terminal output on the Godot study monitor.**
-Recovery T36–T40 now passes its bounded acceptance: visible study, standard
-binding, real Wayland protocols and owned client pixels through Godot. See
-[tasks](TASKS.md) and [frame handoff](handoffs/19-godot-owned-frames.md).
-Next connect the tested session and ImageTexture to the study, launch a real
-native terminal and inspect actual changing output. The study still displays
-an inactive monitor; its scene does not yet start the tested server.
+**P21-T42: type into the real terminal in Godot application mode.**
+Recovery T36–T41 passes its bounded acceptance: furnished study, standard
+binding, real Wayland protocols, owned pixels and changing terminal output on
+the monitor. See [tasks](TASKS.md) and
+[live output handoff](handoffs/20-godot-live-terminal.md).
+Next expose seat keyboard focus/delivery, implement explicit application mode,
+and verify actual shell commands. Do not treat the output preview as a usable
+desktop. Pointer/resize/client-close acceptance follows in T43.
 Broader T00–T19 gates remain unchecked until their full evidence exists.
 
 ## Run the visible Godot frontend
@@ -27,6 +28,9 @@ tools/run-godot.sh --audio-driver Dummy
 Uses the existing local engine and downloaded source cache. Missing/corrupt model
 dependencies fail explicitly. Fresh-machine bootstrap remains unfinished.
 `tools/run-godot.sh --editor` opens the editor. The default runs the study.
+The launcher builds/stages the standard native extension and starts installed
+`/usr/bin/weston-terminal` with `/bin/sh`. For a changing clock/counter, use
+`tools/run-godot.sh --audio-driver Dummy -- --terminal-demo`.
 `build/mansion-desktop --room-camera` still uses the separate legacy renderer.
 
 WASD walks; hold right mouse to look; release/Escape frees the pointer; Home
@@ -50,8 +54,13 @@ returns to arrival; M toggles slow walking and Shift slows while held.
   repeated sessions. Exact RGBA/alpha/padding, buffer reuse/destruction, pending
   state, detach/remap, scale/transform metadata, callbacks and handle invalidation
   pass. Six malformed/unsupported buffer/state cases are rejected in each harness.
-  These checks do not render application content on the study monitor.
-- Standalone core/runtime AddressSanitizer + UBSan + enabled leak detection pass.
+  These checks alone do not establish rendered usability.
+- Live output: two real Weston terminal sessions, changing pixels/revisions,
+  aspect ratio, unchanged-frame skip, disconnect clearing, child/socket cleanup
+  and unchanged host display environment pass. Eight inverse image transforms
+  and eleven GPU color patches under strong colored lighting pass.
+- Standalone core/runtime AddressSanitizer + UBSan + enabled leak detection
+  passed during T40; T41 changes window enumeration and presentation.
 - C++ build and 33/33 Meson tests pass; 62/62 Node plugin tests passed during T39.
   They do not validate live Godot compositor integration.
 - The local editor's first-import shutdown race has a tested paced-startup
@@ -60,10 +69,16 @@ returns to arrival; M toggles slow walking and Shift slows while held.
 ## Agent-observed visuals
 
 [Three rendered views](evidence/godot-recovery/) show real desk, chair, lamp,
-plant, books and shelving, room textures, daylight/shadows and an inactive
+plant, books and shelving, room textures, daylight/shadows and the earlier inactive
 monitor preview. Captures were inspected, including correction of the initially
 backward desk/chair. Compatibility/OpenGL on AMD Custom GPU 0405.
 This passes visible frontend recovery, not final art acceptance.
+
+[Live terminal captures](evidence/live-terminal/) now show real Weston 15.0.1
+output on the monitor, upright text, changing UTC clock/counter and clearing on
+disconnect. Agent inspection: 2026-10-03, Godot 4.7.2, Mesa 26.2.4, 1280×800.
+Room and close-up GPU views were inspected; `client-frame.png` is a source frame,
+not a render. This is output acceptance, not typing or human readability acceptance.
 
 ## Verified by a person
 
@@ -73,8 +88,9 @@ This records approval of its appearance, not a terminal/input/comfort trial.
 
 ## Not verified / unfinished
 
-- Live terminal integration, real application input, focus transitions, resize,
-  close/relaunch and presentation of the owned snapshots on the monitor.
+- Real application input, focus transitions/application mode, resize, client
+  close requests and an in-app relaunch workflow. Live output and owned process
+  shutdown are verified; ordinary terminal usability is not.
 - Original addon initialization: reproduced segmentation fault; isolated with
   `world/addons/mansion_godot/.gdignore`, source and binary preserved.
 - Full renderer-independent compositor extraction: socket/wl_compositor/shm

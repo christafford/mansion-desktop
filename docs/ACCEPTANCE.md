@@ -42,6 +42,22 @@ evidence path, observer, pass/fail and limitations. Track material/lighting,
 interaction, real-client compatibility and performance separately. A correct
 test suite does not erase a failed visual criterion.
 
+## 2026-10-03 agent-observed Godot live output (P21-T41)
+
+Codex inspected the real Weston terminal 15.0.1 output in the Godot study:
+upright text, changing clock/counter, preserved aspect ratio and clearing on
+disconnect. [Room and close-up captures](evidence/live-terminal/) were rendered
+at 1280×800 using Godot 4.7.2 Compatibility, Mesa 26.2.4, AMD Custom GPU 0405.
+Source: T41 implementation committed with [handoff 20](handoffs/20-godot-live-terminal.md),
+based on `3a8843f`. Reproduce with `tools/check-godot-study.sh`.
+
+The real terminal check exercises two sessions and asserts owned process/socket
+cleanup. Separate synthetic GPU color patches and injected controller events
+pass. `client-frame.png` is a source frame, not a rendered screenshot. No actual
+terminal typing, pointer interaction, application mode or physical-input trial
+is claimed. Human acceptance remains **not observed**; T42/T43 implement the
+remaining interaction before the broader terminal usability procedure.
+
 ## Legacy baseline and procedures
 
 Run from the repository root in the normal development container/session:

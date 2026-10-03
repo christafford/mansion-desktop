@@ -157,7 +157,7 @@ Do not launch another broad overnight range before the new boundaries pass.
   and 32 in Godot, six negative cases in each, 33 Meson tests and standalone
   sanitizer checks; see [handoff 19](handoffs/19-godot-owned-frames.md).
 
-- [ ] **P21-T41 Present live terminal output on the Godot study monitor.**
+- [x] **P21-T41 Present live terminal output on the Godot study monitor.**
   **Depends:** P21-T40.
   Build/install the recovered standard binding for the `world/` development
   project; keep the old crashing addon ignored. Reuse the owned session and
@@ -176,6 +176,61 @@ Do not launch another broad overnight range before the new boundaries pass.
   rerun scene/controller, bridge and C++ regressions. Label observation as agent
   evidence. This gate covers live output; follow with a bounded task for ordinary
   typing/pointer input, focus/application mode and resize/close acceptance.
+
+  **Evidence (2026-10-03):** real Weston 15.0.1 terminal, inspected GPU room and
+  close-up captures with changing output, disconnect/owned shutdown cleanup,
+  eight inverse transforms, eleven GPU color patches, controller/bridge checks
+  and 33 Meson tests pass. See [handoff 20](handoffs/20-godot-live-terminal.md).
+
+- [ ] **P21-T42 Type into the real terminal in Godot application mode.**
+  **Depends:** P21-T41.
+  Read handoff 20 and inspect `seat.cpp`, `compositor-runtime.*`,
+  `compositor_session.*`, `terminal_screen.gd` and `game_world.gd` before editing.
+  Keep the current scene and live output working. Do not revive the ignored addon.
+
+  1. Expose keyboard focus and key delivery through the owned runtime/session,
+     reusing the independent seat. Resolve only valid runtime toplevel handles;
+     never pass resource addresses or use the legacy global seat. Test focus
+     enter/leave and exact key/modifier events through a real protocol fixture.
+  2. Add explicit world/application mode. In world mode Enter activates the
+     current live terminal. Present its same live texture in a readable flat
+     view with preserved aspect ratio and unmodified client colors. Release
+     captured mouse/movement on entry and suspend camera input while active.
+  3. Map Godot physical keys to Linux evdev/XKB input explicitly. Support ordinary
+     letters/digits, punctuation, Shift/Ctrl/Alt, arrows, Tab, Backspace, Enter
+     and Escape with press/release and repeat behavior. Do not forward Godot
+     numeric key values as Linux keycodes. State the tested keyboard layout.
+  4. Reserve Ctrl+Alt+Escape for return to world mode; document it in the UI.
+     Ordinary Escape, WASD, M, Home and Tab must reach the application. Clear
+     held keys/modifiers on mode exit, host focus loss and window destruction.
+     Do not capture keys outside the focused Godot host window.
+  5. Run a real `/bin/sh` inside Weston terminal. Through the actual input route,
+     type a command that produces distinctive output, edit it, exercise modifiers
+     and repetition, return to world and reactivate the same live window. Capture
+     the result; test disconnect/focus loss with a held key and no stuck movement.
+
+  **Acceptance:** protocol input assertions, actual shell-command output and
+  rendered application view pass; world/controller, screen-color, binding and
+  full C++ regressions pass. Label injected events and agent observation honestly;
+  no human gate is ticked. Pointer/resize/client-close remain T43. Update status
+  and the next handoff, then commit only task files.
+
+- [ ] **P21-T43 Complete terminal pointer, resize and client close.**
+  **Depends:** P21-T42.
+  Implement application-view surface-local pointer enter/motion/button/scroll
+  through the same runtime seat. Use the presentation's actual letterbox/scale
+  mapping; do not route margins or world-mode clicks to the client. Release held
+  buttons on focus loss, mode exit and disconnect. Add bounded xdg configure
+  requests for application-view resize, respecting ack/commit and client-chosen
+  size. Request close with `xdg_toplevel.close`; do not kill a client as a window
+  close action. Keep owned-process shutdown separate. Provide explicit terminal
+  relaunch after exit, clearing the old handle and content before reassignment.
+  **Acceptance:** fixture tests check coordinates/buttons/scroll, focus cleanup,
+  resize handshake and accepted/deferred close. In the real terminal, verify text
+  selection, scrollback, resizing with readable text, ordinary client exit,
+  relaunch and repeated world/application transitions. Inspect rendered evidence
+  and run scene/bridge/C++ regressions. Add a bounded next integration/owner-trial
+  task; broader human and Project 21 product gates remain open until observed.
 
 
 - [ ] **P21-T00 Repair and verify the toolchain baseline.**

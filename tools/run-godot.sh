@@ -32,4 +32,5 @@ if [ ! -x "$GODOT_BIN" ]; then
 	exit 1
 fi
 
+"$SCRIPT_DIR/build-godot-runtime.sh"
 exec "$GODOT_BIN" --path "$PROJECT_DIR" "$@"

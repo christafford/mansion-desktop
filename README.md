@@ -5,7 +5,8 @@ persistent first-person environment. Current work is Project 21: a Godot world
 frontend, the retained C++ compositor core, and a furnished Poly Haven study.
 The runnable `build/mansion-desktop --room-camera` command still uses the legacy
 custom polygon renderer. The separate Godot study now renders textured furniture
-and supports collision-based movement. The live terminal bridge is still unfinished.
+and supports collision-based movement. A real Weston terminal now supplies live
+output to its monitor; application input is the next recovery task.
 See [current status](docs/STATUS.md) and [Godot launch instructions](world/README.md).
 
 ```sh

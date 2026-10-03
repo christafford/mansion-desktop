@@ -26,6 +26,7 @@ public:
     int surface_count() const;
     int toplevel_count() const;
     std::vector<int64_t> surface_handles() const;
+    std::vector<int64_t> toplevel_handles() const;
     OwnedFrame snapshot(int64_t handle) const;
     const std::string& socket_path() const { return socket_path_; }
     const std::string& last_error() const { return error_; }
