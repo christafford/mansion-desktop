@@ -82,6 +82,8 @@ bool CompositorRuntime::pump() {
     if (wl_event_loop_dispatch(wl_display_get_event_loop(display_), 0) < 0)
         return fail("dispatch Wayland server loop");
     compositor_core_complete_frames(compositor_);
+    if (compositor_->focused_surface_resource && keyboard_focus_handle() == 0)
+        seat_set_keyboard_focus(seat_, nullptr, compositor_);
     wl_display_flush_clients(display_);
     return true;
 }
@@ -132,6 +134,49 @@ OwnedFrame CompositorRuntime::snapshot(int64_t handle) const {
     wl_list_for_each(surface, &compositor_->surface_list, link)
         if (surface->core_frame->handle == handle) return surface->core_frame->frame;
     return {};
+}
+
+int64_t CompositorRuntime::keyboard_focus_handle() const {
+    if (!compositor_ || !compositor_->focused_surface_resource) return 0;
+    MansionSurface* surface;
+    wl_list_for_each(surface, &compositor_->surface_list, link) {
+        const auto& frame = surface->core_frame->frame;
+        if (surface->resource == compositor_->focused_surface_resource && frame &&
+            frame->mapped && xdg_surface_has_toplevel(surface->xdg_surface))
+            return surface->core_frame->handle;
+    }
+    return 0;
+}
+
+bool CompositorRuntime::focus_keyboard(int64_t handle) {
+    if (!compositor_) { error_ = "cannot focus a stopped server"; return false; }
+    if (handle == 0) {
+        seat_set_keyboard_focus(seat_, nullptr, compositor_);
+        return true;
+    }
+    MansionSurface* surface;
+    wl_list_for_each(surface, &compositor_->surface_list, link) {
+        const auto& frame = surface->core_frame->frame;
+        if (surface->core_frame->handle == handle && frame && frame->mapped &&
+            xdg_surface_has_toplevel(surface->xdg_surface)) {
+            seat_set_keyboard_focus(seat_, surface->resource, compositor_);
+            return true;
+        }
+    }
+    error_ = "keyboard focus requires a live mapped toplevel";
+    return false;
+}
+
+bool CompositorRuntime::keyboard_key(uint32_t evdev_code, bool pressed) {
+    if (!keyboard_focus_handle()) {
+        error_ = "keyboard input requires a live focused toplevel";
+        return false;
+    }
+    if (!seat_keyboard_key(seat_, evdev_code, pressed)) {
+        error_ = "invalid Linux evdev keycode";
+        return false;
+    }
+    return true;
 }
 
 int CompositorRuntime::client_count() const {

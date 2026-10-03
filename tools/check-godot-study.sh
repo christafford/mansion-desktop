@@ -20,7 +20,9 @@ run() {
     fi
 }
 run transforms 'SCREEN_TRANSFORM_OK cases=8 failures=0' --headless --script res://tests/screen_transform.gd
+run keyboard-map 'KEYBOARD_MAP_OK cases=27 failures=0' --headless --script res://tests/keyboard_map.gd
 run controller 'STUDY_SMOKE .*failures=0' --script res://tests/study_smoke.gd -- --no-terminal
 run color 'SCREEN_COLOR_OK failures=0' --script res://tests/screen_color.gd
 run terminal 'LIVE_TERMINAL_OK .*sessions=2 failures=0' --script res://tests/live_terminal.gd -- --terminal-demo
-echo "Study checks passed; inspect docs/evidence/live-terminal for visual acceptance."
+run terminal-input 'TERMINAL_INPUT_OK .*failures=0' --script res://tests/terminal_input.gd
+echo "Study checks passed; inspect .tools/terminal-output-test and .tools/terminal-input-test captures."

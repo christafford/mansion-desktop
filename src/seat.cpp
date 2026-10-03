@@ -6,9 +6,14 @@
 #include <cstdlib>
 #include <cstring>
 #include <new>
+#include <chrono>
+#include <linux/input-event-codes.h>
 #include <sys/mman.h>
 #include <unistd.h>
 #include <wayland-server-protocol.h>
+
+static void keyboard_enter(MansionSeat* seat, wl_resource* keyboard, uint32_t serial);
+static void keyboard_focus_destroyed(wl_listener* listener, void* data);
 
 /* ---------- SeatKeyboardClient destroy listener ---------- */
 
@@ -137,6 +142,10 @@ static void seat_get_keyboard(struct wl_client* client, struct wl_resource* seat
     close(fd);
     if (wl_resource_get_version(resource) >= WL_KEYBOARD_REPEAT_INFO_SINCE_VERSION)
         wl_keyboard_send_repeat_info(resource, 25, 500);
+    // A keyboard bound after activation must receive the current focus too.
+    if (seat->focused_surface_resource &&
+        wl_resource_get_client(seat->focused_surface_resource) == client)
+        keyboard_enter(seat, resource, wl_display_next_serial(seat->display));
 }
 
 static void seat_get_touch(struct wl_client* client, struct wl_resource* seat_resource,
@@ -184,6 +193,9 @@ static void seat_bind(struct wl_client* client, void* data, uint32_t version, ui
 struct MansionSeat* seat_create(struct wl_display* display) {
     auto* seat = new (std::nothrow) MansionSeat();
     if (!seat) return nullptr;
+    seat->display = display;
+    wl_list_init(&seat->keyboard_focus_destroy.link);
+    seat->keyboard_focus_destroy.notify = keyboard_focus_destroyed;
     wl_list_init(&seat->resources);
     wl_list_init(&seat->keyboard_clients);
     wl_list_init(&seat->pointer_clients);
@@ -214,6 +226,7 @@ struct MansionSeat* seat_create(struct wl_display* display) {
 
 void seat_destroy(struct MansionSeat* seat) {
     if (!seat) return;
+    wl_list_remove(&seat->keyboard_focus_destroy.link);
 
     // Clear focus before destroying resources to avoid stale references.
     seat->grab_surface_resource = nullptr;
@@ -245,50 +258,111 @@ void seat_destroy(struct MansionSeat* seat) {
     delete seat;
 }
 
-/* ---------- Keyboard focus (P1-T06-C) ---------- */
+/* ---------- Focused keyboard delivery ---------- */
 
-void seat_set_keyboard_focus(struct MansionSeat* seat,
-                              struct wl_resource* surface,
-                              MansionCompositor* comp) {
-    comp->keyboard_focus_serial++;
+static uint32_t keyboard_time() {
+    return static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count());
+}
 
-    /* Send leave to the old focused surface's keyboard clients.
-     * Only send to clients whose resource belongs to the same client
-     * as the old focused surface — libwayland validates this and
-     * rejects cross-client surface pointers as a protocol error. */
-    if (comp->focused_surface_resource) {
-        SeatKeyboardClient *kc, *kc_next;
-        struct wl_client *old_client = wl_resource_get_client(
-            comp->focused_surface_resource);
-        wl_list_for_each_safe(kc, kc_next, &seat->keyboard_clients, seat_link) {
-            if (kc->resource &&
-                wl_resource_get_client(kc->resource) == old_client) {
-                wl_keyboard_send_leave(kc->resource,
-                                       comp->keyboard_focus_serial,
-                                       comp->focused_surface_resource);
-            }
+static void keyboard_modifiers(MansionSeat* seat, wl_resource* resource, uint32_t serial) {
+    wl_keyboard_send_modifiers(resource, serial,
+        xkb_state_serialize_mods(seat->xkbstate, XKB_STATE_MODS_DEPRESSED),
+        xkb_state_serialize_mods(seat->xkbstate, XKB_STATE_MODS_LATCHED),
+        xkb_state_serialize_mods(seat->xkbstate, XKB_STATE_MODS_LOCKED),
+        xkb_state_serialize_layout(seat->xkbstate, XKB_STATE_LAYOUT_EFFECTIVE));
+}
+
+static void keyboard_enter(MansionSeat* seat, wl_resource* keyboard, uint32_t serial) {
+    wl_array keys;
+    wl_array_init(&keys);
+    if (!seat->pressed_keys.empty()) {
+        auto* data = wl_array_add(&keys, seat->pressed_keys.size() * sizeof(uint32_t));
+        if (!data) { wl_resource_post_no_memory(keyboard); wl_array_release(&keys); return; }
+        std::memcpy(data, seat->pressed_keys.data(), keys.size);
+    }
+    wl_keyboard_send_enter(keyboard, serial, seat->focused_surface_resource, &keys);
+    wl_array_release(&keys);
+    keyboard_modifiers(seat, keyboard, serial);
+}
+
+bool seat_keyboard_key(MansionSeat* seat, uint32_t keycode, bool pressed) {
+    if (!seat || !seat->focused_surface_resource || keycode == 0 || keycode > KEY_MAX) return false;
+    auto found = std::find(seat->pressed_keys.begin(), seat->pressed_keys.end(), keycode);
+    if (pressed == (found != seat->pressed_keys.end())) return true;
+    if (pressed) seat->pressed_keys.push_back(keycode);
+    else seat->pressed_keys.erase(found);
+    const auto changed = xkb_state_update_key(seat->xkbstate, keycode + 8,
+        pressed ? XKB_KEY_DOWN : XKB_KEY_UP);
+    const uint32_t serial = wl_display_next_serial(seat->display);
+    const uint32_t time = keyboard_time();
+    auto* client = wl_resource_get_client(seat->focused_surface_resource);
+    SeatKeyboardClient* kc;
+    wl_list_for_each(kc, &seat->keyboard_clients, seat_link) {
+        if (wl_resource_get_client(kc->resource) != client) continue;
+        wl_keyboard_send_key(kc->resource, serial, time, keycode,
+            pressed ? WL_KEYBOARD_KEY_STATE_PRESSED : WL_KEYBOARD_KEY_STATE_RELEASED);
+        if (changed) keyboard_modifiers(seat, kc->resource, serial);
+    }
+    return true;
+}
+
+static void keyboard_release_all(MansionSeat* seat) {
+    while (!seat->pressed_keys.empty()) {
+        const uint32_t key = seat->pressed_keys.back();
+        if (seat->focused_surface_resource) seat_keyboard_key(seat, key, false);
+        else {
+            xkb_state_update_key(seat->xkbstate, key + 8, XKB_KEY_UP);
+            seat->pressed_keys.pop_back();
         }
     }
+    // Focus boundaries reset locks/latched modifiers as well as held keys.
+    xkb_state_update_mask(seat->xkbstate, 0, 0, 0, 0, 0, 0);
+    if (seat->focused_surface_resource) {
+        auto* client = wl_resource_get_client(seat->focused_surface_resource);
+        const uint32_t serial = wl_display_next_serial(seat->display);
+        SeatKeyboardClient* kc;
+        wl_list_for_each(kc, &seat->keyboard_clients, seat_link)
+            if (wl_resource_get_client(kc->resource) == client)
+                keyboard_modifiers(seat, kc->resource, serial);
+    }
+}
+
+static void keyboard_focus_destroyed(wl_listener* listener, void* data) {
+    MansionSeat* seat = wl_container_of(listener, seat, keyboard_focus_destroy);
+    // The surface proxy is already gone. Never send a leave referencing it.
+    keyboard_release_all(seat);
+    seat->focused_surface_resource = nullptr;
+    if (seat->keyboard_compositor && seat->keyboard_compositor->focused_surface_resource == data)
+        seat->keyboard_compositor->focused_surface_resource = nullptr;
+    wl_list_remove(&seat->keyboard_focus_destroy.link);
+    wl_list_init(&seat->keyboard_focus_destroy.link);
+}
+
+void seat_set_keyboard_focus(MansionSeat* seat, wl_resource* surface, MansionCompositor* comp) {
+    if (!seat || !comp) return;
+    if (seat->focused_surface_resource == surface && comp->focused_surface_resource == surface) return;
+    keyboard_release_all(seat);
+    const uint32_t serial = wl_display_next_serial(seat->display);
+    if (seat->focused_surface_resource) {
+        auto* client = wl_resource_get_client(seat->focused_surface_resource);
+        SeatKeyboardClient* kc;
+        wl_list_for_each(kc, &seat->keyboard_clients, seat_link)
+            if (wl_resource_get_client(kc->resource) == client)
+                wl_keyboard_send_leave(kc->resource, serial, seat->focused_surface_resource);
+    }
+    wl_list_remove(&seat->keyboard_focus_destroy.link);
+    wl_list_init(&seat->keyboard_focus_destroy.link);
+    comp->keyboard_focus_serial = serial;
     comp->focused_surface_resource = surface;
     seat->focused_surface_resource = surface;
-
-    /* Send enter to the new surface's keyboard clients.
-     * Only send to clients whose resource belongs to the same client
-     * as the new surface. */
+    seat->keyboard_compositor = comp;
     if (surface) {
-        struct wl_array keys;
-        wl_array_init(&keys);
-        SeatKeyboardClient *kc, *kc_next;
-        struct wl_client *new_client = wl_resource_get_client(surface);
-        wl_list_for_each_safe(kc, kc_next, &seat->keyboard_clients, seat_link) {
-            if (kc->resource &&
-                wl_resource_get_client(kc->resource) == new_client) {
-                wl_keyboard_send_enter(kc->resource,
-                                       comp->keyboard_focus_serial,
-                                       surface, &keys);
-            }
-        }
-        wl_array_release(&keys);
+        wl_resource_add_destroy_listener(surface, &seat->keyboard_focus_destroy);
+        auto* client = wl_resource_get_client(surface);
+        SeatKeyboardClient* kc;
+        wl_list_for_each(kc, &seat->keyboard_clients, seat_link)
+            if (wl_resource_get_client(kc->resource) == client) keyboard_enter(seat, kc->resource, serial);
     }
 }
 

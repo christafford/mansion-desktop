@@ -18,6 +18,11 @@ public:
     godot::PackedInt64Array surface_handles() const;
     godot::PackedInt64Array toplevel_handles() const;
     godot::Dictionary snapshot(int64_t handle, int64_t after_revision = 0) const;
+    bool focus_keyboard(int64_t handle) { return runtime_.focus_keyboard(handle); }
+    int64_t keyboard_focus_handle() const { return runtime_.keyboard_focus_handle(); }
+    bool keyboard_key(int64_t evdev_code, bool pressed) {
+        return evdev_code > 0 && evdev_code <= 767 && runtime_.keyboard_key(static_cast<uint32_t>(evdev_code), pressed);
+    }
     bool start(const godot::String& runtime_directory);
     bool pump() { return runtime_.pump(); }
     bool stop() { return runtime_.stop(); }

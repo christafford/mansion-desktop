@@ -5,6 +5,9 @@
 
 namespace mansion {
 void MansionCompositorSession::_bind_methods() {
+    godot::ClassDB::bind_method(godot::D_METHOD("focus_keyboard", "handle"), &MansionCompositorSession::focus_keyboard);
+    godot::ClassDB::bind_method(godot::D_METHOD("keyboard_focus_handle"), &MansionCompositorSession::keyboard_focus_handle);
+    godot::ClassDB::bind_method(godot::D_METHOD("keyboard_key", "evdev_code", "pressed"), &MansionCompositorSession::keyboard_key);
     godot::ClassDB::bind_method(godot::D_METHOD("surface_handles"), &MansionCompositorSession::surface_handles);
     godot::ClassDB::bind_method(godot::D_METHOD("toplevel_handles"), &MansionCompositorSession::toplevel_handles);
     godot::ClassDB::bind_method(godot::D_METHOD("snapshot", "handle", "after_revision"), &MansionCompositorSession::snapshot, DEFVAL(0));

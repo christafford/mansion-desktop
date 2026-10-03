@@ -8,12 +8,21 @@ model/provider is unchanged. No additional agent framework is required.
 
 As of 2026-10-03, do not start another broad T00–T19 unattended run. The owner
 requested direct recovery after that workflow produced incorrect completion
-claims. Follow STATUS.md and the bounded T36–T40 evidence and next T41 task. After recovery,
+claims. Follow STATUS.md and the bounded T36–T42 evidence and next T43 task. After recovery,
 assign one eligible task at a time and review the actual acceptance artifacts.
 The plugin does not enforce dependencies or determine whether a render is useful.
 The broad-run setup below is retained for reference, not the current work order.
 
-## Start the authorized run
+For the current next task, use only:
+
+```text
+/autocontinue P21-T43
+```
+
+Review its pointer/scroll evidence before assigning T44 (resize), then T45
+(close/relaunch). Keep all broader and human gates open until their checks pass.
+
+## Historical broad-run setup (not the current work order)
 
 Use `/autostop` on any old run before changing its scope. Start OpenCode from
 this repository and keep it and the local model server running. The 2026-10-02

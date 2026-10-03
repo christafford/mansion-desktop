@@ -1,10 +1,11 @@
-## First-person study navigation. No application mode until a live bridge exists.
+## First-person study navigation, suspended while application mode owns input.
 extends CharacterBody3D
 
 const WALK_SPEED := 2.4
 const LOOK_SENSITIVITY := 0.002
 const SPAWN := Vector3(2.4, 0.05, 3.1)
 var slow_walk := false
+var application_mode := false
 var _held: Dictionary = {}
 @onready var camera: Camera3D = $Camera3D
 
@@ -27,6 +28,8 @@ func _notification(what: int) -> void:
 		release_pointer()
 
 func _unhandled_input(event: InputEvent) -> void:
+	if application_mode:
+		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED if event.pressed else Input.MOUSE_MODE_VISIBLE
 	if event is InputEventKey:
@@ -48,6 +51,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		camera.rotation.x = clampf(camera.rotation.x - event.screen_relative.y * LOOK_SENSITIVITY, -1.35, 1.35)
 
 func _physics_process(delta: float) -> void:
+	if application_mode:
+		velocity = Vector3.ZERO
+		return
 	var direction := Vector3(
 		float(_held.has(KEY_D)) - float(_held.has(KEY_A)), 0,
 		float(_held.has(KEY_S)) - float(_held.has(KEY_W)))

@@ -182,7 +182,7 @@ Do not launch another broad overnight range before the new boundaries pass.
   eight inverse transforms, eleven GPU color patches, controller/bridge checks
   and 33 Meson tests pass. See [handoff 20](handoffs/20-godot-live-terminal.md).
 
-- [ ] **P21-T42 Type into the real terminal in Godot application mode.**
+- [x] **P21-T42 Type into the real terminal in Godot application mode.**
   **Depends:** P21-T41.
   Read handoff 20 and inspect `seat.cpp`, `compositor-runtime.*`,
   `compositor_session.*`, `terminal_screen.gd` and `game_world.gd` before editing.
@@ -212,25 +212,62 @@ Do not launch another broad overnight range before the new boundaries pass.
   **Acceptance:** protocol input assertions, actual shell-command output and
   rendered application view pass; world/controller, screen-color, binding and
   full C++ regressions pass. Label injected events and agent observation honestly;
-  no human gate is ticked. Pointer/resize/client-close remain T43. Update status
+  no human gate is ticked. Pointer/resize/client-close remain T43–T45. Update status
   and the next handoff, then commit only task files.
 
-- [ ] **P21-T43 Complete terminal pointer, resize and client close.**
+  **Evidence (2026-10-03):** two-client keyboard protocol and sanitizer checks,
+  27 key-mapping assertions, real shell command/edit/repeat/interrupt tests,
+  native-size application capture with 7,571 pixel comparisons, mode/focus-loss/
+  shell-exit checks, scene/binding regressions and 33 Meson tests pass. Input
+  events are agent-injected, not a physical/human trial. See
+  [handoff 21](handoffs/21-godot-terminal-keyboard.md).
+
+- [ ] **P21-T43 Route terminal pointer and scroll in application mode.**
   **Depends:** P21-T42.
-  Implement application-view surface-local pointer enter/motion/button/scroll
-  through the same runtime seat. Use the presentation's actual letterbox/scale
-  mapping; do not route margins or world-mode clicks to the client. Release held
-  buttons on focus loss, mode exit and disconnect. Add bounded xdg configure
-  requests for application-view resize, respecting ack/commit and client-chosen
-  size. Request close with `xdg_toplevel.close`; do not kill a client as a window
-  close action. Keep owned-process shutdown separate. Provide explicit terminal
-  relaunch after exit, clearing the old handle and content before reassignment.
-  **Acceptance:** fixture tests check coordinates/buttons/scroll, focus cleanup,
-  resize handshake and accepted/deferred close. In the real terminal, verify text
-  selection, scrollback, resizing with readable text, ordinary client exit,
-  relaunch and repeated world/application transitions. Inspect rendered evidence
-  and run scene/bridge/C++ regressions. Add a bounded next integration/owner-trial
-  task; broader human and Project 21 product gates remain open until observed.
+  Read handoff 21. Inspect the existing seat/pointer resource implementation and
+  legacy input policy; Godot must use its owned seat, never the legacy global.
+  Expose surface-local pointer enter/motion/button/scroll through the runtime and
+  standard binding. Map from `application_mode.gd`'s actual TextureRect geometry
+  to logical surface coordinates, including buffer scale/transform. Do not send
+  letterbox-margin or world-mode clicks to clients. Keep pressed-button/grab state
+  bounded to a live surface and release it on mode exit, host focus loss and
+  disconnect. Preserve the keyboard path and the world controller.
+  **Acceptance:** two-client protocol tests assert focus isolation, coordinates,
+  button mapping, scroll and held-button teardown; mapping tests cover native and
+  shrunk views, corners, margins and scale/rotation. In real Weston terminal,
+  select text by dragging, exercise scrollback and return to world with no stuck
+  button/camera motion. Capture agent-observed evidence; run scene/bridge/C++ and
+  relevant sanitizer checks. Client cursor/selection-protocol limitations must
+  be recorded honestly. Resize and explicit shell close/relaunch follow below.
+
+- [ ] **P21-T44 Resize the terminal through xdg configure.**
+  **Depends:** P21-T43.
+  Inspect `xdg-shell.cpp` and the existing configure/ack/commit tests before
+  adding a runtime resize request. Request a bounded application size when the
+  Godot viewport changes; respect window geometry/client decorations, minimum
+  sizes and the client's committed choice. Keep old pixels valid until a new
+  buffer is committed. Do not claim that scaling ImageTexture resizes the client.
+  Recompute the flat-view placement and pointer transform from committed state.
+  **Acceptance:** fixture tests cover configure serials, acknowledgements,
+  delayed/declined size changes, repeated resize and destruction while pending.
+  Resize the real terminal twice in both directions; text/rows change without
+  distortion, typing and pointer mapping remain correct, and the world preview
+  updates. Inspect GPU captures and run scene/bridge/C++ regressions.
+
+- [ ] **P21-T45 Request client close and explicitly relaunch the terminal.**
+  **Depends:** P21-T44.
+  Add a documented application close action using `xdg_toplevel.close`. Never
+  destroy the client's resources or kill its process to simulate acceptance.
+  Keep this separate from launcher-owned process shutdown. Add an explicit world
+  action to launch the terminal after exit; reject duplicate launch while the
+  owned client is still running. Clear stale focus/textures/handles and assign
+  the new live window without treating PID or Wayland IDs as persistent identity.
+  **Acceptance:** accepting/deferred/declining fixture clients and two windows in
+  one process prove target-specific close; real shell/UI close, relaunch and
+  repeated world/application transitions work with keyboard, pointer and resize.
+  Inspect captures, verify owned child/socket cleanup, and run regressions plus
+  lifecycle sanitizers. Add the next bounded integration/owner-trial task; broader
+  human and Project 21 product gates stay open until their evidence exists.
 
 
 - [ ] **P21-T00 Repair and verify the toolchain baseline.**

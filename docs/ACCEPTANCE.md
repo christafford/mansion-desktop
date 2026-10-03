@@ -55,8 +55,28 @@ The real terminal check exercises two sessions and asserts owned process/socket
 cleanup. Separate synthetic GPU color patches and injected controller events
 pass. `client-frame.png` is a source frame, not a rendered screenshot. No actual
 terminal typing, pointer interaction, application mode or physical-input trial
-is claimed. Human acceptance remains **not observed**; T42/T43 implement the
+is claimed. Human acceptance remains **not observed**; T42–T45 implement the
 remaining interaction before the broader terminal usability procedure.
+
+## 2026-10-03 agent-run Godot keyboard interaction (P21-T42)
+
+Codex injected Godot keyboard events through the production application-mode
+path into the real Weston 15.0.1 terminal and `/bin/sh`. Shell-written output
+files verify mixed-case/punctuation typing and Backspace; additional commands
+verify repeat and Ctrl+C interruption. Enter activates the same live window,
+Ctrl+Alt+Escape returns to world, movement resumes, host-focus-loss notification
+clears focus, and typing `exit` while Shift is held restores world mode.
+
+[Application and post-exit captures](evidence/terminal-input/) were inspected at
+1280×800 using Godot 4.7.2 Compatibility, Mesa 26.2.4, AMD Custom GPU 0405.
+The flat view preserves native pixel size and 7,571 sampled client pixels.
+Revision: T42 implementation committed with [handoff 21](handoffs/21-godot-terminal-keyboard.md),
+based on `d7a590c`. Reproduce with `tools/check-godot-study.sh`.
+
+This passes the bounded keyboard gate with a physical US mapping. The events
+were injected; physical host input, IME/layout selection, pointer/scroll, resize,
+compositor close/relaunch, latency and human usability remain **not observed or
+unimplemented**, as applicable. No human task is ticked.
 
 ## Legacy baseline and procedures
 

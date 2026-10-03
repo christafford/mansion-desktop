@@ -5,8 +5,9 @@ persistent first-person environment. Current work is Project 21: a Godot world
 frontend, the retained C++ compositor core, and a furnished Poly Haven study.
 The runnable `build/mansion-desktop --room-camera` command still uses the legacy
 custom polygon renderer. The separate Godot study now renders textured furniture
-and supports collision-based movement. A real Weston terminal now supplies live
-output to its monitor; application input is the next recovery task.
+and supports collision-based movement. A real Weston terminal supplies live
+output to its monitor. Enter opens a readable keyboard-controlled terminal view;
+Ctrl+Alt+Escape returns to the room. Pointer and resize work comes next.
 See [current status](docs/STATUS.md) and [Godot launch instructions](world/README.md).
 
 ```sh
@@ -18,8 +19,8 @@ tools/run-godot.sh --audio-driver Dummy
 Read [Decision 06](docs/decisions/06-godot-poly-haven.md),
 [the art brief](docs/ART-DIRECTION.md) and [the executable tasks](docs/TASKS.md).
 For Qwen/OpenCode, use [the launch instructions](docs/OPENCODE-AUTOCONTINUE.md).
-The next target is an attractive furnished study with a genuinely live terminal,
-followed by a useful two-room workspace. No fixed run deadline applies.
+The immediate target is completing pointer input, resizing and close/relaunch
+in the furnished study, followed by a useful two-room workspace.
 
 ## Start here
 

@@ -19,6 +19,7 @@ struct SeatPointerClient {
 };
 
 struct MansionSeat {
+    struct wl_display* display;
     struct wl_global* global;
     struct wl_list resources;
     struct wl_list keyboard_clients;   /* SeatKeyboardClient */
@@ -29,6 +30,8 @@ struct MansionSeat {
 
     /* Keyboard focus (P1-T06-C). */
     struct wl_resource* focused_surface_resource;
+    struct wl_listener keyboard_focus_destroy;
+    struct MansionCompositor* keyboard_compositor;
 
     /* Pointer focus and grab (P1-T06-D). */
     struct wl_resource* pointer_surface_resource; /* surface pointer is over */

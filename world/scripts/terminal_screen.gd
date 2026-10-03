@@ -42,8 +42,10 @@ func _ready() -> void:
 		return
 	# Environment belongs only to this child; the host Godot connection is intact.
 	child_pid = OS.create_process("/usr/bin/env", PackedStringArray([
-		"-u", "WAYLAND_SOCKET", "-u", "DISPLAY", "-u", "WAYLAND_DEBUG", "-u", "ENV", "-u", "BASH_ENV",
+		"-u", "WAYLAND_SOCKET", "-u", "DISPLAY", "-u", "WAYLAND_DEBUG", "-u", "ENV", "-u", "BASH_ENV", "-u", "PROMPT_COMMAND",
 		"WAYLAND_DISPLAY=" + session.socket_path(), "XDG_CONFIG_HOME=" + config_dir,
+		"HISTFILE=" + config_dir.path_join("history"),
+		"PS1=$ ", "PS2=> ", "INPUTRC=" + ProjectSettings.globalize_path("res://config/terminal.inputrc"),
 		terminal, "--font=monospace", "--font-size=16", "--shell=" + shell]))
 	if child_pid <= 0:
 		fail("Could not launch Weston terminal")

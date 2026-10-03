@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 struct wl_display;
 struct wl_resource;
 struct MansionSeat;
@@ -9,4 +10,6 @@ MansionSeat* seat_create(wl_display* display);
 void seat_destroy(MansionSeat* seat);
 // Sends leave/enter only to the owning client; null surface clears focus.
 void seat_set_keyboard_focus(MansionSeat* seat, wl_resource* surface, MansionCompositor* compositor);
+// Linux evdev keycodes, with client-side repeat; duplicates are ignored.
+bool seat_keyboard_key(MansionSeat* seat, uint32_t keycode, bool pressed);
 void compositor_set_seat(MansionCompositor* compositor, MansionSeat* seat);

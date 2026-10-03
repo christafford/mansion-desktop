@@ -28,6 +28,9 @@ public:
     std::vector<int64_t> surface_handles() const;
     std::vector<int64_t> toplevel_handles() const;
     OwnedFrame snapshot(int64_t handle) const;
+    bool focus_keyboard(int64_t handle); // 0 returns to world/no client focus.
+    int64_t keyboard_focus_handle() const;
+    bool keyboard_key(uint32_t evdev_code, bool pressed);
     const std::string& socket_path() const { return socket_path_; }
     const std::string& last_error() const { return error_; }
     bool running() const { return display_ != nullptr; }

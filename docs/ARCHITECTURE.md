@@ -15,7 +15,10 @@ socket/surface lifecycle, initial xdg-shell handshake and seat protocol checks
 through Godot. Shared `seat.cpp` and `xdg-shell.cpp` are independent of legacy
 input policy and rendering. Owned shm snapshots now pass byte-level Godot tests.
 The study now pumps that runtime and presents changing real Weston terminal
-output via ImageTexture (T41). Godot input routing remains open.
+output via ImageTexture (T41). T42 adds keyboard focus/delivery through that
+runtime's seat and explicit world/application modes in Godot. Pointer and resize
+routing remain open. Godot maps physical US keys; the seat owns XKB and held-key
+state, filters events to the focused client, and clears focus on destruction.
 The original addon is isolated
 because registration crashes. A separate standard-binding regression establishes
 the binding boundary, reused by the study's `mansion_runtime` addon. See STATUS.md

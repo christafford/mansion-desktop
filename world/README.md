@@ -3,7 +3,8 @@
 The study renders six imported Poly Haven furniture models, a textured room,
 lighting and a collision-based first-person controller. The monitor displays
 live output from a real Weston terminal through the retained C++ Wayland core.
-Keyboard/pointer delivery and application mode are not implemented yet.
+Enter opens a flat application view with real keyboard delivery; Ctrl+Alt+Escape
+returns to the room. Pointer delivery, resize and UI close/relaunch remain open.
 
 From the repository root, using the existing local tool/cache:
 
@@ -25,7 +26,8 @@ Godot uses the Compatibility/OpenGL renderer, not Vulkan.
 The launcher builds and stages the recovered standard GDExtension before opening
 Godot. It needs the local godot-cpp checkout and existing C++ build dependencies.
 `/usr/bin/weston-terminal` (tested: Weston 15.0.1) starts `/bin/sh` on the private
-socket, using isolated configuration. Missing terminals produce an explicit
+socket, using isolated configuration, prompt and repository-local shell history.
+Weston starts the shell in your home directory. Missing terminals produce an explicit
 error; there is no simulated fallback. For visibly changing output, run:
 
 ```sh
@@ -44,16 +46,25 @@ unchanged. `-- --no-terminal` disables launch for isolated scene checks.
 | Home | Return to the safe arrival position |
 | M | Toggle slow walking |
 | Shift | Walk slowly while held |
+| Enter (world mode) | Activate the terminal at native pixel size when it fits |
+| Ctrl+Alt+Escape (application mode) | Release application keys and return to the room |
 
 There is no camera bob. Losing window focus clears held input and releases the
 pointer. Close using the host window close control.
+
+Application mode uses physical US keyboard positions. Ordinary Escape, Tab,
+Home, WASD and M reach the terminal; Shift/Ctrl/Alt, editing keys and client key
+repeat work. Host focus loss returns to world mode and releases held modifiers.
+Type `exit` to close the shell. Relaunch currently requires restarting the study.
+IME/composed text and selectable keyboard layouts are not implemented. The flat
+view shrinks proportionally if the window cannot fit the terminal at native size.
 
 ## Verification
 
 ```sh
 # Import and runtime errors must both fail this command.
 tools/validate-godot-project.sh
-# Requires a display: controller, screen colors and two real terminal sessions.
+# Requires a display: controller, colors, live output and real shell typing.
 tools/check-godot-study.sh
 # Three actual GPU-rendered views. Use an absolute output directory.
 tools/run-godot.sh --audio-driver Dummy -- --capture=/tmp/mansion-study
@@ -67,4 +78,6 @@ The old native bridge is preserved under `addons/mansion_godot/`, excluded from
 Godot discovery by `.gdignore` because initialization crashes. The recovered
 standard binding is staged under `addons/mansion_runtime/`; its separate
 protocol/byte-level regression command is `tools/check-godot-binding.sh`.
-See [live output evidence and limitations](../docs/handoffs/20-godot-live-terminal.md).
+Generated test captures go under `.tools/terminal-output-test/` and
+`.tools/terminal-input-test/`, preserving committed historical evidence.
+See [keyboard evidence and limitations](../docs/handoffs/21-godot-terminal-keyboard.md).

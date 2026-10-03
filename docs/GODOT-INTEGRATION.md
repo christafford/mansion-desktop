@@ -9,7 +9,8 @@ The standard binding serves real wl_compositor/shm clients (T38), including
 xdg-shell configure/ack/commit and seat v1/v4 keyboard setup (T39).
 Owned frame transport now passes exact client-byte tests through Godot (T40).
 The study now starts that server and displays real Weston terminal output (T41).
-Input and application mode remain open. See [STATUS.md](STATUS.md).
+T42 adds real keyboard input and a flat application view; pointer and resize
+remain open. See [STATUS.md](STATUS.md).
 
 ## Build and ownership
 
@@ -36,6 +37,17 @@ fits the logical aspect ratio, and clears content on detach/destruction.
 The unshaded screen shader compensates for the study's fixed Filmic tone curve;
 this is tested for Compatibility at exposure/white 1, not a general renderer
 color-management solution. See [live output handoff](handoffs/20-godot-live-terminal.md).
+
+`application_mode.gd` implements explicit shell policy: Enter activates the live
+terminal, Ctrl+Alt+Escape returns to world, and host focus loss clears activation.
+Its TextureRect shares the monitor's current texture, displays native pixels
+when they fit, and bypasses the 3D world environment. `keyboard_map.gd` maps
+physical US Godot keys to Linux evdev codes. The runtime resolves only live,
+mapped toplevel handles for `focus_keyboard`, `keyboard_focus_handle` and
+`keyboard_key`. `seat.cpp` owns XKB, held keys, focused-client routing, late
+keyboard enter and a surface-destroy listener. Duplicate presses are suppressed;
+the Wayland client repeats using the advertised rate/delay. See
+[keyboard handoff](handoffs/21-godot-terminal-keyboard.md).
 
 Godot owns the visible host window and frame loop. GDExtension owns one compositor
 instance with explicit start/pump/stop. Use a nonblocking pump on the owning

@@ -7,14 +7,13 @@ is historical; its extension/visual completion claims were contradicted by tests
 
 ## Next task
 
-**P21-T42: type into the real terminal in Godot application mode.**
-Recovery T36–T41 passes its bounded acceptance: furnished study, standard
-binding, real Wayland protocols, owned pixels and changing terminal output on
-the monitor. See [tasks](TASKS.md) and
-[live output handoff](handoffs/20-godot-live-terminal.md).
-Next expose seat keyboard focus/delivery, implement explicit application mode,
-and verify actual shell commands. Do not treat the output preview as a usable
-desktop. Pointer/resize/client-close acceptance follows in T43.
+**P21-T43: route terminal pointer and scroll in application mode.**
+Recovery T36–T42 passes its bounded acceptance: furnished study, retained
+compositor, live output, real shell typing and a readable application view.
+See [tasks](TASKS.md) and [keyboard handoff](handoffs/21-godot-terminal-keyboard.md).
+Next route application-view pointer events through the same owned seat. T44 then
+handles xdg resize; T45 adds close requests and explicit terminal relaunch. Keyboard
+input alone does not complete the desktop or the broader product gates.
 Broader T00–T19 gates remain unchecked until their full evidence exists.
 
 ## Run the visible Godot frontend
@@ -35,6 +34,10 @@ The launcher builds/stages the standard native extension and starts installed
 
 WASD walks; hold right mouse to look; release/Escape frees the pointer; Home
 returns to arrival; M toggles slow walking and Shift slows while held.
+Enter activates the terminal. Ctrl+Alt+Escape returns to the room. Application
+mode uses physical US keys and native-size text when it fits; ordinary Escape,
+Tab, Home and camera keys reach the terminal. Host focus loss returns to world
+mode. Type `exit` to close the shell; restart the study to relaunch for now.
 
 ## Verified by automated checks in this recovery
 
@@ -59,10 +62,17 @@ returns to arrival; M toggles slow walking and Shift slows while held.
   aspect ratio, unchanged-frame skip, disconnect clearing, child/socket cleanup
   and unchanged host display environment pass. Eight inverse image transforms
   and eleven GPU color patches under strong colored lighting pass.
-- Standalone core/runtime AddressSanitizer + UBSan + enabled leak detection
-  passed during T40; T41 changes window enumeration and presentation.
+- Keyboard protocol: focused delivery to two independent clients, same-client
+  focus switches, US key/modifier values, duplicate suppression, held/locked
+  state reset, late binding, detach, destruction and stale handles pass.
+- Real shell input via injected Godot events: mixed case/punctuation, Backspace,
+  Ctrl+U, client repeat, Ctrl+C interrupt, mode transitions, resumed world
+  movement, host-focus-loss notification and shell exit pass. Flat view preserves
+  7,571 sampled opaque client pixels at native size. These are agent-run trials.
+- Standalone keyboard runtime AddressSanitizer + UBSan + enabled leak detection
+  pass in T42; frame ownership sanitizer checks passed in T40.
 - C++ build and 33/33 Meson tests pass; 62/62 Node plugin tests passed during T39.
-  They do not validate live Godot compositor integration.
+  The Meson/plugin checks alone do not validate the Godot integration.
 - The local editor's first-import shutdown race has a tested paced-startup
   workaround, not an engine fix; see [TOOLCHAIN.md](TOOLCHAIN.md).
 
@@ -80,6 +90,11 @@ disconnect. Agent inspection: 2026-10-03, Godot 4.7.2, Mesa 26.2.4, 1280×800.
 Room and close-up GPU views were inspected; `client-frame.png` is a source frame,
 not a render. This is output acceptance, not typing or human readability acceptance.
 
+[Application-mode evidence](evidence/terminal-input/) shows real command results
+and return to the room after shell exit. Agent inspection, 2026-10-03, same
+engine/renderer/hardware as above. Text is upright and comfortably sized in this
+capture; no human, physical-keyboard or latency acceptance is inferred.
+
 ## Verified by a person
 
 Historical owner confirmation on 2026-10-02: legacy launch, input and vertical
@@ -88,14 +103,15 @@ This records approval of its appearance, not a terminal/input/comfort trial.
 
 ## Not verified / unfinished
 
-- Real application input, focus transitions/application mode, resize, client
-  close requests and an in-app relaunch workflow. Live output and owned process
-  shutdown are verified; ordinary terminal usability is not.
+- Application pointer/scroll, resize, compositor close requests and an in-app
+  relaunch workflow. Keyboard and ordinary shell exit pass; full terminal
+  usability and physical input are not verified. IME/composed text and selectable
+  layouts are not implemented; the current seat/mapping is US.
 - Original addon initialization: reproduced segmentation fault; isolated with
   `world/addons/mansion_godot/.gdignore`, source and binary preserved.
 - Full renderer-independent compositor extraction: socket/wl_compositor/shm
   lifecycle, initial xdg-shell/seat checks and owned shm snapshots pass. Broader
-  surface-tree/protocol conformance and Godot input delivery remain open.
+  surface-tree/protocol conformance and Godot pointer delivery remain open.
 - Finished art rubric, furniture selection/cohesion, performance, physical host
   input and human comfort. No blank capture counts as visual acceptance.
 - Fresh-clone dependency provenance and asset fetching/offline negative checks.

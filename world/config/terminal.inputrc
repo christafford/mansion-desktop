@@ -1,0 +1,2 @@
+# Weston terminal 15 does not implement bracketed paste escape sequences.
+set enable-bracketed-paste off

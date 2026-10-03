@@ -2,6 +2,7 @@
 extends Node3D
 
 var terminal_screen: Node
+var application_mode: CanvasLayer
 
 var furniture: Array[Node3D] = []
 
@@ -109,6 +110,10 @@ func _ready() -> void:
 	terminal_screen.screen = screen
 	terminal_screen.status = text
 	add_child(terminal_screen)
+	application_mode = load("res://scripts/application_mode.gd").new()
+	application_mode.terminal = terminal_screen
+	application_mode.player = get_node("Player")
+	add_child(application_mode)
 	get_tree().auto_accept_quit = false
 	var environment := WorldEnvironment.new()
 	var env := Environment.new()
@@ -148,7 +153,7 @@ func _ready() -> void:
 	add_child(lamp)
 	var ui := CanvasLayer.new()
 	var help := Label.new()
-	help.text = "WASD walk   •   Hold right mouse to look   •   Esc release   •   Home return   •   M slow walk\nLive terminal output preview — keyboard control comes next"
+	help.text = "WASD walk   •   Hold right mouse to look   •   Esc release   •   Home return   •   M slow walk\nEnter uses the terminal   •   Ctrl+Alt+Esc returns to the room"
 	help.position = Vector2(22, 20)
 	help.add_theme_font_size_override("font_size", 16)
 	help.add_theme_color_override("font_shadow_color", Color.BLACK)

@@ -32,7 +32,7 @@ func run() -> void:
 	var player = study.get_node("Player")
 	player.set_physics_process(false)
 	var camera: Camera3D = player.get_node("Camera3D")
-	var destination := ProjectSettings.globalize_path("res://../docs/evidence/live-terminal").simplify_path()
+	var destination := ProjectSettings.globalize_path("res://../.tools/terminal-output-test").simplify_path()
 	DirAccess.make_dir_recursive_absolute(destination)
 	camera.global_position = Vector3(2.4, 1.65, 3.1)
 	camera.look_at(Vector3(0, 1, -2))
