@@ -28,7 +28,7 @@ P2-T05 GPU import remains open and is not a prerequisite for this CPU bridge.
 
 ## Instructions for the next autonomous run
 
-Current recovery is bounded to T36/T37; do not start a broad autocontinue run.
+T36/T37 passed; current recovery continues with T38; do not start a broad autocontinue run.
 The eventual first useful product milestone ends at T19.
 Do not use a broad Projects 1–21 scope: that mixes deferred legacy tasks with
 this work. This document update does not itself start an autonomous run.
@@ -86,7 +86,7 @@ Do not launch another broad overnight range before the new boundaries pass.
   Evidence: [recovery handoff](handoffs/14-godot-frontend-recovery.md).
   This is a frontend preview, not finished art or a live desktop.
 
-- [ ] **P21-T37 Prove a minimal standard godot-cpp binding.**
+- [x] **P21-T37 Prove a minimal standard godot-cpp binding.**
   **Depends:** P21-T36.
   Use the installed compatible godot-cpp and official initialization pattern.
   Build one isolated extension class with one callable method. Run repeated
@@ -96,6 +96,23 @@ Do not launch another broad overnight range before the new boundaries pass.
   record exact engine/bindings/build identities and commands. This is a binding
   prerequisite only, not completion of the compositor adapter in T11.
 
+  Evidence: [binding recovery](handoffs/16-godot-binding-recovery.md).
+
+- [ ] **P21-T38 Connect the recovered binding to a verified compositor lifecycle.**
+  **Depends:** P21-T37.
+  This is bounded recovery of T10/T11, not acceptance of either full gate.
+  Inspect the partial core and preserve the existing compositor's real protocol
+  behavior. Reuse/extract at one boundary; no replacement compositor or legacy
+  GL renderer inside the new extension. Give one native object explicit
+  start/pump/stop ownership. Use `wl_event_loop_dispatch(server_loop, 0)` and
+  flush server clients; never pass a server display to a Wayland client API.
+  Test an actual fixture connecting to the returned private socket, discovery,
+  repeated start/stop, disconnect, and socket removal. Run the standalone core
+  test and Godot lifecycle test plus C++ regressions. No snapshots or input yet.
+  **Acceptance:** a real client connects and is served while Godot continues
+  processing frames, repeated shutdown is clean, and no GL/display dependency
+  enters the reusable core. Preserve pending provenance/art tasks separately.
+
 
 - [ ] **P21-T00 Repair and verify the toolchain baseline.**
   **Depends:** none.
@@ -103,7 +120,7 @@ Do not launch another broad overnight range before the new boundaries pass.
   **Do:**
 
   1. Read TOOLCHAIN.md and handoffs/11-godot-reality-audit.md. Run the existing editor's `--version` and `--help`; record the binary SHA-256 and godot-cpp commit/API version. Do not treat a filename as proof of compatibility or an authentic upstream checksum.
-  2. Verify import on an isolated tiny project and copy of the scaffold without the 2.8 GB cache, using `--headless --path COPY --import`, which passed this audit. The initial combined `--editor --import` invocation aborted; keep that failure recorded without treating all imports as blocked. Do not rebuild/replace the working binary unless a fresh required check fails and diagnosis justifies it. No system installs.
+  2. Verify import on an isolated tiny project and copy of the scaffold without the 2.8 GB cache, using the paced import command in TOOLCHAIN.md. Bare one-frame import has a reproduced editor shutdown race. The initial combined `--editor --import` invocation aborted; keep that failure recorded without treating all imports as blocked. Do not rebuild/replace the working binary unless a fresh required check fails and diagnosis justifies it. No system installs.
   3. Prove a tiny project imports, runs headless, and opens a bounded graphical window. Record renderer/driver and return codes. Use Compatibility/OpenGL initially; do not call it Vulkan. Unavailable audio is not a visual blocker; use the supported dummy audio driver for smoke checks.
   4. Verify godot-cpp targets the engine API actually used. Confirm whether Blender is needed at all: complete glTF can import directly. Pin Blender only if conversion requires it; no invented versions, URLs, hashes or licenses.
   5. Run `meson compile -C build`, `meson test -C build --print-errorlogs` and the Node plugin tests as this run's baseline. Record failures without relabeling them as passes. Update TOOLCHAIN.md with commands actually tested.

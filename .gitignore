@@ -110,3 +110,5 @@ world/assets/*.gltf.import
 world/assets/textures/
 world/assets/cache/*.import
 world/assets/cache/textures/*.import
+tests/godot-binding/.godot/
+tests/godot-binding/bin/

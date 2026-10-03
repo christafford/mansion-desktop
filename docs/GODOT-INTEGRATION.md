@@ -1,11 +1,12 @@
 # Godot and the existing Wayland compositor
 
 Target design under Decision 06; implement and verify through Project 21.
-A separate placeholder Godot project and draft adapter exist, but no integrated
-frontend is working. The legacy `--room-camera` executable does not launch Godot.
-See [STATUS.md](STATUS.md), reopened T00/T01/T10 and unfinished T11 in
-[TASKS.md](TASKS.md).
-Preserve existing tests and the headless path while completing the adapter.
+The Godot study now renders real furniture and supports movement (P21-T36).
+The legacy `--room-camera` executable remains separate. The experimental
+compositor addon is preserved but ignored because it crashes during registration.
+The standard binding probe (P21-T37) is isolated under `tests/godot-binding/`.
+A callable probe is not a working compositor adapter; T10/T11 lifecycle and
+T12/T13 pixel delivery still require their own evidence. See [STATUS.md](STATUS.md).
 
 ## Build and ownership
 
@@ -15,8 +16,7 @@ compare Compatibility and Mobile using actual scenes, driver support and
 measurements. Don't depend on a RenderingDevice in a renderer that lacks it.
 Put the engine project in `world/`, core library in an appropriate C++ source
 boundary, adapter in `src/godot/`, and bootstrap/check commands in `tools/`.
-The `world/` and `src/godot/` paths now exist, but the core-library target and
-working bridge do not. Repair existing run/validation tools rather than treating
+A partial core-library target exists, but the working compositor bridge does not. Repair existing run/validation tools rather than treating
 their successful exit or comments as acceptance. Register an actual Godot class
 through a `.gdextension` resource and prove it can serve a fixture client; do
 not wait for a Project Settings UI to enable the draft `extension.toml`.

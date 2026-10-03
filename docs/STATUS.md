@@ -7,11 +7,14 @@ is historical; its extension/visual completion claims were contradicted by tests
 
 ## Next task
 
-**P21-T37: prove a minimal standard godot-cpp binding.** P21-T36 frontend recovery
-passes its bounded acceptance. See [tasks](TASKS.md) and
-[handoff](handoffs/14-godot-frontend-recovery.md). Do not resume texture delivery
-on top of the old crashing addon. Broader T00–T19 gates remain unchecked until
-their complete evidence exists; a recovery subtask does not pass those gates.
+**P21-T38: connect the recovered binding to a verified compositor lifecycle.**
+P21-T36 frontend recovery and P21-T37 minimal standard binding pass their bounded
+acceptance. See [tasks](TASKS.md), [frontend handoff](handoffs/14-godot-frontend-recovery.md)
+and [binding handoff](handoffs/16-godot-binding-recovery.md). Next prove a private
+socket, actual fixture client, nonblocking server pump and clean shutdown before
+adding pixel delivery. The old addon remains isolated.
+Broader T00–T19 gates remain unchecked until their complete evidence exists;
+these recovery subtasks do not pass the full product or provenance gates.
 
 ## Run the visible Godot frontend
 
@@ -36,8 +39,12 @@ returns to arrival; M toggles slow walking and Shift slows while held.
 - Graphical scene smoke: 56 textured surfaces, walking/key release, wall
   collision, focus cleanup, mouse capture/look/release and Home assertions pass.
   These are injected controller events, not a physical-input or human trial.
-- Earlier audit in this session: C++ build and 31/31 Meson tests pass.
-  They do not validate Godot integration. No C++ implementation changed in T36.
+- Standard C++ binding: fresh import and three clean runtime processes, 300
+  native instances/calls/releases. Separate build uses consistent generated headers.
+- C++ build and 31/31 Meson tests pass; 62/62 Node plugin tests pass.
+  They do not validate live Godot compositor integration.
+- The local editor's first-import shutdown race has a tested paced-startup
+  workaround, not an engine fix; see [TOOLCHAIN.md](TOOLCHAIN.md).
 
 ## Agent-observed visuals
 

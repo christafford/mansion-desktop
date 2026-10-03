@@ -9,10 +9,11 @@ on its owning thread and provides owned CPU frame snapshots plus explicit seat
 and configure commands. See [GODOT-INTEGRATION.md](GODOT-INTEGRATION.md).
 The older snapshot choice in P4-T15 is superseded by P21-T11/T12. Subsequent
 sections describe still-useful ownership boundaries, not an alternate work order.
-Current audit (2026-10-02): a placeholder engine project and draft bridge exist,
-but no functional integration or renderer-independent core library. T10 is
-reopened because compositor source still calls the legacy display/renderer.
-Moving a GPU field out of a header did not complete that boundary.
+Current recovery (2026-10-03): the Godot study renders imported furniture and
+has a collision-based controller. A partial C++ core library exists; fixture
+socket/seat/xdg lifecycle acceptance remains open. The original addon is isolated
+because registration crashes. A separate standard-binding regression establishes
+the binding boundary before compositor work. See STATUS.md for current evidence.
 
 ## Supplied prototype
 

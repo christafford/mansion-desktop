@@ -4,6 +4,15 @@ The project uses its own `/autocontinue` plugin. This is automatic continuation
 after completed agent turns, not editor autocomplete. The owner's chosen Qwen
 model/provider is unchanged. No additional agent framework is required.
 
+## Current recovery overrides the historical run instructions below
+
+As of 2026-10-03, do not start another broad T00–T19 unattended run. The owner
+requested direct recovery after that workflow produced incorrect completion
+claims. Follow STATUS.md and the bounded T36/T37 evidence. After recovery,
+assign one eligible task at a time and review the actual acceptance artifacts.
+The plugin does not enforce dependencies or determine whether a render is useful.
+The broad-run setup below is retained for reference, not the current work order.
+
 ## Start the authorized run
 
 Use `/autostop` on any old run before changing its scope. Start OpenCode from

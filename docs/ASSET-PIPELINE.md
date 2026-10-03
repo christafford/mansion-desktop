@@ -1,10 +1,12 @@
 # Reproducible Poly Haven asset pipeline
 
 Complete the downloader, manifest and conversion tools during Project 21.
-The current fetcher caches individual files but omits all 30 external references
-from its six glTF models (2026-10-02 audit). T02/T03 are reopened; cache size is
-not importability. Preserve existing downloads while fetching verified missing
-dependencies. A JSON glTF may import directly; GLB conversion is not mandatory.
+The 2026-10-02 audit found 30 missing external references. The six model packages
+now exist locally and render in Godot. `world/tools/prepare_study_assets.py`
+checks their manifest SHA-256 values and stages complete source glTF packages.
+The source cache has `.gdignore`; runtime copies are generated and Git-ignored.
+This local staging does not complete acquisition/provenance/offline negative-path
+acceptance in T02/T03. Preserve source downloads; GLB conversion is not required.
 
 ## Select and record
 
@@ -12,7 +14,7 @@ Start with a curated study set: timber flooring, plaster, furniture materials,
 desk/table, chair, lamp, shelves/books, small props and one suitable HDRI.
 Inspect the live [catalog](https://polyhaven.com/all) and candidate previews.
 Use compatible free assets from another documented provider for catalog gaps.
-Create and keep `world/assets/manifest.json` authoritative (currently missing).
+Create and keep `world/assets/manifest.json` authoritative (present; provenance/runtime metadata still needs review).
 Every used asset records:
 
 - stable provider/asset ID, source page, author, license and license URL;

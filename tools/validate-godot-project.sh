@@ -26,6 +26,8 @@ check() {
         exit 1
     fi
 }
-check import --import
+# This engine queues editor documentation callbacks during first import.
+# Allow deferred work to drain before shutdown (see recovery handoff).
+check import --import --quit-after 180 --max-fps 60
 check runtime --quit-after 5
 echo "Godot import and runtime checks passed (not visual acceptance)."
