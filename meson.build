@@ -190,6 +190,7 @@ test('compositor-core', compositor_core_test, suite: 'p2', timeout: 10)
 # GDExtension adapter for Godot integration
 # Note: godot-cpp must be built first at tools/godot-cpp/build/
 godot_cpp_include = include_directories('tools/godot-cpp/include', 'tools/godot-cpp/build/gen/include')
+godot_include = include_directories('tools/godot-4.7.2-stable/core/extension')
 
 # GDExtension source files - use compositor-core API, not old bridge
 gdextension_sources = files(
@@ -203,11 +204,45 @@ gdextension_sources = files(
 # We link against compositor-core static library for the protocol layer,
 # but NOT against libgodot-cpp.a (symbols resolve at runtime)
 # Note: wayland-client is needed for wl_display_dispatch_pending used in pump()
+# Note: -fvisibility=hidden hides symbols by default, so we need explicit visibility
+# for exported functions. GDExtensionInit must be visible.
 mansion_gdextension = shared_library('mansion_godot',
     gdextension_sources,
-    cpp_args: cpp_args + ['-fPIC', '-std=c++17'],
-    include_directories: [include_directories('src'), godot_cpp_include],
+    cpp_args: cpp_args + ['-fPIC', '-std=c++17', '-fvisibility=hidden'],
+    include_directories: [include_directories('src'), godot_cpp_include, godot_include],
     dependencies: [wayland_server, wayland_client],
     link_with: [compositor_core_lib],
+    install: false,
+)
+
+# Minimal GDExtension for testing - no external dependencies
+# This helps isolate if the hang is caused by library loading issues
+minimal_gdextension_sources = files(
+    'src/godot/mansion_extension_minimal.cpp',
+)
+
+minimal_gdextension = shared_library('mansion_godot_minimal',
+    minimal_gdextension_sources,
+    cpp_args: cpp_args + ['-fPIC', '-std=c++17', '-fvisibility=hidden'],
+    include_directories: [include_directories('src'), godot_cpp_include, godot_include],
+    dependencies: [],
+    install: false,
+)
+
+# Test GDExtension that doesn't register any classes - just returns success
+test_gdextension = shared_library('mansion_godot_test',
+    'src/godot/mansion_extension_test.cpp',
+    cpp_args: cpp_args + ['-fPIC', '-std=c++17', '-fvisibility=hidden'],
+    include_directories: [include_directories('src'), godot_cpp_include, godot_include],
+    dependencies: [],
+    install: false,
+)
+
+# Empty GDExtension - just returns success, no initialization code
+empty_gdextension = shared_library('mansion_godot_empty',
+    'src/godot/mansion_extension_empty.cpp',
+    cpp_args: cpp_args + ['-fPIC', '-std=c++17', '-fvisibility=hidden'],
+    include_directories: [include_directories('src'), godot_cpp_include, godot_include],
+    dependencies: [],
     install: false,
 )

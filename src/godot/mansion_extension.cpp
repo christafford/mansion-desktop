@@ -29,6 +29,7 @@ static GDExtensionInterfaceClassdbRegisterExtensionClassMethod classdb_register_
 static GDExtensionInterfaceStringNameNewWithLatin1Chars string_name_new_with_latin1_chars = nullptr;
 static GDExtensionInterfaceStringNewWithLatin1Chars string_new_with_latin1_chars = nullptr;
 static GDExtensionInterfaceStringNewWithLatin1CharsAndLen string_new_with_latin1_chars_and_len = nullptr;
+static GDExtensionInterfaceStringToUtf8Chars string_to_utf8_chars = nullptr;
 static GDExtensionInterfaceVariantDestroy variant_destroy = nullptr;
 static GDExtensionInterfaceVariantNewNil variant_new_nil = nullptr;
 static GDExtensionInterfaceVariantConstruct variant_construct = nullptr;
@@ -58,6 +59,8 @@ static void init_interface_functions(GDExtensionInterfaceGetProcAddress p_get_pr
         get_interface_function("string_new_with_latin1_chars");
     string_new_with_latin1_chars_and_len = (GDExtensionInterfaceStringNewWithLatin1CharsAndLen)
         get_interface_function("string_new_with_latin1_chars_and_len");
+    string_to_utf8_chars = (GDExtensionInterfaceStringToUtf8Chars)
+        get_interface_function("string_to_utf8_chars");
     variant_destroy = (GDExtensionInterfaceVariantDestroy)
         get_interface_function("variant_destroy");
     variant_new_nil = (GDExtensionInterfaceVariantNewNil)
@@ -75,11 +78,78 @@ static void init_interface_functions(GDExtensionInterfaceGetProcAddress p_get_pr
 /* Opaque handle to our adapter instance */
 typedef struct {
     MansionGDExtensionAdapter *adapter;
+    int ref_count;
 } MansionAdapterInstance;
 
-/* Instance binding callbacks - minimal implementations matching GDExtension signatures */
+/* GDExtensionClassCreateInstance3 - creates a new instance */
+static GDExtensionClassInstancePtr mansion_adapter_create_instance(
+    void *p_class_userdata,
+    GDExtensionBool p_notify_postinitialize) {
+    (void)p_class_userdata;
+    (void)p_notify_postinitialize;
+    
+    /* Allocate and initialize the instance */
+    MansionAdapterInstance *instance = (MansionAdapterInstance *)mem_alloc(sizeof(MansionAdapterInstance));
+    if (!instance) {
+        return nullptr;
+    }
+    
+    instance->adapter = nullptr;
+    instance->ref_count = 1;
+    
+    return (GDExtensionClassInstancePtr)instance;
+}
 
-/* GDExtensionClassSet - returns GDExtensionBool */
+/* GDExtensionClassFreeInstance - frees an instance */
+static void mansion_adapter_free_instance(void *p_class_userdata, GDExtensionClassInstancePtr p_instance) {
+    (void)p_class_userdata;
+    
+    if (!p_instance) {
+        return;
+    }
+    
+    MansionAdapterInstance *instance = (MansionAdapterInstance *)p_instance;
+    
+    /* Destroy the adapter if it exists */
+    if (instance->adapter) {
+        mansion_gdextension_adapter_destroy(instance->adapter);
+        instance->adapter = nullptr;
+    }
+    
+    /* Free the instance */
+    mem_free(instance);
+}
+
+/* GDExtensionClassRecreateInstance - recreates an instance */
+static GDExtensionClassInstancePtr mansion_adapter_recreate_instance(
+    void *p_class_userdata,
+    GDExtensionObjectPtr p_object) {
+    (void)p_class_userdata;
+    (void)p_object;
+    
+    /* Recreate with default state */
+    return mansion_adapter_create_instance(p_class_userdata, false);
+}
+
+/* GDExtensionClassReference - increases reference count */
+static void mansion_adapter_reference(GDExtensionClassInstancePtr p_instance) {
+    if (!p_instance) {
+        return;
+    }
+    MansionAdapterInstance *instance = (MansionAdapterInstance *)p_instance;
+    instance->ref_count++;
+}
+
+/* GDExtensionClassUnreference - decreases reference count */
+static void mansion_adapter_unreference(GDExtensionClassInstancePtr p_instance) {
+    if (!p_instance) {
+        return;
+    }
+    MansionAdapterInstance *instance = (MansionAdapterInstance *)p_instance;
+    instance->ref_count--;
+}
+
+/* GDExtensionClassSet - sets a property value, returns GDExtensionBool */
 static GDExtensionBool mansion_adapter_set(
     GDExtensionClassInstancePtr p_instance,
     GDExtensionConstStringNamePtr p_name,
@@ -87,21 +157,21 @@ static GDExtensionBool mansion_adapter_set(
     (void)p_instance;
     (void)p_name;
     (void)p_value;
-    return false;
+    return false; /* No properties to set */
 }
 
-/* GDExtensionClassGet - returns GDExtensionBool */
+/* GDExtensionClassGet - gets a property value, returns GDExtensionBool */
 static GDExtensionBool mansion_adapter_get(
     GDExtensionClassInstancePtr p_instance,
     GDExtensionConstStringNamePtr p_name,
     GDExtensionVariantPtr r_ret) {
     (void)p_instance;
     (void)p_name;
-    (void)r_ret;
-    return false;
+    variant_new_nil(r_ret);
+    return false; /* No properties to get */
 }
 
-/* GDExtensionClassGetPropertyList - returns const GDExtensionPropertyInfo* */
+/* GDExtensionClassGetPropertyList - returns property list, or nullptr if none */
 static const GDExtensionPropertyInfo *mansion_adapter_get_property_list(
     GDExtensionClassInstancePtr p_instance,
     uint32_t *r_count) {
@@ -110,7 +180,7 @@ static const GDExtensionPropertyInfo *mansion_adapter_get_property_list(
     return nullptr;
 }
 
-/* GDExtensionClassFreePropertyList2 */
+/* GDExtensionClassFreePropertyList2 - frees property list */
 static void mansion_adapter_free_property_list(
     GDExtensionClassInstancePtr p_instance,
     const GDExtensionPropertyInfo *p_list,
@@ -126,7 +196,7 @@ static GDExtensionBool mansion_adapter_property_can_revert(
     GDExtensionConstStringNamePtr p_name) {
     (void)p_instance;
     (void)p_name;
-    return false;
+    return false; /* No properties can revert */
 }
 
 /* GDExtensionClassPropertyGetRevert - returns GDExtensionBool */
@@ -136,11 +206,11 @@ static GDExtensionBool mansion_adapter_property_get_revert(
     GDExtensionVariantPtr r_ret) {
     (void)p_instance;
     (void)p_name;
-    (void)r_ret;
-    return false;
+    variant_new_nil(r_ret);
+    return false; /* No properties to revert */
 }
 
-/* GDExtensionClassNotification2 */
+/* GDExtensionClassNotification2 - receives notifications */
 static void mansion_adapter_notification(
     GDExtensionClassInstancePtr p_instance,
     int32_t p_what,
@@ -150,52 +220,18 @@ static void mansion_adapter_notification(
     (void)p_reversed;
 }
 
-/* GDExtensionClassToString */
+/* GDExtensionClassToString - converts to string */
 static void mansion_adapter_to_string(
     GDExtensionClassInstancePtr p_instance,
     GDExtensionBool *r_is_valid,
     GDExtensionStringPtr p_out) {
     (void)p_instance;
     if (r_is_valid) {
-        *r_is_valid = false;
+        *r_is_valid = true;
     }
     if (p_out) {
         string_new_with_latin1_chars(p_out, "MansionAdapter");
     }
-}
-
-/* GDExtensionClassReference */
-static void mansion_adapter_reference(GDExtensionClassInstancePtr p_instance) {
-    (void)p_instance;
-}
-
-/* GDExtensionClassUnreference */
-static void mansion_adapter_unreference(GDExtensionClassInstancePtr p_instance) {
-    (void)p_instance;
-}
-
-/* GDExtensionClassCreateInstance3 */
-static GDExtensionObjectPtr mansion_adapter_create_instance(
-    void *p_class_userdata,
-    GDExtensionBool p_notify_postinitialize) {
-    (void)p_class_userdata;
-    (void)p_notify_postinitialize;
-    return nullptr;
-}
-
-/* GDExtensionClassFreeInstance */
-static void mansion_adapter_free_instance(void *p_class_userdata, GDExtensionClassInstancePtr p_instance) {
-    (void)p_class_userdata;
-    (void)p_instance;
-}
-
-/* GDExtensionClassRecreateInstance */
-static GDExtensionClassInstancePtr mansion_adapter_recreate_instance(
-    void *p_class_userdata,
-    GDExtensionObjectPtr p_object) {
-    (void)p_class_userdata;
-    (void)p_object;
-    return nullptr;
 }
 
 /* Method: initialize(socket_name: String, debug: bool) -> bool */
@@ -208,7 +244,6 @@ static void mansion_adapter_initialize_call(
     GDExtensionCallError *r_error) {
     
     (void)method_userdata;
-    (void)p_args;
     
     if (r_error) {
         r_error->error = GDEXTENSION_CALL_OK;
@@ -226,15 +261,65 @@ static void mansion_adapter_initialize_call(
     
     MansionAdapterInstance *instance = (MansionAdapterInstance *)p_instance;
     
-    if (!instance || !instance->adapter) {
+    if (!instance) {
         if (r_error) {
             r_error->error = GDEXTENSION_CALL_ERROR_INSTANCE_IS_NULL;
         }
         return;
     }
     
-    /* The actual adapter is created by the GDScript side */
-    /* This is just a placeholder for the method signature */
+    /* Get the socket name and debug flag from arguments */
+    GDExtensionVariantType arg_type0 = variant_get_type(p_args[0]);
+    GDExtensionVariantType arg_type1 = variant_get_type(p_args[1]);
+    
+    if (arg_type0 != GDEXTENSION_VARIANT_TYPE_STRING || arg_type1 != GDEXTENSION_VARIANT_TYPE_BOOL) {
+        if (r_error) {
+            r_error->error = GDEXTENSION_CALL_ERROR_INVALID_ARGUMENT;
+        }
+        return;
+    }
+    
+    /* Extract socket name from Variant String */
+    /* In GDExtension, String is stored as a pointer in Variant */
+    GDExtensionStringPtr socket_str_ptr = *(GDExtensionStringPtr *)p_args[0];
+    
+    /* Get the UTF-8 characters from the string */
+    /* First get the required length */
+    GDExtensionInt str_len = string_to_utf8_chars(socket_str_ptr, nullptr, 0);
+    
+    /* Allocate buffer for the string (plus null terminator) */
+    char *socket_name_cstr = (char *)mem_alloc(str_len + 1);
+    if (!socket_name_cstr) {
+        if (r_error) {
+            r_error->error = GDEXTENSION_CALL_ERROR_INVALID_METHOD;
+        }
+        return;
+    }
+    
+    /* Convert to C string */
+    string_to_utf8_chars(socket_str_ptr, socket_name_cstr, str_len);
+    socket_name_cstr[str_len] = '\0';
+    
+    /* Create the adapter */
+    MansionGDExtensionConfig config;
+    memset(&config, 0, sizeof(config));
+    
+    config.socket_name = socket_name_cstr;
+    config.debug_logging = *(GDExtensionBool *)p_args[1];
+    
+    instance->adapter = mansion_gdextension_adapter_create(&config);
+    
+    /* Free the temporary buffer */
+    mem_free(socket_name_cstr);
+    
+    if (!instance->adapter) {
+        if (r_error) {
+            r_error->error = GDEXTENSION_CALL_ERROR_INVALID_METHOD;
+        }
+        GDExtensionBool result = false;
+        memcpy(r_return, &result, sizeof(GDExtensionBool));
+        return;
+    }
     
     /* Return true */
     GDExtensionBool result = true;
@@ -252,6 +337,7 @@ static void mansion_adapter_shutdown_call(
     
     (void)method_userdata;
     (void)p_args;
+    (void)r_return;
     
     if (r_error) {
         r_error->error = GDEXTENSION_CALL_OK;
@@ -428,16 +514,15 @@ static void mansion_register_class(GDExtensionClassLibraryPtr p_library) {
     static const char parent_class[] = "RefCounted";
     
     /* Create StringName for class name and parent class name */
-    GDExtensionUninitializedStringNamePtr class_name_sn_ptr;
-    GDExtensionUninitializedStringNamePtr parent_name_sn_ptr;
+    GDExtensionUninitializedStringNamePtr class_name_sn_storage = nullptr;
+    GDExtensionUninitializedStringNamePtr parent_name_sn_storage = nullptr;
     
     /* Always initialize string names - the function is always available in Godot 4.5+ */
-    string_name_new_with_latin1_chars(class_name_sn_ptr, class_name, false);
-    string_name_new_with_latin1_chars(parent_name_sn_ptr, parent_class, false);
+    string_name_new_with_latin1_chars(&class_name_sn_storage, class_name, false);
+    string_name_new_with_latin1_chars(&parent_name_sn_storage, parent_class, false);
     
-    /* Create StringName objects from the uninitialized pointers */
-    GDExtensionStringNamePtr class_name_sn = (GDExtensionStringNamePtr)class_name_sn_ptr;
-    GDExtensionStringNamePtr parent_name_sn = (GDExtensionStringNamePtr)parent_name_sn_ptr;
+    GDExtensionStringNamePtr class_name_sn = class_name_sn_storage;
+    GDExtensionStringNamePtr parent_name_sn = parent_name_sn_storage;
     
     /* Setup GDExtensionClassCreationInfo6 */
     GDExtensionClassCreationInfo6 class_info = {0};
@@ -447,8 +532,6 @@ static void mansion_register_class(GDExtensionClassLibraryPtr p_library) {
     class_info.is_runtime = true;
     class_info.icon_path = nullptr;
     class_info.class_userdata = nullptr;
-    
-    /* Instance binding callbacks */
     class_info.set_func = mansion_adapter_set;
     class_info.get_func = mansion_adapter_get;
     class_info.get_property_list_func = mansion_adapter_get_property_list;
@@ -460,13 +543,9 @@ static void mansion_register_class(GDExtensionClassLibraryPtr p_library) {
     class_info.to_string_func = mansion_adapter_to_string;
     class_info.reference_func = mansion_adapter_reference;
     class_info.unreference_func = mansion_adapter_unreference;
-    
-    /* Instance creation */
     class_info.create_instance_func = mansion_adapter_create_instance;
     class_info.free_instance_func = mansion_adapter_free_instance;
     class_info.recreate_instance_func = mansion_adapter_recreate_instance;
-    
-    /* Virtual method handling */
     class_info.get_virtual_func = nullptr;
     class_info.get_virtual_call_data_func = nullptr;
     class_info.call_virtual_with_data_func = nullptr;
@@ -477,7 +556,7 @@ static void mansion_register_class(GDExtensionClassLibraryPtr p_library) {
     }
     
     /* Register methods */
-    GDExtensionUninitializedStringNamePtr method_name_sn_ptr;
+    GDExtensionUninitializedStringNamePtr method_name_sn_storage = nullptr;
     
     /* initialize method */
     GDExtensionClassMethodInfo method_info;
@@ -492,8 +571,8 @@ static void mansion_register_class(GDExtensionClassLibraryPtr p_library) {
     method_info.default_argument_count = 0;
     method_info.default_arguments = nullptr;
     
-    string_name_new_with_latin1_chars(method_name_sn_ptr, "initialize", false);
-    GDExtensionStringNamePtr method_name_sn = (GDExtensionStringNamePtr)method_name_sn_ptr;
+    string_name_new_with_latin1_chars(&method_name_sn_storage, "initialize", false);
+    GDExtensionStringNamePtr method_name_sn = method_name_sn_storage;
     method_info.name = method_name_sn;
     method_info.method_userdata = nullptr;
     method_info.call_func = mansion_adapter_initialize_call;
@@ -509,7 +588,7 @@ static void mansion_register_class(GDExtensionClassLibraryPtr p_library) {
     method_info.has_return_value = false;
     method_info.argument_count = 0;
     
-    string_name_new_with_latin1_chars(method_name_sn_ptr, "shutdown", false);
+    string_name_new_with_latin1_chars(&method_name_sn_storage, "shutdown", false);
     method_info.name = method_name_sn;
     method_info.method_userdata = nullptr;
     method_info.call_func = mansion_adapter_shutdown_call;
@@ -525,7 +604,7 @@ static void mansion_register_class(GDExtensionClassLibraryPtr p_library) {
     method_info.has_return_value = false;
     method_info.argument_count = 0;
     
-    string_name_new_with_latin1_chars(method_name_sn_ptr, "destroy", false);
+    string_name_new_with_latin1_chars(&method_name_sn_storage, "destroy", false);
     method_info.name = method_name_sn;
     method_info.method_userdata = nullptr;
     method_info.call_func = mansion_adapter_destroy_call;
@@ -543,7 +622,7 @@ static void mansion_register_class(GDExtensionClassLibraryPtr p_library) {
     method_info.return_value_metadata = GDEXTENSION_METHOD_ARGUMENT_METADATA_NONE;
     method_info.argument_count = 0;
     
-    string_name_new_with_latin1_chars(method_name_sn_ptr, "pump", false);
+    string_name_new_with_latin1_chars(&method_name_sn_storage, "pump", false);
     method_info.name = method_name_sn;
     method_info.method_userdata = nullptr;
     method_info.call_func = mansion_adapter_pump_call;
@@ -561,7 +640,7 @@ static void mansion_register_class(GDExtensionClassLibraryPtr p_library) {
     method_info.return_value_metadata = GDEXTENSION_METHOD_ARGUMENT_METADATA_NONE;
     method_info.argument_count = 0;
     
-    string_name_new_with_latin1_chars(method_name_sn_ptr, "flush", false);
+    string_name_new_with_latin1_chars(&method_name_sn_storage, "flush", false);
     method_info.name = method_name_sn;
     method_info.method_userdata = nullptr;
     method_info.call_func = mansion_adapter_flush_call;
@@ -579,7 +658,7 @@ static void mansion_register_class(GDExtensionClassLibraryPtr p_library) {
     method_info.return_value_metadata = GDEXTENSION_METHOD_ARGUMENT_METADATA_NONE;
     method_info.argument_count = 0;
     
-    string_name_new_with_latin1_chars(method_name_sn_ptr, "get_focused_serial", false);
+    string_name_new_with_latin1_chars(&method_name_sn_storage, "get_focused_serial", false);
     method_info.name = method_name_sn;
     method_info.method_userdata = nullptr;
     method_info.call_func = mansion_adapter_get_focused_serial_call;
@@ -596,33 +675,50 @@ static GDExtensionBool mansion_extension_init(
     GDExtensionClassLibraryPtr p_library,
     GDExtensionInitialization *r_initialization) {
     
-    fprintf(stderr, "[mansion] Initialization started\n");
+    FILE *log = fopen("/tmp/gdextension_init.log", "a");
+    if (log) {
+        fprintf(log, "[mansion] Initialization started\n");
+        fflush(log);
+    }
     
     /* Initialize interface function pointers */
+    if (log) fprintf(log, "[mansion] Initializing interface functions\n");
     init_interface_functions(p_get_proc_address);
     
+    if (log) fprintf(log, "[mansion] Registering class\n");
     /* Register our class */
     mansion_register_class(p_library);
     
+    if (log) fprintf(log, "[mansion] Setting initialization level\n");
     /* Set initialization level */
     r_initialization->minimum_initialization_level = GDEXTENSION_INITIALIZATION_CORE;
     r_initialization->userdata = nullptr;
     r_initialization->initialize = nullptr;
     r_initialization->deinitialize = nullptr;
     
-    fprintf(stderr, "[mansion] Initialization complete\n");
+    if (log) {
+        fprintf(log, "[mansion] Initialization complete\n");
+        fflush(log);
+        fclose(log);
+    }
     return true;
 }
 
-/* GDExtension entry point - must be exported as C symbol */
+/* GDExtension entry point - must be exported as C symbol with default visibility */
 extern "C" {
 
-GDExtensionBool GDExtensionInit(
+/* Mark GDExtensionInit with default visibility even when -fvisibility=hidden is used */
+GDExtensionBool __attribute__((visibility("default"))) GDExtensionInit(
     GDExtensionInterfaceGetProcAddress p_get_proc_address,
     GDExtensionClassLibraryPtr p_library,
     GDExtensionInitialization *r_initialization) {
     
     return mansion_extension_init(p_get_proc_address, p_library, r_initialization);
+}
+
+/* Mark GDExtensionExtensionDestroy with default visibility even when -fvisibility=hidden is used */
+void __attribute__((visibility("default"))) GDExtensionExtensionDestroy(GDExtensionClassLibraryPtr p_library) {
+    /* No cleanup needed - the extension doesn't allocate global resources */
 }
 
 } /* extern "C" */
