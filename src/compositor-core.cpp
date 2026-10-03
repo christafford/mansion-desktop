@@ -1,5 +1,6 @@
 #include <cstring>
-#include <iostream>
+#include <algorithm>
+#include <new>
 
 #include <wayland-server-protocol.h>
 #include <wayland-util.h>
@@ -9,61 +10,41 @@
 
 /* ---------- surface ---------- */
 
-static constexpr int kMaxOrphanedSurfaces = 10;
+static void frame_callback_destroyed(struct wl_resource* resource) {
+    wl_list_remove(wl_resource_get_link(resource));
+}
 
 static void surface_destroy_callback(struct wl_resource* resource) {
     auto* surface = static_cast<MansionSurface*>(wl_resource_get_user_data(resource));
     if (!surface) return;
-
     wl_list_remove(&surface->link);
-
-    /* Fire remaining frame callbacks so clients are not left waiting. */
-    struct wl_resource *cb, *cb_next;
-    wl_list_for_each_safe(cb, cb_next, &surface->frame_callback_list, link) {
-        wl_list_remove(wl_resource_get_link(cb));
-        wl_callback_send_done(cb, 0);
-        wl_resource_destroy(cb);
+    wl_list_remove(&surface->buffer_destroy_listener.link);
+    wl_list_init(&surface->buffer_destroy_listener.link);
+    while (!wl_list_empty(&surface->frame_callback_list)) {
+        wl_resource_destroy(wl_resource_from_link(surface->frame_callback_list.next));
     }
-
-    /* Note: focus clearing is handled by display layer via compositor_core_clear_focus()
-     * after the surface destruction notification. This avoids calling input.h functions. */
-
-    /* Insert at tail (newest last). If the list exceeds the max, evict
-     * the oldest surface (first in the list) and free its resources. */
-    if (surface->compositor->orphaned_surfaces.next != &surface->compositor->orphaned_surfaces) {
-        int count = 0;
-        MansionSurface *s;
-        wl_list_for_each(s, &surface->compositor->orphaned_surfaces, link) {
-            (void)s;
-            count++;
-        }
-        if (count >= kMaxOrphanedSurfaces) {
-            MansionSurface* oldest = wl_container_of(
-                surface->compositor->orphaned_surfaces.next, oldest, link);
-            wl_list_remove(&oldest->link);
-            delete oldest;
-        }
+    if (surface->compositor->focused_surface_resource == resource) {
+        compositor_core_clear_focus(surface->compositor);
     }
-
-    wl_list_insert(surface->compositor->orphaned_surfaces.prev, &surface->link);
+    // A renderer-independent core does not retain dead Wayland resources as art.
+    // A future owned frame snapshot has its own lifetime, independent of this.
+    wl_resource_set_user_data(resource, nullptr);
+    delete surface;
 }
 
 static void surface_destroy(struct wl_client* client, struct wl_resource* resource) {
-    (void)client; (void)resource;
+    (void)client;
+    wl_resource_destroy(resource);
 }
 
 /* Buffer destroy listener — fires when the client destroys the wl_buffer proxy. */
 static void buffer_destroy_notify(struct wl_listener* listener, void* data) {
-    (void)data;
     MansionSurface* surface = wl_container_of(listener, surface, buffer_destroy_listener);
-
-    if (!surface) return;
+    wl_list_remove(&listener->link);
+    wl_list_init(&listener->link);
+    if (surface->buffer_resource == data) surface->buffer_resource = nullptr;
+    if (surface->pending_buffer_resource == data) surface->pending_buffer_resource = nullptr;
     surface->buffer_destroyed = true;
-    surface->buffer_resource = nullptr;
-
-    /* The GL texture is a pixel copy (glTexImage2D) and remains valid
-     * for orphaned-surface rendering. We delete it on re-upload in
-     * render_panel() where we also create the new texture. */
 }
 
 static void surface_attach(struct wl_client* client, struct wl_resource* resource,
@@ -76,6 +57,7 @@ static void surface_attach(struct wl_client* client, struct wl_resource* resourc
      * pending buffer below (or not at all if the new buffer is null). */
     if (!wl_list_empty(&surface->buffer_destroy_listener.link)) {
         wl_list_remove(&surface->buffer_destroy_listener.link);
+        wl_list_init(&surface->buffer_destroy_listener.link);
     }
 
     surface->pending_buffer_resource = buffer_resource;
@@ -198,6 +180,7 @@ static void surface_frame(struct wl_client* client, struct wl_resource* resource
         wl_client_post_no_memory(client);
         return;
     }
+    wl_resource_set_destructor(cb, frame_callback_destroyed);
     wl_list_insert(&surface->frame_callback_list, wl_resource_get_link(cb));
 }
 
@@ -270,8 +253,12 @@ static void compositor_create_surface(struct wl_client* client, struct wl_resour
                                        uint32_t id) {
     auto* compositor = static_cast<MansionCompositor*>(wl_resource_get_user_data(compositor_resource));
 
-    auto* surface = new MansionSurface;
-    surface->resource = wl_resource_create(client, &wl_surface_interface, 4, id);
+    auto* surface = new (std::nothrow) MansionSurface{};
+    if (!surface) {
+        wl_client_post_no_memory(client);
+        return;
+    }
+    surface->resource = wl_resource_create(client, &wl_surface_interface, wl_resource_get_version(compositor_resource), id);
     if (!surface->resource) {
         delete surface;
         wl_client_post_no_memory(client);
@@ -332,9 +319,7 @@ static const struct wl_compositor_interface compositor_impl = {
 
 static void compositor_bind(struct wl_client* client, void* data, uint32_t version, uint32_t id) {
     auto* compositor = static_cast<MansionCompositor*>(data);
-    (void)version;
-
-    auto* resource = wl_resource_create(client, &wl_compositor_interface, 4, id);
+    auto* resource = wl_resource_create(client, &wl_compositor_interface, std::min(version, 4u), id);
     if (!resource) {
         wl_client_post_no_memory(client);
         return;
@@ -345,7 +330,9 @@ static void compositor_bind(struct wl_client* client, void* data, uint32_t versi
 /* ---------- Core API implementation ---------- */
 
 struct MansionCompositor* compositor_core_create(struct wl_display* display) {
-    auto* compositor = new MansionCompositor{};
+    if (!display) return nullptr;
+    auto* compositor = new (std::nothrow) MansionCompositor{};
+    if (!compositor) return nullptr;
     wl_list_init(&compositor->surface_list);
     wl_list_init(&compositor->orphaned_surfaces);
     wl_list_init(&compositor->toplevel_list);
@@ -434,14 +421,16 @@ void compositor_core_connect_seat(struct MansionCompositor* compositor,
 
 struct wl_resource* compositor_core_surface_first(struct wl_list* surface_list) {
     if (!surface_list || wl_list_empty(surface_list)) return nullptr;
-    return wl_resource_from_link(surface_list->next);
+    MansionSurface* surface = wl_container_of(surface_list->next, surface, link);
+    return surface->resource;
 }
 
 struct wl_resource* compositor_core_surface_next(struct wl_resource* resource) {
     if (!resource) return nullptr;
-    struct wl_list* link = wl_resource_get_link(resource);
-    if (link->next == link) return nullptr;  /* Only element in list */
-    return wl_resource_from_link(link->next);
+    auto* surface = static_cast<MansionSurface*>(wl_resource_get_user_data(resource));
+    if (!surface || surface->link.next == &surface->compositor->surface_list) return nullptr;
+    MansionSurface* next = wl_container_of(surface->link.next, next, link);
+    return next->resource;
 }
 
 void* compositor_core_surface_get_user_data(struct wl_resource* resource) {
@@ -458,7 +447,11 @@ struct wl_resource* compositor_core_create_surface(struct MansionCompositor* com
                                                    uint32_t id) {
     if (!compositor || !client) return nullptr;
 
-    auto* surface = new MansionSurface;
+    auto* surface = new (std::nothrow) MansionSurface{};
+    if (!surface) {
+        wl_client_post_no_memory(client);
+        return nullptr;
+    }
     surface->resource = wl_resource_create(client, &wl_surface_interface, 4, id);
     if (!surface->resource) {
         delete surface;

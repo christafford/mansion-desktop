@@ -246,3 +246,13 @@ empty_gdextension = shared_library('mansion_godot_empty',
     dependencies: [],
     install: false,
 )
+
+# Real socket/resource lifecycle, also exercised through the Godot binding.
+runtime_client = executable('runtime-client',
+    'tests/runtime-client.c', dependencies: wayland_client)
+runtime_lifecycle_test = executable('test_compositor_runtime',
+    'tests/test_compositor_runtime.cpp', 'src/compositor-runtime.cpp',
+    cpp_args: cpp_args, include_directories: include_directories('src'),
+    dependencies: wayland_server, link_with: compositor_core_lib)
+test('compositor-runtime', runtime_lifecycle_test,
+    args: [runtime_client.full_path()], suite: 'p21', timeout: 30)

@@ -10,8 +10,8 @@ and configure commands. See [GODOT-INTEGRATION.md](GODOT-INTEGRATION.md).
 The older snapshot choice in P4-T15 is superseded by P21-T11/T12. Subsequent
 sections describe still-useful ownership boundaries, not an alternate work order.
 Current recovery (2026-10-03): the Godot study renders imported furniture and
-has a collision-based controller. A partial C++ core library exists; fixture
-socket/seat/xdg lifecycle acceptance remains open. The original addon is isolated
+has a collision-based controller. The extracted C++ core now passes real fixture
+socket/surface lifecycle checks through Godot; seat/xdg acceptance remains open. The original addon is isolated
 because registration crashes. A separate standard-binding regression establishes
 the binding boundary before compositor work. See STATUS.md for current evidence.
 

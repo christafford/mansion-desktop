@@ -1,5 +1,6 @@
 // Small load/call/lifetime regression for the standard godot-cpp boundary.
-// No compositor ownership is established by this probe.
+// The separate MansionCompositorSession class owns the lifecycle under test.
+#include "compositor_session.h"
 #include <godot_cpp/classes/ref_counted.hpp>
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/godot.hpp>
@@ -21,6 +22,7 @@ public:
 void initialize(godot::ModuleInitializationLevel level) {
     if (level == godot::MODULE_INITIALIZATION_LEVEL_SCENE) {
         GDREGISTER_CLASS(MansionBindingProbe);
+        GDREGISTER_CLASS(MansionCompositorSession);
     }
 }
 

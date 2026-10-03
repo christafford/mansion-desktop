@@ -5,8 +5,9 @@ The Godot study now renders real furniture and supports movement (P21-T36).
 The legacy `--room-camera` executable remains separate. The experimental
 compositor addon is preserved but ignored because it crashes during registration.
 The standard binding probe (P21-T37) is isolated under `tests/godot-binding/`.
-A callable probe is not a working compositor adapter; T10/T11 lifecycle and
-T12/T13 pixel delivery still require their own evidence. See [STATUS.md](STATUS.md).
+The standard binding now serves a real wl_compositor/shm fixture with verified
+socket/resource cleanup (T38). Seat/xdg integration and T12/T13 pixel delivery
+still require their own evidence; the study does not start this server yet. See [STATUS.md](STATUS.md).
 
 ## Build and ownership
 

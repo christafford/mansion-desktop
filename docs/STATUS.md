@@ -7,14 +7,16 @@ is historical; its extension/visual completion claims were contradicted by tests
 
 ## Next task
 
-**P21-T38: connect the recovered binding to a verified compositor lifecycle.**
-P21-T36 frontend recovery and P21-T37 minimal standard binding pass their bounded
-acceptance. See [tasks](TASKS.md), [frontend handoff](handoffs/14-godot-frontend-recovery.md)
-and [binding handoff](handoffs/16-godot-binding-recovery.md). Next prove a private
-socket, actual fixture client, nonblocking server pump and clean shutdown before
-adding pixel delivery. The old addon remains isolated.
-Broader T00–T19 gates remain unchecked until their complete evidence exists;
-these recovery subtasks do not pass the full product or provenance gates.
+**P21-T39: restore xdg-shell and seat in the recovered core runtime.**
+P21-T36 (visible frontend), T37 (standard binding), and T38 (real Wayland
+socket/client lifecycle) pass their bounded acceptance. See [tasks](TASKS.md),
+[frontend handoff](handoffs/14-godot-frontend-recovery.md),
+[binding handoff](handoffs/16-godot-binding-recovery.md), and
+[lifecycle handoff](handoffs/17-godot-compositor-lifecycle.md).
+Next reuse the existing xdg-shell/seat code and prove configure/ack/commit
+through Godot before snapshots or terminal launch. The study still displays
+an inactive monitor; its scene does not yet start the tested server.
+Broader T00–T19 gates remain unchecked until their full evidence exists.
 
 ## Run the visible Godot frontend
 
@@ -41,7 +43,11 @@ returns to arrival; M toggles slow walking and Shift slows while held.
   These are injected controller events, not a physical-input or human trial.
 - Standard C++ binding: fresh import and three clean runtime processes, 300
   native instances/calls/releases. Separate build uses consistent generated headers.
-- C++ build and 31/31 Meson tests pass; 62/62 Node plugin tests pass.
+- Real Wayland lifecycle: nine standalone and nine Godot trials, including
+  explicit surface destruction, abrupt disconnect and stop with connected clients.
+  Godot frames advance; server cleanup removes its socket and private directory.
+- Standalone core/runtime AddressSanitizer + UBSan + enabled leak detection pass.
+- C++ build and 32/32 Meson tests pass; 62/62 Node plugin tests passed during T36.
   They do not validate live Godot compositor integration.
 - The local editor's first-import shutdown race has a tested paced-startup
   workaround, not an engine fix; see [TOOLCHAIN.md](TOOLCHAIN.md).
@@ -65,8 +71,8 @@ orientation fixes worked. No owner acceptance of the recovered Godot scene yet.
   close/relaunch and owned snapshots in Godot.
 - Original addon initialization: reproduced segmentation fault; isolated with
   `world/addons/mansion_godot/.gdignore`, source and binary preserved.
-- Full renderer-independent compositor extraction: existing library/test are
-  partial; fixture socket/seat/xdg lifecycle acceptance remains open.
+- Full renderer-independent compositor extraction: socket/wl_compositor/shm
+  lifecycle passes; seat and xdg-shell adaptation/acceptance remain open.
 - Finished art rubric, furniture selection/cohesion, performance, physical host
   input and human comfort. No blank capture counts as visual acceptance.
 - Fresh-clone dependency provenance and asset fetching/offline negative checks.

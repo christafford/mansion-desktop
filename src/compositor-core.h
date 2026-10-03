@@ -16,7 +16,7 @@ struct MansionSeat;
 struct MansionCompositor* compositor_core_create(struct wl_display* display);
 
 /* Destroy the compositor and free all resources.
- * NOTE: Display layer must clean up renderer surfaces before calling this. */
+ * Destroy its clients first; bound protocol resources refer to this core. */
 void compositor_core_destroy(struct MansionCompositor* compositor);
 
 /* Get the Wayland display associated with the compositor. */
@@ -86,14 +86,12 @@ typedef void (*surface_commit_callback)(struct wl_resource* surface_resource,
 /* ---------- Surface lifecycle (core layer) ---------- */
 
 /* Create a new surface with only core protocol state.
- * Display layer must initialize renderer surface separately.
  * Returns nullptr on failure (client must be from wl_compositor interface handler). */
 struct wl_resource* compositor_core_create_surface(struct MansionCompositor* compositor,
                                                    struct wl_client* client,
                                                    uint32_t id);
 
-/* Destroy a surface (core state only).
- * Display layer must clean up renderer surface before calling. */
+/* Destroy a surface and its protocol state; owned snapshots must be separate. */
 void compositor_core_destroy_surface(struct wl_resource* surface_resource);
 
 /* Set the commit callback for a surface.

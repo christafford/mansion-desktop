@@ -28,7 +28,7 @@ P2-T05 GPU import remains open and is not a prerequisite for this CPU bridge.
 
 ## Instructions for the next autonomous run
 
-T36/T37 passed; current recovery continues with T38; do not start a broad autocontinue run.
+T36/T37/T38 passed; current recovery continues with T39; do not start a broad autocontinue run.
 The eventual first useful product milestone ends at T19.
 Do not use a broad Projects 1–21 scope: that mixes deferred legacy tasks with
 this work. This document update does not itself start an autonomous run.
@@ -98,7 +98,7 @@ Do not launch another broad overnight range before the new boundaries pass.
 
   Evidence: [binding recovery](handoffs/16-godot-binding-recovery.md).
 
-- [ ] **P21-T38 Connect the recovered binding to a verified compositor lifecycle.**
+- [x] **P21-T38 Connect the recovered binding to a verified compositor lifecycle.**
   **Depends:** P21-T37.
   This is bounded recovery of T10/T11, not acceptance of either full gate.
   Inspect the partial core and preserve the existing compositor's real protocol
@@ -112,6 +112,21 @@ Do not launch another broad overnight range before the new boundaries pass.
   **Acceptance:** a real client connects and is served while Godot continues
   processing frames, repeated shutdown is clean, and no GL/display dependency
   enters the reusable core. Preserve pending provenance/art tasks separately.
+
+  Evidence: [compositor lifecycle](handoffs/17-godot-compositor-lifecycle.md).
+
+- [ ] **P21-T39 Restore xdg-shell and seat in the recovered core runtime.**
+  **Depends:** P21-T38.
+  Inspect and adapt the existing `xdg-shell.cpp` and `input.cpp`; keep policy and
+  legacy renderer calls outside the reusable core. Register the real globals
+  through the owned runtime; preserve existing protocol behavior and tests.
+  Extend the actual client fixture to verify initial xdg configure/ack/commit,
+  seat discovery and client/resource teardown through Godot. Keep the headless
+  core library independent of EGL/GLES and the legacy display loop.
+  **Acceptance:** fixture handshake and repeated lifecycle checks pass through
+  both standalone core and Godot, regression suite passes, and ownership is
+  explicit. Terminal usability, input mapping and live pixel delivery remain
+  separate gates. Do not substitute stub globals or a new compositor.
 
 
 - [ ] **P21-T00 Repair and verify the toolchain baseline.**
