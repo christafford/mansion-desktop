@@ -4,6 +4,7 @@
 
 struct MansionXdgSurface;
 struct MansionSeat;
+struct CoreFrameState;
 
 /* Forward declaration for the toplevel list link. */
 struct wl_list;
@@ -25,6 +26,7 @@ typedef void (*surface_commit_callback)(struct wl_resource* surface_resource,
  * by the rendering layer (renderer-surface.h) and accessed via
  * display.h accessor functions. */
 struct MansionSurface {
+    CoreFrameState* core_frame = nullptr; // Used only by compositor-core.
     struct wl_resource* resource;
     struct wl_list link;
 

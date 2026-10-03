@@ -1,6 +1,10 @@
 #include <cstring>
 #include <algorithm>
 #include <new>
+#include <atomic>
+#include <limits>
+#include <chrono>
+#include "core-frame-state.h"
 
 #include <wayland-server-protocol.h>
 #include <wayland-util.h>
@@ -27,8 +31,10 @@ static void surface_destroy_callback(struct wl_resource* resource) {
     if (surface->compositor->focused_surface_resource == resource) {
         compositor_core_clear_focus(surface->compositor);
     }
-    // A renderer-independent core does not retain dead Wayland resources as art.
-    // A future owned frame snapshot has its own lifetime, independent of this.
+    while (!wl_list_empty(&surface->core_frame->committed_callbacks))
+        wl_resource_destroy(wl_resource_from_link(surface->core_frame->committed_callbacks.next));
+    delete surface->core_frame;
+    // A retained OwnedFrame has its own lifetime after the surface disappears.
     wl_resource_set_user_data(resource, nullptr);
     delete surface;
 }
@@ -43,9 +49,12 @@ static void buffer_destroy_notify(struct wl_listener* listener, void* data) {
     MansionSurface* surface = wl_container_of(listener, surface, buffer_destroy_listener);
     wl_list_remove(&listener->link);
     wl_list_init(&listener->link);
-    if (surface->buffer_resource == data) surface->buffer_resource = nullptr;
-    if (surface->pending_buffer_resource == data) surface->pending_buffer_resource = nullptr;
-    surface->buffer_destroyed = true;
+    if (surface->pending_buffer_resource == data) {
+        surface->pending_buffer_resource = nullptr;
+        // A destroyed pending buffer is unspecified by Wayland. Preserve the
+        // last owned content; only an explicit null attach detaches it.
+        surface->core_frame->pending_attach = false;
+    }
 }
 
 static void surface_attach(struct wl_client* client, struct wl_resource* resource,
@@ -53,124 +62,136 @@ static void surface_attach(struct wl_client* client, struct wl_resource* resourc
     (void)client; (void)x; (void)y;
     auto* surface = static_cast<MansionSurface*>(wl_resource_get_user_data(resource));
 
-    /* Always remove the listener — it may be registered for the current
-     * buffer from a previous commit. We will re-register it for the new
-     * pending buffer below (or not at all if the new buffer is null). */
-    if (!wl_list_empty(&surface->buffer_destroy_listener.link)) {
-        wl_list_remove(&surface->buffer_destroy_listener.link);
-        wl_list_init(&surface->buffer_destroy_listener.link);
-    }
-
+    wl_list_remove(&surface->buffer_destroy_listener.link);
+    wl_list_init(&surface->buffer_destroy_listener.link);
     surface->pending_buffer_resource = buffer_resource;
+    surface->core_frame->pending_attach = true;
     surface->has_pending_position = true;
     surface->pending_x = x;
     surface->pending_y = y;
-
-    if (buffer_resource != nullptr) {
-        /* Validate stride for shm buffers. */
-        auto* shm_buf = wl_shm_buffer_get(buffer_resource);
-        if (shm_buf) {
-            int32_t stride = wl_shm_buffer_get_stride(shm_buf);
-            int32_t fmt_w = wl_shm_buffer_get_width(shm_buf);
-            /* Stride must be at least enough for one pixel row of the given format. */
-            int32_t min_stride = fmt_w * 4;  /* ARGB8888 = 4 bytes/pixel */
-            if (stride < min_stride || stride % 4 != 0) {
-                wl_resource_post_error(buffer_resource, WL_SHM_ERROR_INVALID_STRIDE,
-                    "invalid stride %d for width %d (min %d)",
-                    stride, fmt_w, min_stride);
-                surface->pending_buffer_resource = nullptr;
-                return;
-            }
-        }
-
-        surface->buffer_destroyed = false;
-        /* Listen for pending buffer destruction. */
+    if (buffer_resource) {
         surface->buffer_destroy_listener.notify = buffer_destroy_notify;
         wl_resource_add_destroy_listener(buffer_resource, &surface->buffer_destroy_listener);
-    } else {
-        surface->buffer_destroyed = false;
     }
 }
 
-static void surface_damage(struct wl_client* client, struct wl_resource* resource,
-                           int32_t x, int32_t y, int32_t width, int32_t height) {
-    (void)client;
+static void surface_damage(struct wl_client*, struct wl_resource* resource,
+                           int32_t, int32_t, int32_t width, int32_t height) {
+    // Full-frame copies deliberately subsume damage, without rectangle overflow.
     auto* surface = static_cast<MansionSurface*>(wl_resource_get_user_data(resource));
-    (void)surface; (void)x; (void)y; (void)width; (void)height;
-    /* Accumulate damage into a single bounding box. */
-    if (surface->damage_count == 0) {
-        surface->pending_x_damage = x;
-        surface->pending_y_damage = y;
-        surface->pending_w_damage = width;
-        surface->pending_h_damage = height;
-    } else {
-        /* Expand bounding box to include new damage. */
-        if (x < surface->pending_x_damage)
-            surface->pending_x_damage = x;
-        if (y < surface->pending_y_damage)
-            surface->pending_y_damage = y;
-        int32_t right = x + width;
-        int32_t bottom = y + height;
-        int32_t cur_right = surface->pending_x_damage + surface->pending_w_damage;
-        int32_t cur_bottom = surface->pending_y_damage + surface->pending_h_damage;
-        if (right > cur_right)
-            surface->pending_w_damage = right - surface->pending_x_damage;
-        if (bottom > cur_bottom)
-            surface->pending_h_damage = bottom - surface->pending_y_damage;
+    if (width > 0 && height > 0) surface->damage_count = 1;
+}
+
+static bool copy_frame(MansionSurface* surface, mansion::FrameSnapshot& frame) {
+    auto* buffer = wl_shm_buffer_get(surface->pending_buffer_resource);
+    if (!buffer) {
+        wl_client_post_implementation_error(wl_resource_get_client(surface->resource),
+                               "Mansion frame bridge requires wl_shm buffers");
+        return false;
     }
-    surface->damage_count++;
+    const int width = wl_shm_buffer_get_width(buffer), height = wl_shm_buffer_get_height(buffer);
+    const int stride = wl_shm_buffer_get_stride(buffer);
+    const uint32_t format = wl_shm_buffer_get_format(buffer);
+    if (format != WL_SHM_FORMAT_ARGB8888 && format != WL_SHM_FORMAT_XRGB8888) {
+        wl_client_post_implementation_error(wl_resource_get_client(surface->resource),
+                               "Mansion frame bridge supports only ARGB8888/XRGB8888");
+        return false;
+    }
+    // Bounds cover multiplication, the client stride and allocation. The total
+    // cap counts frames retained by this compositor; caller-owned copies are separate.
+    constexpr size_t max_frame_bytes = 64u * 1024 * 1024;
+    constexpr size_t max_compositor_bytes = 256u * 1024 * 1024;
+    if (width <= 0 || height <= 0 || int64_t(stride) < int64_t(width) * 4 ||
+        uint64_t(width) * height > max_frame_bytes / 4) {
+        wl_client_post_implementation_error(wl_resource_get_client(surface->resource),
+                               "shm frame exceeds supported dimensions/64 MiB limit");
+        return false;
+    }
+    const size_t bytes = size_t(width) * height * 4;
+    size_t retained = bytes;
+    MansionSurface* other;
+    wl_list_for_each(other, &surface->compositor->surface_list, link) {
+        if (other != surface && other->core_frame && other->core_frame->frame)
+            retained += other->core_frame->frame->pixels.size();
+    }
+    if (retained > max_compositor_bytes) {
+        wl_client_post_implementation_error(wl_resource_get_client(surface->resource),
+                               "compositor frame storage exceeds 256 MiB limit");
+        return false;
+    }
+    frame.width = width; frame.height = height; frame.stride = width * 4;
+    frame.source_format = format; frame.source_stride = stride; frame.mapped = true;
+    frame.pixels.resize(bytes);
+    wl_shm_buffer_begin_access(buffer);
+    const auto* source = static_cast<const uint8_t*>(wl_shm_buffer_get_data(buffer));
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            uint32_t pixel;
+            std::memcpy(&pixel, source + size_t(y) * stride + size_t(x) * 4, 4);
+            uint32_t alpha = format == WL_SHM_FORMAT_XRGB8888 ? 255 : pixel >> 24;
+            auto* target = frame.pixels.data() + (size_t(y) * width + x) * 4;
+            for (int c = 0; c < 3; ++c) {
+                const uint32_t premultiplied = (pixel >> (16 - 8 * c)) & 255;
+                target[c] = alpha ? std::min(255u, (premultiplied * 255 + alpha / 2) / alpha) : 0;
+            }
+            target[3] = alpha;
+        }
+    }
+    wl_shm_buffer_end_access(buffer);
+    return true;
 }
 
 static void surface_commit(struct wl_client* client, struct wl_resource* resource) {
-    (void)client;
     auto* surface = static_cast<MansionSurface*>(wl_resource_get_user_data(resource));
-
-    if (surface->xdg_surface) xdg_shell_on_surface_commit(surface->xdg_surface);
-
-    /* Apply pending position. */
-    if (surface->has_pending_position) {
-        surface->current_x = surface->pending_x;
-        surface->current_y = surface->pending_y;
-        surface->has_current_position = true;
-        surface->has_pending_position = false;
-    }
-
-    /* Apply pending buffer: promote pending to current.
-     * The old buffer is released in render_surface() after being
-     * rendered. This matches the simple headless compositor model. */
-
-    if (surface->pending_buffer_resource) {
-        auto* shm_buf = wl_shm_buffer_get(surface->pending_buffer_resource);
-        if (shm_buf) {
-            surface->width = wl_shm_buffer_get_width(shm_buf);
-            surface->height = wl_shm_buffer_get_height(shm_buf);
+    auto& state = *surface->core_frame;
+    if (surface->xdg_surface && !xdg_shell_on_surface_commit(surface->xdg_surface)) return;
+    const bool metadata_changed = state.scale != state.pending_scale || state.transform != state.pending_transform;
+    if (state.pending_attach || (metadata_changed && state.frame)) {
+        try {
+            auto next = state.pending_attach ? std::make_shared<mansion::FrameSnapshot>()
+                                             : std::make_shared<mansion::FrameSnapshot>(*state.frame);
+            if (state.pending_attach && surface->pending_buffer_resource && !copy_frame(surface, *next)) return;
+            next->scale = state.pending_scale; next->transform = state.pending_transform;
+            const bool rotated = next->transform & 1;
+            const int transformed_width = rotated ? next->height : next->width;
+            const int transformed_height = rotated ? next->width : next->height;
+            if (transformed_width % next->scale || transformed_height % next->scale) {
+                wl_resource_post_error(resource, WL_SURFACE_ERROR_INVALID_SIZE,
+                                       "buffer dimensions must be divisible by buffer scale");
+                return;
+            }
+            next->logical_width = transformed_width / next->scale;
+            next->logical_height = transformed_height / next->scale;
+            next->handle = state.handle; next->revision = ++state.revision;
+            state.frame = std::move(next);
+        } catch (const std::bad_alloc&) {
+            wl_client_post_no_memory(client);
+            return;
         }
-
-        /* Unregister destroy listener from old pending buffer (now becoming current). */
-        if (!wl_list_empty(&surface->buffer_destroy_listener.link)) {
-            wl_list_remove(&surface->buffer_destroy_listener.link);
-        }
-
-        /* Promote pending buffer to current. */
-        surface->buffer_resource = surface->pending_buffer_resource;
-        surface->buffer_destroyed = false;
-        surface->needs_upload = true;
-
-        /* Listen for current buffer destruction. */
-        surface->buffer_destroy_listener.notify = buffer_destroy_notify;
-        wl_resource_add_destroy_listener(surface->pending_buffer_resource,
-                                         &surface->buffer_destroy_listener);
+        surface->width = state.frame->logical_width;
+        surface->height = state.frame->logical_height;
+        if (state.pending_attach && !surface->pending_buffer_resource && surface->xdg_surface)
+            xdg_shell_on_surface_unmap(surface->xdg_surface);
     }
-    /* Clear pending — committed (whether null or a buffer). */
+    state.scale = state.pending_scale; state.transform = state.pending_transform;
+    if (state.pending_attach && surface->pending_buffer_resource) {
+        // Copy is complete. Never keep or read this client buffer after release.
+        wl_buffer_send_release(surface->pending_buffer_resource);
+    }
+    wl_list_remove(&surface->buffer_destroy_listener.link);
+    wl_list_init(&surface->buffer_destroy_listener.link);
     surface->pending_buffer_resource = nullptr;
-
-    /* Clear pending damage. */
-    surface->damage_count = 0;
-
-    /* Notify display layer via callback if set (e.g., for xdg-shell configure events). */
-    if (surface->commit_callback) {
-        surface->commit_callback(resource, surface->commit_callback_user_data);
+    surface->buffer_resource = nullptr;
+    state.pending_attach = false;
+    if (surface->has_pending_position) {
+        surface->current_x = surface->pending_x; surface->current_y = surface->pending_y;
+        surface->has_current_position = true; surface->has_pending_position = false;
     }
+    surface->damage_count = 0;
+    // A callback requested after this commit remains pending until another commit.
+    wl_list_insert_list(state.committed_callbacks.prev, &surface->frame_callback_list);
+    wl_list_init(&surface->frame_callback_list);
+    if (surface->commit_callback) surface->commit_callback(resource, surface->commit_callback_user_data);
 }
 
 static void surface_frame(struct wl_client* client, struct wl_resource* resource,
@@ -184,7 +205,7 @@ static void surface_frame(struct wl_client* client, struct wl_resource* resource
         return;
     }
     wl_resource_set_destructor(cb, frame_callback_destroyed);
-    wl_list_insert(&surface->frame_callback_list, wl_resource_get_link(cb));
+    wl_list_insert(surface->frame_callback_list.prev, wl_resource_get_link(cb));
 }
 
 static void surface_set_opaque_region(struct wl_client* client, struct wl_resource* resource,
@@ -199,17 +220,29 @@ static void surface_set_input_region(struct wl_client* client, struct wl_resourc
 
 static void surface_set_buffer_transform(struct wl_client* client, struct wl_resource* resource,
                                          int32_t transform) {
-    (void)client; (void)resource; (void)transform;
+    (void)client;
+    if (transform < 0 || transform > 7) {
+        wl_resource_post_error(resource, WL_SURFACE_ERROR_INVALID_TRANSFORM, "invalid buffer transform");
+        return;
+    }
+    auto* surface = static_cast<MansionSurface*>(wl_resource_get_user_data(resource));
+    surface->core_frame->pending_transform = transform;
 }
 
 static void surface_set_buffer_scale(struct wl_client* client, struct wl_resource* resource,
                                      int32_t scale) {
-    (void)client; (void)resource; (void)scale;
+    (void)client;
+    if (scale <= 0) {
+        wl_resource_post_error(resource, WL_SURFACE_ERROR_INVALID_SCALE, "invalid buffer scale");
+        return;
+    }
+    auto* surface = static_cast<MansionSurface*>(wl_resource_get_user_data(resource));
+    surface->core_frame->pending_scale = scale;
 }
 
 static void surface_damage_buffer(struct wl_client* client, struct wl_resource* resource,
                                   int32_t x, int32_t y, int32_t width, int32_t height) {
-    (void)client; (void)resource; (void)x; (void)y; (void)width; (void)height;
+    surface_damage(client, resource, x, y, width, height);
 }
 
 static const struct wl_surface_interface surface_impl = {
@@ -252,6 +285,24 @@ static const struct wl_region_interface region_impl = {
 
 /* ---------- compositor ---------- */
 
+static bool initialize_frame_state(MansionSurface* surface, wl_client* client) {
+    static std::atomic<int64_t> next_handle{1};
+    surface->core_frame = new (std::nothrow) CoreFrameState;
+    if (!surface->core_frame) { wl_client_post_no_memory(client); return false; }
+    // Saturate instead of allowing an old handle to become valid again.
+    int64_t handle = next_handle.load();
+    do {
+        if (handle == std::numeric_limits<int64_t>::max()) {
+            delete surface->core_frame; surface->core_frame = nullptr;
+            wl_client_post_implementation_error(client, "runtime surface handles exhausted");
+            return false;
+        }
+    } while (!next_handle.compare_exchange_weak(handle, handle + 1));
+    surface->core_frame->handle = handle;
+    wl_list_init(&surface->core_frame->committed_callbacks);
+    return true;
+}
+
 static void compositor_create_surface(struct wl_client* client, struct wl_resource* compositor_resource,
                                        uint32_t id) {
     auto* compositor = static_cast<MansionCompositor*>(wl_resource_get_user_data(compositor_resource));
@@ -261,8 +312,10 @@ static void compositor_create_surface(struct wl_client* client, struct wl_resour
         wl_client_post_no_memory(client);
         return;
     }
+    if (!initialize_frame_state(surface, client)) { delete surface; return; }
     surface->resource = wl_resource_create(client, &wl_surface_interface, wl_resource_get_version(compositor_resource), id);
     if (!surface->resource) {
+        delete surface->core_frame;
         delete surface;
         wl_client_post_no_memory(client);
         return;
@@ -455,8 +508,10 @@ struct wl_resource* compositor_core_create_surface(struct MansionCompositor* com
         wl_client_post_no_memory(client);
         return nullptr;
     }
+    if (!initialize_frame_state(surface, client)) { delete surface; return nullptr; }
     surface->resource = wl_resource_create(client, &wl_surface_interface, 4, id);
     if (!surface->resource) {
+        delete surface->core_frame;
         delete surface;
         wl_client_post_no_memory(client);
         return nullptr;
@@ -518,5 +573,20 @@ void compositor_core_surface_set_commit_callback(struct wl_resource* surface_res
     if (surface) {
         surface->commit_callback = callback;
         surface->commit_callback_user_data = user_data;
+    }
+}
+
+void compositor_core_complete_frames(MansionCompositor* compositor) {
+    if (!compositor) return;
+    const auto now = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
+    MansionSurface* surface;
+    wl_list_for_each(surface, &compositor->surface_list, link) {
+        auto& callbacks = surface->core_frame->committed_callbacks;
+        while (!wl_list_empty(&callbacks)) {
+            auto* callback = wl_resource_from_link(callbacks.next);
+            wl_callback_send_done(callback, static_cast<uint32_t>(now));
+            wl_resource_destroy(callback);
+        }
     }
 }

@@ -28,7 +28,7 @@ P2-T05 GPU import remains open and is not a prerequisite for this CPU bridge.
 
 ## Instructions for the next autonomous run
 
-T36–T39 passed; current recovery continues with T40; do not start a broad autocontinue run.
+T36–T40 passed; current recovery continues with T41; do not start a broad autocontinue run.
 The eventual first useful product milestone ends at T19.
 Do not use a broad Projects 1–21 scope: that mixes deferred legacy tasks with
 this work. This document update does not itself start an autonomous run.
@@ -132,7 +132,7 @@ Do not launch another broad overnight range before the new boundaries pass.
   32/32 Meson tests and standalone ASan/UBSan with leak detection; see
   [handoff 18](handoffs/18-godot-window-protocol.md).
 
-- [ ] **P21-T40 Deliver owned shm frames through the recovered binding.**
+- [x] **P21-T40 Deliver owned shm frames through the recovered binding.**
   **Depends:** P21-T39.
   Work in `compositor-core.cpp`, `compositor-runtime.*` and the standard
   `compositor_session.*` binding. Preserve the existing legacy renderer.
@@ -152,6 +152,30 @@ Do not launch another broad overnight range before the new boundaries pass.
   transport acceptance, not a rendered monitor or terminal usability claim.
   On completion, add the next bounded task for ImageTexture presentation on the
   study monitor, with actual rendered evidence and real terminal launch.
+
+  **Evidence (2026-10-03):** real shm bytes verified at 32 barriers in standalone
+  and 32 in Godot, six negative cases in each, 33 Meson tests and standalone
+  sanitizer checks; see [handoff 19](handoffs/19-godot-owned-frames.md).
+
+- [ ] **P21-T41 Present live terminal output on the Godot study monitor.**
+  **Depends:** P21-T40.
+  Build/install the recovered standard binding for the `world/` development
+  project; keep the old crashing addon ignored. Reuse the owned session and
+  pump it from the scene's frame loop. Select a real xdg toplevel, not cursor or
+  other role-less surfaces; expose minimal window metadata if needed. Update an
+  unlit ImageTexture only on new frame revisions, replacing it when dimensions
+  change. Apply inverse buffer transform/scale consistently; preserve the room,
+  controller and real assets. Clear live content on detach/destruction.
+  Inspect installed terminals and launch one native software-rendered client on
+  the returned private socket with isolated process environment. Track only
+  owned children and clean them up with the session. Fix required protocol gaps
+  at their existing boundary; do not replace missing terminal output with a mock.
+  **Acceptance:** documented launch command produces real, changing terminal
+  text inside the study monitor. Inspect GPU captures of the room and close-up;
+  verify orientation, color, aspect ratio, update and disconnect behavior, and
+  rerun scene/controller, bridge and C++ regressions. Label observation as agent
+  evidence. This gate covers live output; follow with a bounded task for ordinary
+  typing/pointer input, focus/application mode and resize/close acceptance.
 
 
 - [ ] **P21-T00 Repair and verify the toolchain baseline.**

@@ -264,3 +264,13 @@ runtime_lifecycle_test = executable('test_compositor_runtime',
     dependencies: wayland_server, link_with: compositor_core_lib)
 test('compositor-runtime', runtime_lifecycle_test,
     args: [runtime_client.full_path()], suite: 'p21', timeout: 30)
+
+frame_client = executable('frame-client',
+    'tests/frame-client.c', xdg_shell_client_h, xdg_shell_code,
+    c_args: ['-Wall', '-Wextra'], dependencies: wayland_client)
+frame_snapshot_test = executable('test_frame_snapshot',
+    'tests/test_frame_snapshot.cpp', 'src/compositor-runtime.cpp',
+    cpp_args: cpp_args, include_directories: include_directories('src'),
+    dependencies: wayland_server, link_with: compositor_core_lib)
+test('frame-snapshot', frame_snapshot_test,
+    args: [frame_client.full_path()], suite: 'p21', timeout: 45)

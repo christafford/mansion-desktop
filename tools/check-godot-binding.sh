@@ -20,7 +20,7 @@ cmake --build "$BUILD" --parallel 2
 # Exercise discovery from a fresh cache, not a previously imported project.
 PROBE_PROJECT=$(mktemp -d "$BUILD/project.XXXXXX")
 mkdir -p "$PROBE_PROJECT/bin"
-cp "$PROJECT/project.godot" "$PROJECT/probe.gdextension" "$PROJECT/smoke.gd" "$PROJECT/lifecycle.gd" "$PROBE_PROJECT/"
+cp "$PROJECT/project.godot" "$PROJECT/probe.gdextension" "$PROJECT/smoke.gd" "$PROJECT/lifecycle.gd" "$PROJECT/frames.gd" "$PROBE_PROJECT/"
 cp "$PROJECT/bin/libmansion_probe.so" "$PROBE_PROJECT/bin/"
 PROJECT="$PROBE_PROJECT"
 run() {
@@ -49,6 +49,10 @@ trap 'rmdir "$RUNTIME_BASE"' EXIT
 run lifecycle --max-fps 120 --script res://lifecycle.gd -- "$BUILD/runtime-client" "$RUNTIME_BASE"
 rg -q '^GODOT_LIFECYCLE_OK .*failures=0$' "$BUILD/lifecycle.log"
 cat "$BUILD/lifecycle.log"
+"$BUILD/frame-snapshot" "$BUILD/frame-client"
+run frames --max-fps 120 --script res://frames.gd -- "$BUILD/frame-client" "$RUNTIME_BASE"
+rg -q '^GODOT_FRAMES_OK .*failures=0$' "$BUILD/frames.log"
+cat "$BUILD/frames.log"
 "$GODOT" --version
 git -C "$CPP" rev-parse HEAD
-printf 'Binding and lifecycle checks passed: 300 probe calls and 32 real-client trials. Logs: %s\n' "$BUILD"
+printf 'Binding and lifecycle checks passed: 300 probe calls and 32 protocol trials plus 16 frame/client trials. Logs: %s\n' "$BUILD"

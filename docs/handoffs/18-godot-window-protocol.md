@@ -1,5 +1,8 @@
 # Godot window protocols — 2026-10-03
 
+Historical T39 checkpoint (`821e7fe`). Continue from
+[handoff 19](19-godot-owned-frames.md) after the completed T40 frame transport.
+
 P21-T39 adapts the existing seat and xdg-shell implementation to the recovered
 runtime. Starting revision: `5f7de10` plus preserved overnight edits. This is
 protocol evidence from actual fixture clients, not real terminal usability.

@@ -26,6 +26,7 @@ endforeach()
 add_library(mansion_runtime STATIC ../../src/compositor-core.cpp ../../src/compositor-runtime.cpp
     ../../src/seat.cpp ../../src/xdg-shell.cpp xdg-shell-server-protocol.h xdg-shell-protocol.c)
 target_include_directories(mansion_runtime PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+target_compile_features(mansion_runtime PUBLIC cxx_std_20)
 set_target_properties(mansion_runtime PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(mansion_runtime PUBLIC PkgConfig::WAYLAND_SERVER PkgConfig::XKBCOMMON)
 add_library(mansion_probe SHARED ../../src/godot/binding_probe.cpp ../../src/godot/compositor_session.cpp)
@@ -42,3 +43,10 @@ target_link_libraries(runtime-client PRIVATE PkgConfig::WAYLAND_CLIENT PkgConfig
 add_executable(runtime-lifecycle ../test_compositor_runtime.cpp)
 target_include_directories(runtime-lifecycle PRIVATE ../../src)
 target_link_libraries(runtime-lifecycle PRIVATE mansion_runtime)
+
+add_executable(frame-client ../frame-client.c xdg-shell-client-protocol.h xdg-shell-protocol.c)
+target_include_directories(frame-client PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+target_link_libraries(frame-client PRIVATE PkgConfig::WAYLAND_CLIENT)
+add_executable(frame-snapshot ../test_frame_snapshot.cpp)
+target_include_directories(frame-snapshot PRIVATE ../../src)
+target_link_libraries(frame-snapshot PRIVATE mansion_runtime)

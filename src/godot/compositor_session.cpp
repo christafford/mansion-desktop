@@ -1,8 +1,12 @@
 #include "compositor_session.h"
 #include <godot_cpp/core/class_db.hpp>
+#include <godot_cpp/variant/packed_byte_array.hpp>
+#include <cstring>
 
 namespace mansion {
 void MansionCompositorSession::_bind_methods() {
+    godot::ClassDB::bind_method(godot::D_METHOD("surface_handles"), &MansionCompositorSession::surface_handles);
+    godot::ClassDB::bind_method(godot::D_METHOD("snapshot", "handle"), &MansionCompositorSession::snapshot);
     godot::ClassDB::bind_method(godot::D_METHOD("start", "runtime_directory"), &MansionCompositorSession::start);
     godot::ClassDB::bind_method(godot::D_METHOD("pump"), &MansionCompositorSession::pump);
     godot::ClassDB::bind_method(godot::D_METHOD("stop"), &MansionCompositorSession::stop);
@@ -12,6 +16,35 @@ void MansionCompositorSession::_bind_methods() {
     godot::ClassDB::bind_method(godot::D_METHOD("surface_count"), &MansionCompositorSession::surface_count);
     godot::ClassDB::bind_method(godot::D_METHOD("socket_path"), &MansionCompositorSession::socket_path);
     godot::ClassDB::bind_method(godot::D_METHOD("last_error"), &MansionCompositorSession::last_error);
+}
+
+godot::PackedInt64Array MansionCompositorSession::surface_handles() const {
+    godot::PackedInt64Array handles;
+    for (auto handle : runtime_.surface_handles()) handles.push_back(handle);
+    return handles;
+}
+
+godot::Dictionary MansionCompositorSession::snapshot(int64_t handle) const {
+    auto frame = runtime_.snapshot(handle);
+    godot::Dictionary result;
+    if (!frame) return result;
+    result["handle"] = frame->handle;
+    result["revision"] = static_cast<int64_t>(frame->revision);
+    result["mapped"] = frame->mapped;
+    result["width"] = frame->width; result["height"] = frame->height;
+    result["stride"] = frame->stride;
+    result["logical_width"] = frame->logical_width; result["logical_height"] = frame->logical_height;
+    result["scale"] = frame->scale; result["transform"] = frame->transform;
+    result["source_format"] = frame->source_format; result["source_stride"] = frame->source_stride;
+    result["format"] = "RGBA8";
+    godot::PackedByteArray pixels;
+    if (pixels.resize(frame->pixels.size()) != godot::OK) {
+        ERR_PRINT("Could not allocate Godot frame snapshot");
+        return {};
+    }
+    if (!frame->pixels.empty()) std::memcpy(pixels.ptrw(), frame->pixels.data(), frame->pixels.size());
+    result["pixels"] = pixels;
+    return result;
 }
 
 bool MansionCompositorSession::start(const godot::String& runtime_directory) {

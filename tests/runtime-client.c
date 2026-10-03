@@ -91,6 +91,14 @@ struct window {
     int role_configures, configures;
     uint32_t serial;
 };
+static void frame_done(void *data, struct wl_callback *callback, uint32_t time) {
+    (void)time;
+    ((struct window*)data)->frame = NULL;
+    wl_callback_destroy(callback);
+}
+static const struct wl_callback_listener frame_listener = { frame_done };
+static void released(void *data, struct wl_buffer *buffer) { (void)data; (void)buffer; }
+static const struct wl_buffer_listener buffer_listener = { released };
 static void configured(void *data, struct xdg_surface *surface, uint32_t serial) {
     struct window *w = data;
     require(w->role_configures == w->configures + 1, "role configure before surface configure");
@@ -170,6 +178,7 @@ int main(int argc, char **argv) {
     require(fd >= 0 && ftruncate(fd, 16) == 0, "buffer fd");
     struct wl_shm_pool *pool = wl_shm_create_pool(g.shm, fd, 16);
     struct wl_buffer *buffer = wl_shm_pool_create_buffer(pool, 0, 2, 2, 8, WL_SHM_FORMAT_ARGB8888);
+    wl_buffer_add_listener(buffer, &buffer_listener, NULL);
     wl_shm_pool_destroy(pool); close(fd);
     struct window windows[16] = {0};
     for (int i = 0; i < 16; ++i) {
@@ -181,6 +190,7 @@ int main(int argc, char **argv) {
         require(windows[i].configures == 1, "one initial configure");
         wl_surface_attach(windows[i].surface, buffer, 0, 0);
         windows[i].frame = wl_surface_frame(windows[i].surface);
+        wl_callback_add_listener(windows[i].frame, &frame_listener, &windows[i]);
         wl_surface_commit(windows[i].surface);
         wl_surface_commit(windows[i].surface);
     }

@@ -1,6 +1,7 @@
 #include "compositor-runtime.h"
 #include "compositor-core.h"
 #include "compositor-private.h"
+#include "core-frame-state.h"
 #include "seat.h"
 #include "xdg-shell.h"
 
@@ -80,6 +81,7 @@ bool CompositorRuntime::pump() {
     // Server API, zero polling timeout. Never dispatch a client wl_display here.
     if (wl_event_loop_dispatch(wl_display_get_event_loop(display_), 0) < 0)
         return fail("dispatch Wayland server loop");
+    compositor_core_complete_frames(compositor_);
     wl_display_flush_clients(display_);
     return true;
 }
@@ -104,6 +106,23 @@ bool CompositorRuntime::stop() {
     }
     socket_path_.clear();
     return true;
+}
+
+std::vector<int64_t> CompositorRuntime::surface_handles() const {
+    std::vector<int64_t> result;
+    if (!compositor_) return result;
+    MansionSurface* surface;
+    wl_list_for_each(surface, &compositor_->surface_list, link)
+        result.push_back(surface->core_frame->handle);
+    return result;
+}
+
+OwnedFrame CompositorRuntime::snapshot(int64_t handle) const {
+    if (!compositor_ || handle <= 0) return {};
+    MansionSurface* surface;
+    wl_list_for_each(surface, &compositor_->surface_list, link)
+        if (surface->core_frame->handle == handle) return surface->core_frame->frame;
+    return {};
 }
 
 int CompositorRuntime::client_count() const {

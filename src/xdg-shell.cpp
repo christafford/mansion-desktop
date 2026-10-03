@@ -380,21 +380,28 @@ static void send_configure(MansionXdgSurface* xdg_surface) {
     xdg_surface->configured = true;
 }
 
-void xdg_shell_on_surface_commit(MansionXdgSurface* xdg_surface) {
-    if (!xdg_surface) return;
+bool xdg_shell_on_surface_commit(MansionXdgSurface* xdg_surface) {
+    if (!xdg_surface) return true;
     if (!xdg_surface->toplevel) {
         wl_resource_post_error(xdg_surface->resource, XDG_SURFACE_ERROR_NOT_CONSTRUCTED,
                                "commit requires an xdg_surface role");
-        return;
+        return false;
     }
     auto* surface = user_data<MansionSurface>(xdg_surface->surface_resource);
     if (!xdg_surface->has_acked_configure &&
         (surface->buffer_resource || surface->pending_buffer_resource)) {
         wl_resource_post_error(xdg_surface->resource, XDG_SURFACE_ERROR_UNCONFIGURED_BUFFER,
                                "buffer committed before configure acknowledgement");
-        return;
+        return false;
     }
     if (!xdg_surface->configured) send_configure(xdg_surface);
+    return true;
+}
+
+void xdg_shell_on_surface_unmap(MansionXdgSurface* xdg_surface) {
+    xdg_surface->configured = false;
+    xdg_surface->has_acked_configure = false;
+    xdg_surface->pending_configures.clear();
 }
 
 void xdg_shell_send_configure_resize(struct MansionXdgSurface* xdg_surface,

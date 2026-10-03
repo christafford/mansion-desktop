@@ -60,6 +60,10 @@ void compositor_core_clear_focus(struct MansionCompositor* compositor);
 void compositor_core_connect_seat(struct MansionCompositor* compositor,
                                    struct MansionSeat* seat);
 
+/* Complete only committed callbacks after the runtime consumes the dispatch.
+ * This is CPU bridge pacing, not evidence of display scanout/presentation. */
+void compositor_core_complete_frames(struct MansionCompositor* compositor);
+
 /* ---------- Surface iteration helpers ---------- */
 
 /* Get the first surface in the list, or nullptr if empty. */

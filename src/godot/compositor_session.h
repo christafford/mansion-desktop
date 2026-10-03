@@ -2,6 +2,8 @@
 #include "../compositor-runtime.h"
 #include <godot_cpp/classes/ref_counted.hpp>
 #include <godot_cpp/variant/string.hpp>
+#include <godot_cpp/variant/dictionary.hpp>
+#include <godot_cpp/variant/packed_int64_array.hpp>
 
 namespace mansion {
 // Godot owns this on its main thread. Native runtime owns every server resource.
@@ -13,6 +15,8 @@ protected:
     static void _bind_methods();
 
 public:
+    godot::PackedInt64Array surface_handles() const;
+    godot::Dictionary snapshot(int64_t handle) const;
     bool start(const godot::String& runtime_directory);
     bool pump() { return runtime_.pump(); }
     bool stop() { return runtime_.stop(); }

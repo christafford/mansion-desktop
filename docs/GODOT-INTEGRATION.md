@@ -7,8 +7,8 @@ compositor addon is preserved but ignored because it crashes during registration
 The standard binding probe (P21-T37) is isolated under `tests/godot-binding/`.
 The standard binding serves real wl_compositor/shm clients (T38), including
 xdg-shell configure/ack/commit and seat v1/v4 keyboard setup (T39).
-Owned frames (T40) and T12/T13 pixel presentation still require their own evidence;
-the study does not start this server yet. See [STATUS.md](STATUS.md).
+Owned frame transport now passes exact client-byte tests through Godot (T40).
+T41 connects those frames to the study; the scene does not start this server yet. See [STATUS.md](STATUS.md).
 
 ## Build and ownership
 
@@ -23,7 +23,8 @@ The tested `MansionCompositorSession` owns the reusable server and protocol stat
 The shared `seat.cpp`/`xdg-shell.cpp` protocol library has no legacy display or
 camera dependencies. Legacy input policy remains in `input.cpp`; its global
 seat wrapper is separate from each runtime's seat. See
-[handoff 18](handoffs/18-godot-window-protocol.md) for ownership and remaining limits.
+[protocol handoff](handoffs/18-godot-window-protocol.md) and
+[frame contract](handoffs/19-godot-owned-frames.md) for ownership and limits.
 
 Godot owns the visible host window and frame loop. GDExtension owns one compositor
 instance with explicit start/pump/stop. Use a nonblocking pump on the owning

@@ -7,12 +7,12 @@ is historical; its extension/visual completion claims were contradicted by tests
 
 ## Next task
 
-**P21-T40: deliver owned shm frames through the recovered Godot binding.**
-P21-T36 (visible frontend), T37 (standard binding), T38 (real Wayland lifecycle)
-and T39 (xdg-shell/seat handshake) pass their bounded acceptance. See
-[tasks](TASKS.md) and the [protocol handoff](handoffs/18-godot-window-protocol.md).
-Next implement correct pending/current buffer ownership and CPU snapshots, then
-verify actual client pixel updates through the binding. The study still displays
+**P21-T41: present live terminal output on the Godot study monitor.**
+Recovery T36–T40 now passes its bounded acceptance: visible study, standard
+binding, real Wayland protocols and owned client pixels through Godot. See
+[tasks](TASKS.md) and [frame handoff](handoffs/19-godot-owned-frames.md).
+Next connect the tested session and ImageTexture to the study, launch a real
+native terminal and inspect actual changing output. The study still displays
 an inactive monitor; its scene does not yet start the tested server.
 Broader T00–T19 gates remain unchecked until their full evidence exists.
 
@@ -46,8 +46,13 @@ returns to arrival; M toggles slow walking and Shift slows while held.
   version-correct events/releases, partial destruction, disconnect, server stop
   and five invalid request sequences pass. Godot frames advance; resources,
   socket and private directory are cleaned up.
+- Owned frame transport: 32 standalone + 32 Godot pixel/state barriers across
+  repeated sessions. Exact RGBA/alpha/padding, buffer reuse/destruction, pending
+  state, detach/remap, scale/transform metadata, callbacks and handle invalidation
+  pass. Six malformed/unsupported buffer/state cases are rejected in each harness.
+  These checks do not render application content on the study monitor.
 - Standalone core/runtime AddressSanitizer + UBSan + enabled leak detection pass.
-- C++ build and 32/32 Meson tests pass; 62/62 Node plugin tests pass.
+- C++ build and 33/33 Meson tests pass; 62/62 Node plugin tests passed during T39.
   They do not validate live Godot compositor integration.
 - The local editor's first-import shutdown race has a tested paced-startup
   workaround, not an engine fix; see [TOOLCHAIN.md](TOOLCHAIN.md).
@@ -69,12 +74,12 @@ This records approval of its appearance, not a terminal/input/comfort trial.
 ## Not verified / unfinished
 
 - Live terminal integration, real application input, focus transitions, resize,
-  close/relaunch and owned snapshots in Godot.
+  close/relaunch and presentation of the owned snapshots on the monitor.
 - Original addon initialization: reproduced segmentation fault; isolated with
   `world/addons/mansion_godot/.gdignore`, source and binary preserved.
 - Full renderer-independent compositor extraction: socket/wl_compositor/shm
-  lifecycle and initial xdg-shell/seat protocol checks pass. Full surface-state,
-  snapshot ownership and Godot input delivery remain open.
+  lifecycle, initial xdg-shell/seat checks and owned shm snapshots pass. Broader
+  surface-tree/protocol conformance and Godot input delivery remain open.
 - Finished art rubric, furniture selection/cohesion, performance, physical host
   input and human comfort. No blank capture counts as visual acceptance.
 - Fresh-clone dependency provenance and asset fetching/offline negative checks.
