@@ -51,4 +51,4 @@ rg -q '^GODOT_LIFECYCLE_OK .*failures=0$' "$BUILD/lifecycle.log"
 cat "$BUILD/lifecycle.log"
 "$GODOT" --version
 git -C "$CPP" rev-parse HEAD
-printf 'Binding and lifecycle checks passed: 300 probe calls and 18 real-client trials. Logs: %s\n' "$BUILD"
+printf 'Binding and lifecycle checks passed: 300 probe calls and 32 real-client trials. Logs: %s\n' "$BUILD"

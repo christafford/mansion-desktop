@@ -11,7 +11,10 @@ The older snapshot choice in P4-T15 is superseded by P21-T11/T12. Subsequent
 sections describe still-useful ownership boundaries, not an alternate work order.
 Current recovery (2026-10-03): the Godot study renders imported furniture and
 has a collision-based controller. The extracted C++ core now passes real fixture
-socket/surface lifecycle checks through Godot; seat/xdg acceptance remains open. The original addon is isolated
+socket/surface lifecycle, initial xdg-shell handshake and seat protocol checks
+through Godot. Shared `seat.cpp` and `xdg-shell.cpp` are independent of legacy
+input policy and rendering. CPU snapshots and Godot input routing remain open.
+The original addon is isolated
 because registration crashes. A separate standard-binding regression establishes
 the binding boundary before compositor work. See STATUS.md for current evidence.
 

@@ -40,16 +40,22 @@ relative_ptr_code = custom_target('relative-pointer-code',
 sources_display = files(
     'src/main.cpp',
     'src/compositor.cpp',
-    'src/xdg-shell.cpp',
     'src/display.cpp',
     'src/input.cpp',
     'src/launch.cpp',
     'src/room.cpp',
 )
 
+# Protocol ownership is shared by the legacy frontend and the Godot runtime.
+compositor_protocol_lib = static_library('compositor-protocol',
+    'src/seat.cpp', 'src/xdg-shell.cpp', xdg_shell_server_h, xdg_shell_code,
+    cpp_args: cpp_args, pic: true,
+    dependencies: [wayland_server, xkbcommon], install: false)
+
 # Core compositor library (PIC, no GL/display dependencies)
 compositor_core_lib = static_library('compositor-core',
     'src/compositor-core.cpp',
+    link_with: compositor_protocol_lib,
     cpp_args: cpp_args + ['-fPIC'],
     dependencies: [wayland_server],
     include_directories: include_directories('.'),
@@ -65,7 +71,7 @@ mansion_exe = executable('mansion-desktop',
     cpp_args: cpp_args,
     dependencies: [wayland_server, wayland_client, wayland_egl, egl, glesv2, xkbcommon],
     include_directories: include_directories('.'),
-    link_with: compositor_core_lib,
+    link_with: [compositor_core_lib, compositor_protocol_lib],
     install: true,
 )
 
@@ -171,9 +177,10 @@ test('host-events', host_events_test, suite: 'p4', timeout: 5)
 
 host_input_test = executable('test_host_input',
     'tests/host_input.cpp', 'src/input.cpp', 'src/compositor.cpp',
-    'src/xdg-shell.cpp', 'src/room.cpp', 'src/launch.cpp',
+    'src/room.cpp', 'src/launch.cpp',
     xdg_shell_server_h, xdg_shell_client_h, xdg_shell_code,
     relative_ptr_client_h, relative_ptr_code,
+    link_with: compositor_protocol_lib,
     cpp_args: cpp_args,
     include_directories: include_directories('.'),
     dependencies: [wayland_server, wayland_client, wayland_egl, egl, glesv2, xkbcommon])
@@ -249,7 +256,8 @@ empty_gdextension = shared_library('mansion_godot_empty',
 
 # Real socket/resource lifecycle, also exercised through the Godot binding.
 runtime_client = executable('runtime-client',
-    'tests/runtime-client.c', dependencies: wayland_client)
+    'tests/runtime-client.c', xdg_shell_client_h, xdg_shell_code,
+    dependencies: [wayland_client, xkbcommon])
 runtime_lifecycle_test = executable('test_compositor_runtime',
     'tests/test_compositor_runtime.cpp', 'src/compositor-runtime.cpp',
     cpp_args: cpp_args, include_directories: include_directories('src'),

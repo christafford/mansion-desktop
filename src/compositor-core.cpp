@@ -7,6 +7,7 @@
 
 #include "compositor-core.h"
 #include "compositor-private.h"
+#include "xdg-shell.h"
 
 /* ---------- surface ---------- */
 
@@ -123,6 +124,8 @@ static void surface_damage(struct wl_client* client, struct wl_resource* resourc
 static void surface_commit(struct wl_client* client, struct wl_resource* resource) {
     (void)client;
     auto* surface = static_cast<MansionSurface*>(wl_resource_get_user_data(resource));
+
+    if (surface->xdg_surface) xdg_shell_on_surface_commit(surface->xdg_surface);
 
     /* Apply pending position. */
     if (surface->has_pending_position) {

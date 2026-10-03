@@ -5,9 +5,10 @@ The Godot study now renders real furniture and supports movement (P21-T36).
 The legacy `--room-camera` executable remains separate. The experimental
 compositor addon is preserved but ignored because it crashes during registration.
 The standard binding probe (P21-T37) is isolated under `tests/godot-binding/`.
-The standard binding now serves a real wl_compositor/shm fixture with verified
-socket/resource cleanup (T38). Seat/xdg integration and T12/T13 pixel delivery
-still require their own evidence; the study does not start this server yet. See [STATUS.md](STATUS.md).
+The standard binding serves real wl_compositor/shm clients (T38), including
+xdg-shell configure/ack/commit and seat v1/v4 keyboard setup (T39).
+Owned frames (T40) and T12/T13 pixel presentation still require their own evidence;
+the study does not start this server yet. See [STATUS.md](STATUS.md).
 
 ## Build and ownership
 
@@ -17,10 +18,12 @@ compare Compatibility and Mobile using actual scenes, driver support and
 measurements. Don't depend on a RenderingDevice in a renderer that lacks it.
 Put the engine project in `world/`, core library in an appropriate C++ source
 boundary, adapter in `src/godot/`, and bootstrap/check commands in `tools/`.
-A partial core-library target exists, but the working compositor bridge does not. Repair existing run/validation tools rather than treating
-their successful exit or comments as acceptance. Register an actual Godot class
-through a `.gdextension` resource and prove it can serve a fixture client; do
-not wait for a Project Settings UI to enable the draft `extension.toml`.
+The tested `MansionCompositorSession` owns the reusable server and protocol state;
+`tools/check-godot-binding.sh` exercises it from a fresh isolated Godot project.
+The shared `seat.cpp`/`xdg-shell.cpp` protocol library has no legacy display or
+camera dependencies. Legacy input policy remains in `input.cpp`; its global
+seat wrapper is separate from each runtime's seat. See
+[handoff 18](handoffs/18-godot-window-protocol.md) for ownership and remaining limits.
 
 Godot owns the visible host window and frame loop. GDExtension owns one compositor
 instance with explicit start/pump/stop. Use a nonblocking pump on the owning

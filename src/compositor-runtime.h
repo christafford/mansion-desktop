@@ -4,11 +4,13 @@
 
 struct wl_display;
 struct MansionCompositor;
+struct MansionSeat;
+struct MansionXdgShell;
 
 namespace mansion {
 // Single-threaded server ownership. All calls and destruction belong to the
 // creating thread, driven by Godot's frame loop or the headless test harness.
-// This owns only wl_compositor/shm for now; xdg-shell and seat are later gates.
+// Owns compositor/shm, xdg-shell and seat protocol state, independent of rendering.
 class CompositorRuntime {
 public:
     CompositorRuntime() = default;
@@ -21,6 +23,7 @@ public:
     bool stop();
     int client_count() const;
     int surface_count() const;
+    int toplevel_count() const;
     const std::string& socket_path() const { return socket_path_; }
     const std::string& last_error() const { return error_; }
     bool running() const { return display_ != nullptr; }
@@ -29,6 +32,8 @@ private:
     bool fail(const std::string& operation);
     wl_display* display_ = nullptr;
     MansionCompositor* compositor_ = nullptr;
+    MansionSeat* seat_ = nullptr;
+    MansionXdgShell* shell_ = nullptr;
     std::string directory_;
     std::string socket_path_;
     std::string error_;

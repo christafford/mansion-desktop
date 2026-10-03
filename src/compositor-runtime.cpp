@@ -1,5 +1,8 @@
 #include "compositor-runtime.h"
 #include "compositor-core.h"
+#include "compositor-private.h"
+#include "seat.h"
+#include "xdg-shell.h"
 
 #include <cerrno>
 #include <cstdio>
@@ -52,6 +55,14 @@ bool CompositorRuntime::start(const std::string& runtime_directory) {
         stop();
         return false;
     }
+    seat_ = seat_create(display_);
+    shell_ = create_xdg_shell(compositor_, display_);
+    if (!seat_ || !shell_) {
+        fail("create seat/xdg-shell globals");
+        stop();
+        return false;
+    }
+    compositor_set_seat(compositor_, seat_);
     // An absolute name avoids changing the host XDG_RUNTIME_DIR/WAYLAND_DISPLAY.
     if (wl_display_add_socket(display_, socket_path_.c_str()) < 0) {
         fail("bind private Wayland socket");
@@ -77,6 +88,10 @@ bool CompositorRuntime::stop() {
     if (display_) {
         // Resource callbacks still need the compositor during client teardown.
         wl_display_destroy_clients(display_);
+        destroy_xdg_shell(shell_);
+        shell_ = nullptr;
+        seat_destroy(seat_);
+        seat_ = nullptr;
         compositor_core_destroy(compositor_);
         compositor_ = nullptr;
         wl_display_destroy(display_);
@@ -93,6 +108,10 @@ bool CompositorRuntime::stop() {
 
 int CompositorRuntime::client_count() const {
     return display_ ? wl_list_length(wl_display_get_client_list(display_)) : 0;
+}
+
+int CompositorRuntime::toplevel_count() const {
+    return compositor_ ? compositor_->toplevel_count : 0;
 }
 
 int CompositorRuntime::surface_count() const {

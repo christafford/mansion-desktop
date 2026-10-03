@@ -5,7 +5,6 @@
 #include <vector>
 #include <algorithm>
 #include <iostream>
-#include <fcntl.h>
 #include <unistd.h>
 #include <linux/input.h>
 
@@ -16,11 +15,9 @@
 #include "compositor-private.h"
 #include "display.h"
 #include "input.h"
+#include "seat-private.h"
 #include "room.h"
 #include "xdg-shell.h"
-
-/* memfd_create may not be declared without _GNU_SOURCE. */
-extern "C" int memfd_create(const char *name, unsigned int flags);
 
 /* Current pointer state */
 static wl_fixed_t pointer_x = wl_fixed_from_int(300);
@@ -84,42 +81,7 @@ struct MansionSeat* g_seat = nullptr;
 /* Global pointer to compositor for pointer hit testing. */
 struct MansionCompositor* g_compositor = nullptr;
 
-/* Per-client keyboard state */
-struct SeatKeyboardClient {
-    struct wl_resource* resource;
-    struct wl_listener destroy_listener;
-    struct wl_list seat_link;         /* Link in seat->keyboard_clients */
-};
-
-/* Per-client pointer state */
-struct SeatPointerClient {
-    struct wl_resource* resource;
-    struct wl_listener destroy_listener;
-    struct wl_list seat_link;         /* Link in seat->pointer_clients */
-};
-
-struct MansionSeat {
-    struct wl_global* global;
-    struct wl_list keyboard_clients;   /* SeatKeyboardClient */
-    struct wl_list pointer_clients;    /* SeatPointerClient */
-
-    xkb_keymap* keymap;
-    xkb_state*  xkbstate;
-
-    /* Keyboard focus (P1-T06-C). */
-    struct wl_resource* focused_surface_resource;
-
-    /* Pointer focus and grab (P1-T06-D). */
-    struct wl_resource* pointer_surface_resource; /* surface pointer is over */
-    struct wl_resource* grab_surface_resource;    /* surface with pointer grab */
-    uint32_t serial;                              /* shared serial for all events */
-
-    /* P3-T02: track pressed keycodes for clean exit from Application mode. */
-    std::vector<uint32_t> pressed_keys;
-
-    /* P3-T03: saved mode when host focus is lost (re-apply on focus gained). */
-    InputMode stored_mode_when_focus_lost = InputMode::World;
-};
+static InputMode stored_mode_when_focus_lost = InputMode::World;
 
 int input_init(void) { return 0; }
 void input_destroy(void) { input_wayland_focus(false); }
@@ -656,7 +618,7 @@ int input_script_step(struct InputScript* s,
         }
     } else if (strcmp(line, "focus gained") == 0) {
         /* P3-T03: re-enter application mode only if stored mode was Application. */
-        if (g_seat && g_seat->stored_mode_when_focus_lost == InputMode::Application
+        if (g_seat && stored_mode_when_focus_lost == InputMode::Application
             && g_compositor && g_compositor->focused_surface_resource) {
             input_mode_set(InputMode::Application);
             seat_set_keyboard_focus(seat, g_compositor->focused_surface_resource,
@@ -669,7 +631,7 @@ int input_script_step(struct InputScript* s,
     } else if (strcmp(line, "focus lost") == 0) {
         /* P3-T03: save current mode, then exit application mode and switch to World. */
         if (g_seat) {
-            g_seat->stored_mode_when_focus_lost = input_mode_get();
+            stored_mode_when_focus_lost = input_mode_get();
             exit_application_mode();
             input_mode_set(InputMode::World);
         } else if (seat) {
@@ -697,318 +659,13 @@ void input_script_apply_movement(struct InputScript* s,
 }
 
 
-/* ---------- SeatKeyboardClient destroy listener ---------- */
-
-static void keyboard_client_destroy(struct wl_listener* listener, void* data) {
-    (void)data;
-    SeatKeyboardClient* kbc = wl_container_of(listener, kbc, destroy_listener);
-    /* Do NOT remove from the list or delete here — the Wayland library
-     * may still hold references during teardown and we crash.
-     * Instead we just null the resource; destroy_seat will clean up. */
-    kbc->resource = nullptr;
+// Legacy policy owns its global seat; the reusable server has no global seat.
+MansionSeat* create_seat(wl_display* display) {
+    stored_mode_when_focus_lost = InputMode::World;
+    g_seat = seat_create(display);
+    return g_seat;
 }
-
-/* ---------- SeatPointerClient destroy listener ---------- */
-
-static void pointer_client_destroy(struct wl_listener* listener, void* data) {
-    (void)data;
-    SeatPointerClient* pkc = wl_container_of(listener, pkc, destroy_listener);
-    /* Do NOT remove from the list or delete here — the Wayland library
-     * may still hold references during teardown and we crash.
-     * Instead we just null the resource; destroy_seat will clean up. */
-    pkc->resource = nullptr;
-}
-
-/* ---------- Pointer implementation ---------- */
-
-static void pointer_set_cursor(struct wl_client* client, struct wl_resource* resource,
-                                uint32_t serial, struct wl_resource* surface,
-                                int32_t x, int32_t y) {
-    (void)client; (void)resource; (void)serial; (void)surface; (void)x; (void)y;
-}
-
-static const struct wl_pointer_interface pointer_impl = {
-    pointer_set_cursor,
-    nullptr, /* release (v4, optional) */
-};
-
-/* ---------- Keyboard implementation ---------- */
-
-static const struct wl_keyboard_interface keyboard_impl = {
-    nullptr, /* release (v3, optional) */
-};
-
-/* ---------- Seat implementations ---------- */
-
-static void seat_get_pointer(struct wl_client* client, struct wl_resource* seat_resource,
-                               uint32_t id) {
-    auto* seat = static_cast<MansionSeat*>(wl_resource_get_user_data(seat_resource));
-
-    auto* kpc = new SeatPointerClient;
-    memset(kpc, 0, sizeof(*kpc));
-
-    auto* resource = wl_resource_create(client, &wl_pointer_interface, 4, id);
-    if (!resource) {
-        delete kpc;
-        wl_client_post_no_memory(client);
-        return;
-    }
-
-    wl_resource_set_implementation(resource, &pointer_impl, seat, nullptr);
-    kpc->resource = resource;
-
-    // Listen for client destruction of this pointer resource
-    wl_listener* destroy_listener = &kpc->destroy_listener;
-    destroy_listener->notify = pointer_client_destroy;
-    wl_signal_add(&resource->destroy_signal, destroy_listener);
-
-    // Track in seat's client list using a separate link
-    wl_list_insert(&seat->pointer_clients, &kpc->seat_link);
-
-    /* Don't send a synthetic enter here; proper enter/leave is handled
-       by pointer_check_focus() when the pointer position changes. */
-
-    // Send capabilities (done at seat level, not per-client)
-}
-
-static void seat_get_keyboard(struct wl_client* client, struct wl_resource* seat_resource,
-                               uint32_t id) {
-    auto* seat = static_cast<MansionSeat*>(wl_resource_get_user_data(seat_resource));
-
-    auto* kbc = new SeatKeyboardClient;
-    memset(kbc, 0, sizeof(*kbc));
-
-    auto* resource = wl_resource_create(client, &wl_keyboard_interface, 7, id);
-    if (!resource) {
-        delete kbc;
-        wl_client_post_no_memory(client);
-        return;
-    }
-
-    wl_resource_set_implementation(resource, &keyboard_impl, seat, nullptr);
-    kbc->resource = resource;
-
-    // Listen for client destruction of this keyboard resource
-    wl_listener* destroy_listener = &kbc->destroy_listener;
-    destroy_listener->notify = keyboard_client_destroy;
-    wl_signal_add(&resource->destroy_signal, destroy_listener);
-
-    // Track in seat's client list using a separate link
-    wl_list_insert(&seat->keyboard_clients, &kbc->seat_link);
-
-    // Send keymap
-    if (seat->keymap) {
-        const char* keymap_string = xkb_keymap_get_as_string(
-            seat->keymap, XKB_KEYMAP_FORMAT_TEXT_V1);
-
-        if (keymap_string) {
-            size_t keymap_len = strlen(keymap_string);
-            int fd = memfd_create("xkb-keymap", 0);
-            if (fd >= 0) {
-                write(fd, keymap_string, keymap_len);
-                lseek(fd, 0, SEEK_SET);
-                wl_keyboard_send_keymap(resource, WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1,
-                                        fd, (uint32_t)keymap_len);
-                close(fd);
-            }
-        }
-    }
-
-    // Send repeat_info (rate = 25 keys/sec, delay = 500 ms)
-    wl_keyboard_send_repeat_info(resource, 25, 500);
-}
-
-static void seat_get_touch(struct wl_client* client, struct wl_resource* seat_resource,
-                             uint32_t id) {
-    (void)client; (void)seat_resource; (void)id;
-    wl_resource_post_error(seat_resource, WL_SEAT_ERROR_MISSING_CAPABILITY,
-                           "seat does not have touch capability");
-}
-
-static void seat_release(struct wl_client* client, struct wl_resource* seat_resource) {
-    (void)client;
-    wl_resource_destroy(seat_resource);
-}
-
-static const struct wl_seat_interface seat_impl = {
-    seat_get_pointer,
-    seat_get_keyboard,
-    seat_get_touch,
-    seat_release,
-};
-
-static void seat_bind(struct wl_client* client, void* data, uint32_t version, uint32_t id) {
-    auto* seat = static_cast<MansionSeat*>(data);
-    (void)version;
-
-    auto* resource = wl_resource_create(client, &wl_seat_interface, 4, id);
-    if (!resource) {
-        wl_client_post_no_memory(client);
-        return;
-    }
-
-    wl_resource_set_implementation(resource, &seat_impl, seat, nullptr);
-
-    // Send seat name
-    wl_seat_send_name(resource, "default-seat");
-
-    // Send capabilities (pointer + keyboard)
-    wl_seat_send_capabilities(resource, WL_SEAT_CAPABILITY_POINTER | WL_SEAT_CAPABILITY_KEYBOARD);
-}
-
-struct MansionSeat* create_seat(struct wl_display* display) {
-    auto* seat = new MansionSeat();
-    wl_list_init(&seat->keyboard_clients);
-    wl_list_init(&seat->pointer_clients);
-    seat->serial = 1;
-
-    seat->global = wl_global_create(display, &wl_seat_interface, 4, seat, seat_bind);
-    if (!seat->global) {
-        delete seat;
-        return nullptr;
-    }
-
-    // Create xkb keymap. xkb_keymap_new_from_names requires xkbcommon >= 1.0;
-    // fall back to a hardcoded keymap on older versions.
-    xkb_context* ctx = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
-    if (ctx) {
-        seat->keymap = xkb_keymap_new_from_string(
-            ctx,
-            "xkb_keymap {\n"
-            "    xkb_keycodes  { include \"evdev+aliases(qwerty)\" };\n"
-            "    xkb_types     { include \"complete\" };\n"
-            "    xkb_compat    { include \"complete\" };\n"
-            "    xkb_symbols   { include \"pc+us+inet(evdev)\" };\n"
-            "    xkb_geometry  { include \"pc(pc105)\" };\n"
-            "};\n",
-            XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS);
-        if (seat->keymap) {
-            seat->xkbstate = xkb_state_new(seat->keymap);
-        }
-        xkb_context_unref(ctx);
-    }
-
-    if (!seat->keymap) {
-        fprintf(stderr, "Warning: could not create xkb keymap\n");
-        // Use hardcoded fallback
-        seat->keymap = xkb_keymap_new_from_string(
-            nullptr,
-            "xkb_keymap {\n"
-            "    xkb_keycodes  { include \"evdev+aliases(qwerty)\" };\n"
-            "    xkb_types     { include \"complete\" };\n"
-            "    xkb_compat    { include \"complete\" };\n"
-            "    xkb_symbols   { include \"pc+us+inet(evdev)\" };\n"
-            "    xkb_geometry  { include \"pc(pc105)\" };\n"
-            "};\n",
-            XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS);
-        if (seat->keymap) {
-            seat->xkbstate = xkb_state_new(seat->keymap);
-        }
-    }
-
-    // Register as global seat for input forwarding
-    g_seat = seat;
-
-    return seat;
-}
-
-void destroy_seat(struct MansionSeat* seat) {
-    if (!seat) return;
-
-    // Unregister global seat
-    if (g_seat == seat) {
-        g_seat = nullptr;
-    }
-
-    // Clear focus before destroying resources to avoid stale references.
-    seat->grab_surface_resource = nullptr;
-    seat->pointer_surface_resource = nullptr;
-    seat->focused_surface_resource = nullptr;
-
-    // Destroy all keyboard clients.
-    // If a client was destroyed earlier (Wayland library), its resource is
-    // nullptr — we still delete the struct.  We do NOT call wl_resource_destroy
-    // here; wl_display_destroy handles it.
-    {
-        SeatKeyboardClient *kc, *kc_next;
-        wl_list_for_each_safe(kc, kc_next, &seat->keyboard_clients, seat_link) {
-            wl_list_remove(&kc->seat_link);
-            delete kc;
-        }
-    }
-
-    // Destroy all pointer clients.
-    {
-        SeatPointerClient *pk, *pk_next;
-        wl_list_for_each_safe(pk, pk_next, &seat->pointer_clients, seat_link) {
-            wl_list_remove(&pk->seat_link);
-            delete pk;
-        }
-    }
-
-    wl_global_destroy(seat->global);
-
-    // Clean up xkb state and keymap
-    if (seat->xkbstate) {
-        xkb_state_unref(seat->xkbstate);
-    }
-    if (seat->keymap) {
-        xkb_keymap_unref(seat->keymap);
-    }
-    seat->xkbstate = nullptr;
-    seat->keymap = nullptr;
-    delete seat;
-}
-
-/* ---------- Keyboard focus (P1-T06-C) ---------- */
-
-void seat_set_keyboard_focus(struct MansionSeat* seat,
-                              struct wl_resource* surface,
-                              MansionCompositor* comp) {
-    comp->keyboard_focus_serial++;
-
-    /* Send leave to the old focused surface's keyboard clients.
-     * Only send to clients whose resource belongs to the same client
-     * as the old focused surface — libwayland validates this and
-     * rejects cross-client surface pointers as a protocol error. */
-    if (comp->focused_surface_resource) {
-        SeatKeyboardClient *kc, *kc_next;
-        struct wl_client *old_client = wl_resource_get_client(
-            comp->focused_surface_resource);
-        wl_list_for_each_safe(kc, kc_next, &seat->keyboard_clients, seat_link) {
-            if (kc->resource &&
-                wl_resource_get_client(kc->resource) == old_client) {
-                wl_keyboard_send_leave(kc->resource,
-                                       comp->keyboard_focus_serial,
-                                       comp->focused_surface_resource);
-            }
-        }
-    }
-    comp->focused_surface_resource = surface;
-    seat->focused_surface_resource = surface;
-
-    /* Send enter to the new surface's keyboard clients.
-     * Only send to clients whose resource belongs to the same client
-     * as the new surface. */
-    if (surface) {
-        struct wl_array keys;
-        wl_array_init(&keys);
-        SeatKeyboardClient *kc, *kc_next;
-        struct wl_client *new_client = wl_resource_get_client(surface);
-        wl_list_for_each_safe(kc, kc_next, &seat->keyboard_clients, seat_link) {
-            if (kc->resource &&
-                wl_resource_get_client(kc->resource) == new_client) {
-                wl_keyboard_send_enter(kc->resource,
-                                       comp->keyboard_focus_serial,
-                                       surface, &keys);
-            }
-        }
-        wl_array_release(&keys);
-    }
-}
-
-void compositor_set_seat(struct MansionCompositor* compositor,
-                          struct MansionSeat* seat) {
-    if (!compositor) return;
-    compositor->seat = seat;
+void destroy_seat(MansionSeat* seat) {
+    if (g_seat == seat) g_seat = nullptr;
+    seat_destroy(seat);
 }

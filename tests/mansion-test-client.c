@@ -551,6 +551,10 @@ int main(int argc, char** argv) {
         xdg_toplevel_add_listener(c.toplevel, &toplevel_listener, &c);
         xdg_surface_add_listener(c.xdg_surface, &surface_listener, &c);
 
+        /* EGL readback follows the same xdg handshake as the shm fixture. */
+        wl_surface_commit(c.surface);
+        if (wl_display_roundtrip(c.display) < 0 || !c.configured) goto error;
+
         /* Render with EGL PBuffer */
         EGLDisplay egl_dpy = eglGetPlatformDisplay(EGL_PLATFORM_SURFACELESS_MESA, NULL, NULL);
         if (egl_dpy != EGL_NO_DISPLAY) {

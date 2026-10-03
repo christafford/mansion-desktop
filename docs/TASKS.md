@@ -28,7 +28,7 @@ P2-T05 GPU import remains open and is not a prerequisite for this CPU bridge.
 
 ## Instructions for the next autonomous run
 
-T36/T37/T38 passed; current recovery continues with T39; do not start a broad autocontinue run.
+T36–T39 passed; current recovery continues with T40; do not start a broad autocontinue run.
 The eventual first useful product milestone ends at T19.
 Do not use a broad Projects 1–21 scope: that mixes deferred legacy tasks with
 this work. This document update does not itself start an autonomous run.
@@ -115,7 +115,7 @@ Do not launch another broad overnight range before the new boundaries pass.
 
   Evidence: [compositor lifecycle](handoffs/17-godot-compositor-lifecycle.md).
 
-- [ ] **P21-T39 Restore xdg-shell and seat in the recovered core runtime.**
+- [x] **P21-T39 Restore xdg-shell and seat in the recovered core runtime.**
   **Depends:** P21-T38.
   Inspect and adapt the existing `xdg-shell.cpp` and `input.cpp`; keep policy and
   legacy renderer calls outside the reusable core. Register the real globals
@@ -127,6 +127,31 @@ Do not launch another broad overnight range before the new boundaries pass.
   both standalone core and Godot, regression suite passes, and ownership is
   explicit. Terminal usability, input mapping and live pixel delivery remain
   separate gates. Do not substitute stub globals or a new compositor.
+
+  **Evidence (2026-10-03):** 16 standalone + 16 Godot real-client trials,
+  32/32 Meson tests and standalone ASan/UBSan with leak detection; see
+  [handoff 18](handoffs/18-godot-window-protocol.md).
+
+- [ ] **P21-T40 Deliver owned shm frames through the recovered binding.**
+  **Depends:** P21-T39.
+  Work in `compositor-core.cpp`, `compositor-runtime.*` and the standard
+  `compositor_session.*` binding. Preserve the existing legacy renderer.
+  First fix pending/current buffer semantics, including explicit null attach,
+  buffer replacement/destruction and detach. Copy supported ARGB/XRGB shm pixels
+  under Wayland read access into bounded, owned CPU storage with explicit size,
+  stride/format and revision. Release client buffers only after the copy; finish
+  frame callbacks after the runtime has consumed the commit. Expose runtime-only
+  surface handles and copied frame data to Godot, never raw pointers or durable
+  identities derived from Wayland IDs. Reject unsupported formats explicitly.
+  Extend the fixture to send changing asymmetric pixels with row padding and to
+  replace/destroy/detach buffers. Test an old snapshot after replacement and
+  disconnect; ensure handles from a previous session cannot alias a new window.
+  **Acceptance:** exact dimensions, orientation, channel order and byte values
+  verified through standalone runtime and Godot; release/frame callbacks and
+  teardown asserted; sanitizer and regression checks pass. This is frame
+  transport acceptance, not a rendered monitor or terminal usability claim.
+  On completion, add the next bounded task for ImageTexture presentation on the
+  study monitor, with actual rendered evidence and real terminal launch.
 
 
 - [ ] **P21-T00 Repair and verify the toolchain baseline.**

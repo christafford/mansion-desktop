@@ -1,5 +1,8 @@
 # Godot compositor lifecycle — 2026-10-03
 
+Historical T38 checkpoint (`5f7de10`). T39 is now complete; use
+[handoff 18](18-godot-window-protocol.md) for current continuation and sanitizer commands.
+
 P21-T38 connects the recovered native binding to the existing extracted
 `compositor-core.cpp`. It serves real Wayland requests without linking the old
 renderer. This is a protocol/lifetime gate, not a terminal or pixel-rendering gate.

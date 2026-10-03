@@ -1,6 +1,8 @@
 #pragma once
 
 #include <wayland-server.h>
+#include <cstdio>
+#include "seat.h"
 
 struct MansionDisplay;
 struct MansionSeat;
@@ -34,16 +36,6 @@ int input_tab_key_get(void);
 /* External globals for main.cpp to set. */
 extern struct MansionSeat* g_seat;
 extern struct MansionCompositor* g_compositor;
-
-/* Set the seat's keyboard focus. Sends leave to the old surface and enter
-   to the new one. `surface` can be nullptr to clear focus. */
-void seat_set_keyboard_focus(struct MansionSeat* seat,
-                              struct wl_resource* surface,
-                              struct MansionCompositor* comp);
-
-/* Connect the seat to a compositor so focus can be queried. */
-void compositor_set_seat(struct MansionCompositor* compositor,
-                          struct MansionSeat* seat);
 
 /* P3-T06: Clear all seat-level focus pointers to prevent dangling references
  * when a focused surface is destroyed. */

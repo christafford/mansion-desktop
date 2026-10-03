@@ -8,7 +8,7 @@ model/provider is unchanged. No additional agent framework is required.
 
 As of 2026-10-03, do not start another broad T00–T19 unattended run. The owner
 requested direct recovery after that workflow produced incorrect completion
-claims. Follow STATUS.md and the bounded T36/T37 evidence. After recovery,
+claims. Follow STATUS.md and the bounded T36–T39 evidence and next T40 task. After recovery,
 assign one eligible task at a time and review the actual acceptance artifacts.
 The plugin does not enforce dependencies or determine whether a render is useful.
 The broad-run setup below is retained for reference, not the current work order.
