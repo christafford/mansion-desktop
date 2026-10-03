@@ -84,6 +84,7 @@ bool CompositorRuntime::pump() {
     compositor_core_complete_frames(compositor_);
     if (compositor_->focused_surface_resource && keyboard_focus_handle() == 0)
         seat_set_keyboard_focus(seat_, nullptr, compositor_);
+    if (seat_pointer_surface(seat_) && pointer_focus_handle() == 0) seat_pointer_reset(seat_);
     wl_display_flush_clients(display_);
     return true;
 }
@@ -178,6 +179,53 @@ bool CompositorRuntime::keyboard_key(uint32_t evdev_code, bool pressed) {
     }
     return true;
 }
+
+int64_t CompositorRuntime::pointer_focus_handle() const {
+    if (!compositor_) return 0;
+    MansionSurface* surface;
+    wl_list_for_each(surface, &compositor_->surface_list, link) {
+        const auto& frame = surface->core_frame->frame;
+        if (surface->resource == seat_pointer_surface(seat_) && frame && frame->mapped &&
+            xdg_surface_has_toplevel(surface->xdg_surface)) return surface->core_frame->handle;
+    }
+    return 0;
+}
+
+bool CompositorRuntime::pointer_motion(int64_t handle, double x, double y) {
+    if (!compositor_) { error_ = "pointer input requires a running server"; return false; }
+    if (handle == 0) {
+        if (seat_pointer_motion(seat_, nullptr, x, y)) return true;
+        error_ = "pointer leave requires valid coordinates and no active grab; use reset to cancel";
+        return false;
+    }
+    MansionSurface* surface;
+    wl_list_for_each(surface, &compositor_->surface_list, link) {
+        const auto& frame = surface->core_frame->frame;
+        if (surface->core_frame->handle != handle || !frame || !frame->mapped ||
+            !xdg_surface_has_toplevel(surface->xdg_surface)) continue;
+        // Only an existing grab may travel outside the surface bounds.
+        if (!pointer_grabbed() && (x < 0 || y < 0 || x >= frame->logical_width || y >= frame->logical_height)) break;
+        if (seat_pointer_motion(seat_, surface->resource, x, y)) return true;
+        break;
+    }
+    error_ = "pointer motion requires a live mapped target, valid coordinates and matching grab";
+    return false;
+}
+
+bool CompositorRuntime::pointer_button(uint32_t button, bool pressed) {
+    if (pointer_focus_handle() && seat_pointer_button(seat_, button, pressed)) return true;
+    error_ = "pointer button requires a live focused toplevel and supported evdev button";
+    return false;
+}
+
+bool CompositorRuntime::pointer_axis(double horizontal, double vertical) {
+    if (pointer_focus_handle() && seat_pointer_axis(seat_, horizontal, vertical)) return true;
+    error_ = "pointer scroll requires a live focused toplevel and finite bounded values";
+    return false;
+}
+
+void CompositorRuntime::pointer_reset() { seat_pointer_reset(seat_); }
+bool CompositorRuntime::pointer_grabbed() const { return seat_pointer_grabbed(seat_); }
 
 int CompositorRuntime::client_count() const {
     return display_ ? wl_list_length(wl_display_get_client_list(display_)) : 0;

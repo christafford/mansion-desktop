@@ -1,6 +1,7 @@
 ## Owns shell input policy; compositor resources remain behind the session API.
 extends CanvasLayer
 const KeyboardMap = preload("res://scripts/keyboard_map.gd")
+const PointerMap = preload("res://scripts/pointer_map.gd")
 var terminal: Node
 var player: CharacterBody3D
 var active := false
@@ -19,7 +20,7 @@ func _ready() -> void:
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	panel.add_child(background)
 	var help := Label.new()
-	help.text = "Terminal  •  US keyboard  •  Ctrl+Alt+Esc returns to the room\nPointer controls come next"
+	help.text = "Terminal  •  US keyboard  •  Ctrl+Alt+Esc returns to the room\nDrag to select  •  Wheel to scroll"
 	help.position = Vector2(22, 12)
 	help.add_theme_font_size_override("font_size", 16)
 	panel.add_child(help)
@@ -30,6 +31,7 @@ func _ready() -> void:
 	view.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(view)
 	panel.hide()
+	get_viewport().mouse_exited.connect(pointer_left_window)
 
 func enter_application() -> bool:
 	if not host_focused or terminal.session == null or not terminal.screen.visible:
@@ -47,6 +49,7 @@ func enter_application() -> bool:
 
 func exit_application() -> void:
 	if terminal.session != null and terminal.session.is_running():
+		terminal.session.pointer_reset()
 		if not terminal.session.focus_keyboard(0):
 			push_error(terminal.session.last_error())
 	active = false
@@ -93,8 +96,52 @@ func _input(event: InputEvent) -> void:
 		var code := KeyboardMap.evdev(event)
 		if code and not terminal.session.keyboard_key(code, event.pressed):
 			exit_application()
-	elif active and (event is InputEventMouse or event is InputEventJoypadButton or event is InputEventJoypadMotion):
+	elif active and event is InputEventMouse:
 		get_viewport().set_input_as_handled()
+		route_pointer(event)
+	elif active and event is InputEventPanGesture:
+		get_viewport().set_input_as_handled()
+		if move_pointer(event.position) and image_rect().has_point(event.position):
+			if not terminal.session.pointer_axis(event.delta.x * 10, event.delta.y * 10): exit_application()
+	elif active and (event is InputEventJoypadButton or event is InputEventJoypadMotion):
+		get_viewport().set_input_as_handled()
+
+func image_rect() -> Rect2:
+	if view.texture == null: return Rect2()
+	return PointerMap.drawn_rect(view.get_global_rect(), view.texture.get_size())
+
+func move_pointer(position: Vector2) -> bool:
+	var grabbed: bool = terminal.session.pointer_grabbed()
+	var local := PointerMap.surface_position(position, image_rect(), terminal.logical_size, grabbed)
+	if not local.is_finite():
+		if not grabbed: terminal.session.pointer_motion(0, 0, 0)
+		return false
+	if not terminal.session.pointer_motion(focused_handle, local.x, local.y):
+		exit_application()
+		return false
+	return true
+
+func route_pointer(event: InputEventMouse) -> void:
+	if not move_pointer(event.position): return
+	if event is InputEventMouseButton:
+		var inside := image_rect().has_point(event.position)
+		var code := PointerMap.evdev(event.button_index)
+		# Outside motion/releases complete a drag, but margins never start clicks.
+		if code and (inside or not event.pressed):
+			if not terminal.session.pointer_button(code, event.pressed):
+				exit_application()
+				return
+		elif event.pressed and inside:
+			var axis := PointerMap.wheel(event.button_index, event.factor)
+			if axis != Vector2.ZERO and not terminal.session.pointer_axis(axis.x, axis.y):
+				exit_application()
+				return
+		if not inside and not terminal.session.pointer_grabbed():
+			terminal.session.pointer_motion(0, 0, 0)
+
+func pointer_left_window() -> void:
+	if active and not terminal.session.pointer_grabbed():
+		terminal.session.pointer_motion(0, 0, 0)
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:

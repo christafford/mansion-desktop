@@ -57,3 +57,10 @@ target_link_libraries(keyboard-client PRIVATE PkgConfig::WAYLAND_CLIENT PkgConfi
 add_executable(runtime-keyboard ../test_runtime_keyboard.cpp)
 target_include_directories(runtime-keyboard PRIVATE ../../src)
 target_link_libraries(runtime-keyboard PRIVATE mansion_runtime)
+
+add_executable(pointer-client ../pointer-client.c xdg-shell-client-protocol.h xdg-shell-protocol.c)
+target_include_directories(pointer-client PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+target_link_libraries(pointer-client PRIVATE PkgConfig::WAYLAND_CLIENT)
+add_executable(runtime-pointer ../test_runtime_pointer.cpp)
+target_include_directories(runtime-pointer PRIVATE ../../src)
+target_link_libraries(runtime-pointer PRIVATE mansion_runtime)

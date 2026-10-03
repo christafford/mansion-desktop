@@ -78,6 +78,28 @@ were injected; physical host input, IME/layout selection, pointer/scroll, resize
 compositor close/relaunch, latency and human usability remain **not observed or
 unimplemented**, as applicable. No human task is ticked.
 
+## 2026-10-03 agent-run Godot pointer interaction (P21-T43)
+
+Codex injected Godot mouse events into real Weston 15.0.1: a left drag highlights
+the printed output line, release stops the selection, and a second drag releases
+outside the image. Three wheel-up events reveal rows 47–71 after `seq 1 100`;
+wheel-down restores rows 77–100 and the prompt. Mode exit during a drag releases
+input; room movement resumes/stops and the camera stays released. Host-focus-loss
+notification and abrupt owned-client disconnect while held clear pointer state.
+
+[GPU captures](evidence/terminal-pointer/) were inspected using Godot 4.7.2
+Compatibility, Mesa 26.2.4, AMD Custom GPU 0405, 1280×800. Revision: T43 changes
+committed with [handoff 22](handoffs/22-godot-terminal-pointer.md), based on
+`ddd489c`. Reproduce with `tools/check-godot-study.sh`. Native protocol and mapping
+tests separately cover client isolation, coordinates, button/axis codes and
+scale/transform/letterboxing; they do not substitute for this real-client trial.
+
+This passes selection/scroll, not clipboard transfer. Client cursor images and
+popup menus remain unsupported (a popup request can disconnect a client).
+Physical mouse/touchpad input, latency, actual client resize, compositor close/
+relaunch and human usability are not accepted by this evidence. No human task
+is ticked.
+
 ## Legacy baseline and procedures
 
 Run from the repository root in the normal development container/session:

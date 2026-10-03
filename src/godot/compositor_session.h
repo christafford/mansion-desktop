@@ -23,6 +23,14 @@ public:
     bool keyboard_key(int64_t evdev_code, bool pressed) {
         return evdev_code > 0 && evdev_code <= 767 && runtime_.keyboard_key(static_cast<uint32_t>(evdev_code), pressed);
     }
+    bool pointer_motion(int64_t handle, double x, double y) { return runtime_.pointer_motion(handle, x, y); }
+    bool pointer_button(int64_t button, bool pressed) {
+        return button >= 272 && button <= 279 && runtime_.pointer_button(static_cast<uint32_t>(button), pressed);
+    }
+    bool pointer_axis(double horizontal, double vertical) { return runtime_.pointer_axis(horizontal, vertical); }
+    void pointer_reset() { runtime_.pointer_reset(); }
+    int64_t pointer_focus_handle() const { return runtime_.pointer_focus_handle(); }
+    bool pointer_grabbed() const { return runtime_.pointer_grabbed(); }
     bool start(const godot::String& runtime_directory);
     bool pump() { return runtime_.pump(); }
     bool stop() { return runtime_.stop(); }

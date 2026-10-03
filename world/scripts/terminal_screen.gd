@@ -8,6 +8,7 @@ var revision := 0
 var updates := 0
 var texture: ImageTexture
 var last_image: Image
+var logical_size := Vector2.ZERO
 var screen: MeshInstance3D
 var status: Label3D
 var closing := false
@@ -69,6 +70,7 @@ static func image_from_frame(frame: Dictionary) -> Image:
 	return image
 
 func show_frame(frame: Dictionary) -> void:
+	logical_size = Vector2(frame.logical_width, frame.logical_height)
 	last_image = image_from_frame(frame)
 	if texture == null or Vector2i(texture.get_size()) != last_image.get_size():
 		texture = ImageTexture.create_from_image(last_image)
@@ -90,6 +92,7 @@ func clear_content(message: String) -> void:
 	(screen.material_override as ShaderMaterial).set_shader_parameter("client_pixels", null)
 	texture = null
 	last_image = null
+	logical_size = Vector2.ZERO
 	status.text = message
 	status.visible = true
 

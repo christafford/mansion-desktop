@@ -9,8 +9,9 @@ The standard binding serves real wl_compositor/shm clients (T38), including
 xdg-shell configure/ack/commit and seat v1/v4 keyboard setup (T39).
 Owned frame transport now passes exact client-byte tests through Godot (T40).
 The study now starts that server and displays real Weston terminal output (T41).
-T42 adds real keyboard input and a flat application view; pointer and resize
-remain open. See [STATUS.md](STATUS.md).
+T42 adds real keyboard input and a flat application view; T43 adds text selection
+and pointer/scroll routing. Actual client resize remains open.
+See [STATUS.md](STATUS.md).
 
 ## Build and ownership
 
@@ -48,6 +49,16 @@ mapped toplevel handles for `focus_keyboard`, `keyboard_focus_handle` and
 keyboard enter and a surface-destroy listener. Duplicate presses are suppressed;
 the Wayland client repeats using the advertised rate/delay. See
 [keyboard handoff](handoffs/21-godot-terminal-keyboard.md).
+
+`pointer_map.gd` derives the actual drawn rectangle from the flat TextureRect and
+maps it to committed logical dimensions. The image is already upright; scale
+and rotation must not be applied a second time. `application_mode.gd` routes
+motion, Linux button codes and scroll through that session, with no world or
+margin clicks. The seat owns focused-client delivery, bounded held-button state,
+implicit grab and destruction cleanup. Mode/focus exit releases buttons before
+leave. See [pointer handoff](handoffs/22-godot-terminal-pointer.md) for exact APIs,
+validation and limitations: client cursors, clipboard and popup menus remain
+unsupported even though real text highlighting and scrollback work.
 
 Godot owns the visible host window and frame loop. GDExtension owns one compositor
 instance with explicit start/pump/stop. Use a nonblocking pump on the owning

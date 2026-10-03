@@ -28,7 +28,8 @@ P2-T05 GPU import remains open and is not a prerequisite for this CPU bridge.
 
 ## Instructions for the next autonomous run
 
-T36–T40 passed; current recovery continues with T41; do not start a broad autocontinue run.
+T36–T43 passed; current recovery continues with T44; do not start a broad
+autocontinue run.
 The eventual first useful product milestone ends at T19.
 Do not use a broad Projects 1–21 scope: that mixes deferred legacy tasks with
 this work. This document update does not itself start an autonomous run.
@@ -55,8 +56,9 @@ this work. This document update does not itself start an autonomous run.
    task in scope: T10 needs only T00; T11 also needs T01. If no task is eligible,
    record all blockers and end with `AUTOCONTINUE_BLOCKED`.
 7. End with `AUTOCONTINUE_DONE` only after every non-human task in the configured
-   scope passes. For the recommended scope this includes T19, not just T09 or
-   a compiled bridge. Otherwise end with `Next: <task id>`.
+   scope passes. The current recommended scope is the single recovery task in
+   STATUS.md. The historical T00–T19 range is not active. Otherwise end with
+   `Next: <task id>`.
 
 **Original full milestone sequence (resume after recovery):** T00 → T01 → T02 → T03 → T04 → T05 → T06 → T07 → T08 →
 T09 → T10 → T11 → T12 → T13 → T14 → T15 → T16 → T17 → T18 → T19.
@@ -222,7 +224,7 @@ Do not launch another broad overnight range before the new boundaries pass.
   events are agent-injected, not a physical/human trial. See
   [handoff 21](handoffs/21-godot-terminal-keyboard.md).
 
-- [ ] **P21-T43 Route terminal pointer and scroll in application mode.**
+- [x] **P21-T43 Route terminal pointer and scroll in application mode.**
   **Depends:** P21-T42.
   Read handoff 21. Inspect the existing seat/pointer resource implementation and
   legacy input policy; Godot must use its owned seat, never the legacy global.
@@ -239,11 +241,17 @@ Do not launch another broad overnight range before the new boundaries pass.
   button/camera motion. Capture agent-observed evidence; run scene/bridge/C++ and
   relevant sanitizer checks. Client cursor/selection-protocol limitations must
   be recorded honestly. Resize and explicit shell close/relaunch follow below.
+  **Verified 2026-10-03:** native isolation/grab/lifetime tests and sanitizers,
+  302 mapping assertions, real Weston selection/scroll, inspected captures,
+  scene/bridge regressions and 33/33 Meson tests. See
+  [handoff 22](handoffs/22-godot-terminal-pointer.md). Cursor images, clipboard and
+  popup menus remain unsupported; a popup request can disconnect a client.
+  This checkmark is not the broader terminal usability gate.
 
 - [ ] **P21-T44 Resize the terminal through xdg configure.**
   **Depends:** P21-T43.
-  Inspect `xdg-shell.cpp` and the existing configure/ack/commit tests before
-  adding a runtime resize request. Request a bounded application size when the
+  Read handoff 22. Inspect `xdg-shell.cpp` and existing configure/ack/commit tests
+  before adding a runtime resize request. Request a bounded application size when the
   Godot viewport changes; respect window geometry/client decorations, minimum
   sizes and the client's committed choice. Keep old pixels valid until a new
   buffer is committed. Do not claim that scaling ImageTexture resizes the client.
@@ -266,8 +274,9 @@ Do not launch another broad overnight range before the new boundaries pass.
   one process prove target-specific close; real shell/UI close, relaunch and
   repeated world/application transitions work with keyboard, pointer and resize.
   Inspect captures, verify owned child/socket cleanup, and run regressions plus
-  lifecycle sanitizers. Add the next bounded integration/owner-trial task; broader
-  human and Project 21 product gates stay open until their evidence exists.
+  lifecycle sanitizers. Add bounded follow-up tasks for cursor/clipboard/popup
+  limitations before claiming full usability, and an integration/owner-trial task.
+  Broader human and Project 21 product gates stay open until their evidence exists.
 
 
 - [ ] **P21-T00 Repair and verify the toolchain baseline.**

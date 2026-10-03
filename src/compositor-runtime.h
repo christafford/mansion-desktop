@@ -31,6 +31,12 @@ public:
     bool focus_keyboard(int64_t handle); // 0 returns to world/no client focus.
     int64_t keyboard_focus_handle() const;
     bool keyboard_key(uint32_t evdev_code, bool pressed);
+    bool pointer_motion(int64_t handle, double x, double y); // 0 leaves (unless grabbed).
+    bool pointer_button(uint32_t button, bool pressed);
+    bool pointer_axis(double horizontal, double vertical);
+    void pointer_reset();
+    int64_t pointer_focus_handle() const;
+    bool pointer_grabbed() const;
     const std::string& socket_path() const { return socket_path_; }
     const std::string& last_error() const { return error_; }
     bool running() const { return display_ != nullptr; }

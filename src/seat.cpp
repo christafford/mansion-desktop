@@ -7,6 +7,7 @@
 #include <cstring>
 #include <new>
 #include <chrono>
+#include <cmath>
 #include <linux/input-event-codes.h>
 #include <sys/mman.h>
 #include <unistd.h>
@@ -14,6 +15,7 @@
 
 static void keyboard_enter(MansionSeat* seat, wl_resource* keyboard, uint32_t serial);
 static void keyboard_focus_destroyed(wl_listener* listener, void* data);
+static void pointer_focus_destroyed(wl_listener* listener, void* data);
 
 /* ---------- SeatKeyboardClient destroy listener ---------- */
 
@@ -84,10 +86,12 @@ static void seat_get_pointer(struct wl_client* client, struct wl_resource* seat_
     // Track in seat's client list using a separate link
     wl_list_insert(&seat->pointer_clients, &kpc->seat_link);
 
-    /* Don't send a synthetic enter here; proper enter/leave is handled
-       by pointer_check_focus() when the pointer position changes. */
-
-    // Send capabilities (done at seat level, not per-client)
+    // Only the owned runtime installs this lifetime-tracked focus listener.
+    if (!wl_list_empty(&seat->pointer_focus_destroy.link) && seat->pointer_surface_resource &&
+        wl_resource_get_client(seat->pointer_surface_resource) == client)
+        wl_pointer_send_enter(resource, wl_display_next_serial(seat->display),
+            seat->pointer_surface_resource, wl_fixed_from_double(seat->pointer_x),
+            wl_fixed_from_double(seat->pointer_y));
 }
 
 static void seat_get_keyboard(struct wl_client* client, struct wl_resource* seat_resource,
@@ -196,6 +200,8 @@ struct MansionSeat* seat_create(struct wl_display* display) {
     seat->display = display;
     wl_list_init(&seat->keyboard_focus_destroy.link);
     seat->keyboard_focus_destroy.notify = keyboard_focus_destroyed;
+    wl_list_init(&seat->pointer_focus_destroy.link);
+    seat->pointer_focus_destroy.notify = pointer_focus_destroyed;
     wl_list_init(&seat->resources);
     wl_list_init(&seat->keyboard_clients);
     wl_list_init(&seat->pointer_clients);
@@ -227,6 +233,7 @@ struct MansionSeat* seat_create(struct wl_display* display) {
 void seat_destroy(struct MansionSeat* seat) {
     if (!seat) return;
     wl_list_remove(&seat->keyboard_focus_destroy.link);
+    wl_list_remove(&seat->pointer_focus_destroy.link);
 
     // Clear focus before destroying resources to avoid stale references.
     seat->grab_surface_resource = nullptr;
@@ -370,4 +377,106 @@ void compositor_set_seat(struct MansionCompositor* compositor,
                           struct MansionSeat* seat) {
     if (!compositor) return;
     compositor->seat = seat;
+}
+
+/* ---------- Owned runtime pointer delivery (seat v4) ---------- */
+
+static bool pointer_value(double value) {
+    // Leave ample room inside wl_fixed's signed 24.8 range before conversion.
+    return std::isfinite(value) && std::abs(value) <= 1000000.0;
+}
+
+wl_resource* seat_pointer_surface(MansionSeat* seat) {
+    return seat ? seat->pointer_surface_resource : nullptr;
+}
+bool seat_pointer_grabbed(MansionSeat* seat) {
+    return seat && !seat->pressed_buttons.empty();
+}
+
+bool seat_pointer_button(MansionSeat* seat, uint32_t button, bool pressed) {
+    if (!seat || !seat->pointer_surface_resource || button < BTN_LEFT || button > BTN_TASK) return false;
+    auto found = std::find(seat->pressed_buttons.begin(), seat->pressed_buttons.end(), button);
+    if (pressed == (found != seat->pressed_buttons.end())) return true;
+    if (pressed) seat->pressed_buttons.push_back(button);
+    else seat->pressed_buttons.erase(found);
+    seat->grab_surface_resource = seat->pressed_buttons.empty() ? nullptr : seat->pointer_surface_resource;
+    const auto serial = wl_display_next_serial(seat->display);
+    const auto time = keyboard_time();
+    auto* client = wl_resource_get_client(seat->pointer_surface_resource);
+    SeatPointerClient* pc;
+    wl_list_for_each(pc, &seat->pointer_clients, seat_link)
+        if (wl_resource_get_client(pc->resource) == client)
+            wl_pointer_send_button(pc->resource, serial, time, button,
+                pressed ? WL_POINTER_BUTTON_STATE_PRESSED : WL_POINTER_BUTTON_STATE_RELEASED);
+    return true;
+}
+
+static void pointer_release_all(MansionSeat* seat) {
+    while (!seat->pressed_buttons.empty()) {
+        if (seat->pointer_surface_resource) seat_pointer_button(seat, seat->pressed_buttons.back(), false);
+        else seat->pressed_buttons.pop_back();
+    }
+    seat->grab_surface_resource = nullptr;
+}
+
+static void pointer_focus_destroyed(wl_listener* listener, void*) {
+    MansionSeat* seat = wl_container_of(listener, seat, pointer_focus_destroy);
+    // Releases contain no surface reference; leave would refer to a dead proxy.
+    pointer_release_all(seat);
+    seat->pointer_surface_resource = nullptr;
+    wl_list_remove(&seat->pointer_focus_destroy.link);
+    wl_list_init(&seat->pointer_focus_destroy.link);
+}
+
+void seat_pointer_reset(MansionSeat* seat) {
+    if (!seat) return;
+    pointer_release_all(seat);
+    if (seat->pointer_surface_resource) {
+        auto* client = wl_resource_get_client(seat->pointer_surface_resource);
+        const auto serial = wl_display_next_serial(seat->display);
+        SeatPointerClient* pc;
+        wl_list_for_each(pc, &seat->pointer_clients, seat_link)
+            if (wl_resource_get_client(pc->resource) == client)
+                wl_pointer_send_leave(pc->resource, serial, seat->pointer_surface_resource);
+    }
+    seat->pointer_surface_resource = nullptr;
+    wl_list_remove(&seat->pointer_focus_destroy.link);
+    wl_list_init(&seat->pointer_focus_destroy.link);
+}
+
+bool seat_pointer_motion(MansionSeat* seat, wl_resource* surface, double x, double y) {
+    if (!seat || !pointer_value(x) || !pointer_value(y)) return false;
+    // The caller must keep using the grabbed surface's coordinate system.
+    if (seat_pointer_grabbed(seat) && surface != seat->pointer_surface_resource) return false;
+    const bool changed = seat->pointer_surface_resource != surface;
+    if (changed) seat_pointer_reset(seat);
+    seat->pointer_x = x; seat->pointer_y = y;
+    if (!surface) return true;
+    if (changed) {
+        seat->pointer_surface_resource = surface;
+        wl_resource_add_destroy_listener(surface, &seat->pointer_focus_destroy);
+    }
+    const auto serial = changed ? wl_display_next_serial(seat->display) : 0;
+    const auto time = keyboard_time();
+    auto* client = wl_resource_get_client(surface);
+    SeatPointerClient* pc;
+    wl_list_for_each(pc, &seat->pointer_clients, seat_link) {
+        if (wl_resource_get_client(pc->resource) != client) continue;
+        if (changed) wl_pointer_send_enter(pc->resource, serial, surface, wl_fixed_from_double(x), wl_fixed_from_double(y));
+        else wl_pointer_send_motion(pc->resource, time, wl_fixed_from_double(x), wl_fixed_from_double(y));
+    }
+    return true;
+}
+
+bool seat_pointer_axis(MansionSeat* seat, double horizontal, double vertical) {
+    if (!seat || !seat->pointer_surface_resource || !pointer_value(horizontal) || !pointer_value(vertical)) return false;
+    const auto time = keyboard_time();
+    auto* client = wl_resource_get_client(seat->pointer_surface_resource);
+    SeatPointerClient* pc;
+    wl_list_for_each(pc, &seat->pointer_clients, seat_link) {
+        if (wl_resource_get_client(pc->resource) != client) continue;
+        if (horizontal) wl_pointer_send_axis(pc->resource, time, WL_POINTER_AXIS_HORIZONTAL_SCROLL, wl_fixed_from_double(horizontal));
+        if (vertical) wl_pointer_send_axis(pc->resource, time, WL_POINTER_AXIS_VERTICAL_SCROLL, wl_fixed_from_double(vertical));
+    }
+    return true;
 }

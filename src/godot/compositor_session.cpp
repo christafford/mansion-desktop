@@ -5,6 +5,12 @@
 
 namespace mansion {
 void MansionCompositorSession::_bind_methods() {
+    godot::ClassDB::bind_method(godot::D_METHOD("pointer_motion", "handle", "x", "y"), &MansionCompositorSession::pointer_motion);
+    godot::ClassDB::bind_method(godot::D_METHOD("pointer_button", "button", "pressed"), &MansionCompositorSession::pointer_button);
+    godot::ClassDB::bind_method(godot::D_METHOD("pointer_axis", "horizontal", "vertical"), &MansionCompositorSession::pointer_axis);
+    godot::ClassDB::bind_method(godot::D_METHOD("pointer_reset"), &MansionCompositorSession::pointer_reset);
+    godot::ClassDB::bind_method(godot::D_METHOD("pointer_focus_handle"), &MansionCompositorSession::pointer_focus_handle);
+    godot::ClassDB::bind_method(godot::D_METHOD("pointer_grabbed"), &MansionCompositorSession::pointer_grabbed);
     godot::ClassDB::bind_method(godot::D_METHOD("focus_keyboard", "handle"), &MansionCompositorSession::focus_keyboard);
     godot::ClassDB::bind_method(godot::D_METHOD("keyboard_focus_handle"), &MansionCompositorSession::keyboard_focus_handle);
     godot::ClassDB::bind_method(godot::D_METHOD("keyboard_key", "evdev_code", "pressed"), &MansionCompositorSession::keyboard_key);

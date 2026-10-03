@@ -7,13 +7,14 @@ is historical; its extension/visual completion claims were contradicted by tests
 
 ## Next task
 
-**P21-T43: route terminal pointer and scroll in application mode.**
-Recovery T36–T42 passes its bounded acceptance: furnished study, retained
-compositor, live output, real shell typing and a readable application view.
-See [tasks](TASKS.md) and [keyboard handoff](handoffs/21-godot-terminal-keyboard.md).
-Next route application-view pointer events through the same owned seat. T44 then
-handles xdg resize; T45 adds close requests and explicit terminal relaunch. Keyboard
-input alone does not complete the desktop or the broader product gates.
+**P21-T44: resize the terminal through xdg configure.**
+Recovery T36–T43 passes its bounded acceptance: furnished study, retained
+compositor, live output, real shell typing, readable application view, text
+selection and scrollback. See [tasks](TASKS.md) and
+[pointer handoff](handoffs/22-godot-terminal-pointer.md).
+Next request actual client resize and respect configure/ack/committed state;
+scaling a texture does not resize the client. T45 then adds close requests and
+explicit relaunch. Cursor images, clipboard and popup menus remain unsupported.
 Broader T00–T19 gates remain unchecked until their full evidence exists.
 
 ## Run the visible Godot frontend
@@ -37,7 +38,8 @@ returns to arrival; M toggles slow walking and Shift slows while held.
 Enter activates the terminal. Ctrl+Alt+Escape returns to the room. Application
 mode uses physical US keys and native-size text when it fits; ordinary Escape,
 Tab, Home and camera keys reach the terminal. Host focus loss returns to world
-mode. Type `exit` to close the shell; restart the study to relaunch for now.
+mode. Left-drag selects text and the wheel scrolls terminal history. Type `exit`
+to close the shell; restart the study to relaunch for now.
 
 ## Verified by automated checks in this recovery
 
@@ -69,6 +71,16 @@ mode. Type `exit` to close the shell; restart the study to relaunch for now.
   Ctrl+U, client repeat, Ctrl+C interrupt, mode transitions, resumed world
   movement, host-focus-loss notification and shell exit pass. Flat view preserves
   7,571 sampled opaque client pixels at native size. These are agent-run trials.
+- Pointer protocol: client isolation, fractional coordinates, button/axis values,
+  implicit grabs, duplicate suppression, outside drag, late binding, reset,
+  detach, destruction, disconnect and stale handles pass. 302 Godot assertions
+  cover drawn-rectangle mapping, scale/rotation, corners/margins and buttons.
+- Real Weston pointer trial via injected Godot events: text selection, release
+  outside the image, scrollback up/down, held-button mode exit, world control
+  recovery, focus-loss notification and disconnect pass. Captures were inspected;
+  physical mouse/touchpad input and latency are not inferred.
+- Standalone pointer runtime AddressSanitizer + UBSan + enabled leak detection
+  pass in T43.
 - Standalone keyboard runtime AddressSanitizer + UBSan + enabled leak detection
   pass in T42; frame ownership sanitizer checks passed in T40.
 - C++ build and 33/33 Meson tests pass; 62/62 Node plugin tests passed during T39.
@@ -95,6 +107,11 @@ and return to the room after shell exit. Agent inspection, 2026-10-03, same
 engine/renderer/hardware as above. Text is upright and comfortably sized in this
 capture; no human, physical-keyboard or latency acceptance is inferred.
 
+[Pointer evidence](evidence/terminal-pointer/) shows a highlighted real output
+line, earlier/later scrollback and return to the live study. Agent inspection,
+2026-10-03, same engine/renderer/hardware. This is selection/scroll acceptance;
+it does not establish clipboard transfer or popup-menu support.
+
 ## Verified by a person
 
 Historical owner confirmation on 2026-10-02: legacy launch, input and vertical
@@ -103,15 +120,18 @@ This records approval of its appearance, not a terminal/input/comfort trial.
 
 ## Not verified / unfinished
 
-- Application pointer/scroll, resize, compositor close requests and an in-app
-  relaunch workflow. Keyboard and ordinary shell exit pass; full terminal
+- Actual client resize, compositor close requests and an in-app relaunch
+  workflow. Keyboard, selection/scroll and ordinary shell exit pass; full terminal
   usability and physical input are not verified. IME/composed text and selectable
   layouts are not implemented; the current seat/mapping is US.
+- Client cursor images, clipboard/primary selection and popup menus. The host
+  cursor remains visible; highlighting does not implement copy/paste. A right-click
+  menu request can disconnect the client because xdg_popup remains unsupported.
 - Original addon initialization: reproduced segmentation fault; isolated with
   `world/addons/mansion_godot/.gdignore`, source and binary preserved.
 - Full renderer-independent compositor extraction: socket/wl_compositor/shm
   lifecycle, initial xdg-shell/seat checks and owned shm snapshots pass. Broader
-  surface-tree/protocol conformance and Godot pointer delivery remain open.
+  surface-tree/protocol conformance and popup presentation remain open.
 - Finished art rubric, furniture selection/cohesion, performance, physical host
   input and human comfort. No blank capture counts as visual acceptance.
 - Fresh-clone dependency provenance and asset fetching/offline negative checks.

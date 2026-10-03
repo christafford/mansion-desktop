@@ -36,6 +36,9 @@ struct MansionSeat {
     /* Pointer focus and grab (P1-T06-D). */
     struct wl_resource* pointer_surface_resource; /* surface pointer is over */
     struct wl_resource* grab_surface_resource;    /* surface with pointer grab */
+    struct wl_listener pointer_focus_destroy;
+    double pointer_x = 0, pointer_y = 0;
+    std::vector<uint32_t> pressed_buttons;
     uint32_t serial;                              /* shared serial for all events */
 
     /* P3-T02: track pressed keycodes for clean exit from Application mode. */
