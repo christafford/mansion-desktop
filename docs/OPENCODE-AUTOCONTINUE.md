@@ -1,8 +1,9 @@
-# Qwen/OpenCode: build the Godot and Poly Haven workspace
+# Historical Qwen/OpenCode workflow
 
-The project uses its own `/autocontinue` plugin. This is automatic continuation
-after completed agent turns, not editor autocomplete. The owner's chosen Qwen
-model/provider is unchanged. No additional agent framework is required.
+The owner is now using Codex for this work (2026-10-04), not Claude Code or the
+earlier Qwen overnight workflow. The instructions below describe the existing
+OpenCode `/autocontinue` plugin for reference; they do not select or require the
+active coding agent. Follow STATUS.md for current work and evidence.
 
 ## Current recovery overrides the historical run instructions below
 

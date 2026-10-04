@@ -19,6 +19,15 @@ Vulkan. Complete glTF packages import directly; Blender is not required here.
 
 ## Supported checks
 
+The application launcher also uses installed Python 3.14.7, PyGObject 3.56.3,
+GIO/GioUnix 2.88.3 and GTK 3.24.52 introspection. GTK resolves icons in a helper
+process; Godot renders the UI. KDE/Plasma/KRunner is not required. These measured
+versions and the vendored MIT radial asset are covered by
+[Decision 07](decisions/07-application-launcher.md). Missing introspection
+dependencies produce a launcher error; no automatic system installation occurs.
+The radial asset's upstream revision, local patch and hashes are recorded in
+[UPSTREAM.md](../world/addons/advanced_radial_menu/UPSTREAM.md).
+
 ```sh
 python3 world/tools/prepare_study_assets.py
 tools/validate-godot-project.sh

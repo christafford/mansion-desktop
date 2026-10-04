@@ -20,6 +20,11 @@ runtime's seat and explicit world/application modes in Godot. T43 adds logical
 pointer mapping, focused button/axis delivery and lifetime-tracked drag grabs.
 T44 adds bounded xdg resize suggestions, committed geometry/size limits and
 actual terminal reflow on host resize. Popup presentation remains open.
+T48 adds a Godot application wheel/search overlay and a separate Python helper
+for freedesktop metadata, installed icons and argument-vector execution. The
+frontend still owns the compositor session and its launched child processes.
+Only desktop-entry IDs persist in recents; PID/window associations are temporary.
+This does not add a KDE service dependency or general application compatibility.
 Godot maps physical US keys; the seat owns XKB and held-key state, filters events
 to the focused client, and clears focus on destruction.
 The original addon is isolated

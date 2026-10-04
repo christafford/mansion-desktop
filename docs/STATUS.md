@@ -1,6 +1,7 @@
 # Project status
 
-Current authority: recovery begun 2026-10-03, T44 and navigation T46 verified 2026-10-04,
+Current authority: recovery begun 2026-10-03; T44 and navigation/launcher T46–T48
+verified 2026-10-04,
 starting from `4c0c078` plus the existing
 uncommitted overnight work. [Decision 06](decisions/06-godot-poly-haven.md) remains
 the direction. [Previous status](handoffs/15-status-before-frontend-recovery.md)
@@ -8,13 +9,15 @@ is historical; its extension/visual completion claims were contradicted by tests
 
 ## Next task
 
-**P21-T45: request client close and explicitly relaunch the terminal.**
+**P21-T45: finish targeted client close and its lifecycle acceptance.**
 Recovery T36–T44 passes its bounded acceptance: furnished study, retained
 compositor, live output, typing, selection/scroll and actual client resize.
 See [tasks](TASKS.md) and [resize handoff](handoffs/23-godot-terminal-resize.md).
 The owner's navigation adjustment is recorded separately in
 [handoff 24](handoffs/24-godot-navigation.md); it does not complete T45.
-Next send targeted xdg close requests and add explicit relaunch without using
+The requested application wheel/search and explicit terminal relaunch now pass
+T48; see [handoff 25](handoffs/25-application-launcher.md). Reuse that launcher.
+Next send targeted xdg close requests without using
 process termination as a window-close implementation. Cursor images, clipboard
 and popup menus remain unsupported; carry these into concrete follow-up tasks.
 Broader T00–T19 gates remain unchecked until their full evidence exists.
@@ -35,7 +38,7 @@ The launcher builds/stages the standard native extension and starts installed
 `tools/run-godot.sh --audio-driver Dummy -- --terminal-demo`.
 `build/mansion-desktop --room-camera` still uses the separate legacy renderer.
 
-WASD walks; hold right mouse to look with reversed horizontal mouse movement.
+W/S walks; hold right mouse to look with reversed horizontal mouse movement.
 A and D turn left and right; while right mouse is held they strafe instead.
 Releasing right mouse frees the pointer and eases the vertical angle back to its
 arrival value over 0.2 seconds, preserving horizontal direction. Holding right
@@ -45,8 +48,19 @@ Enter activates the terminal. Ctrl+Alt+Escape returns to the room. Application
 mode uses physical US keys and native-size text when it fits; ordinary Escape,
 Tab, Home and camera keys reach the terminal. Host focus loss returns to world
 mode. Left-drag selects text and the wheel scrolls terminal history. Type `exit`
-to close the shell; restart the study to relaunch for now. In application mode,
+to close the shell; use the application wheel to relaunch. In application mode,
 resize the host window to resize the actual terminal and its rows/columns.
+
+Tab in world mode (or the Applications button) opens eight recent-app slots.
+Newest is at twelve o'clock, then clockwise; unused slots stay empty. Click the
+center to search installed application names/keywords with their icons. Enter,
+double-click or Launch starts the selected app; a recent live app is restored
+without duplicating it. Esc returns from search to the wheel, then to the room.
+Tab still belongs to applications in application mode. Recents persist in
+`.tools/launcher-state/recent.json`; tests use an isolated state directory.
+Discovery uses freedesktop entries and icon themes without a KDE service.
+Verified clients are Weston terminal and Vim through Terminal=true. Other
+graphical apps may fail; Flatpak launch is explicitly unavailable for now.
 
 ## Verified by automated checks in this recovery
 
@@ -58,6 +72,15 @@ resize the host window to resize the actual terminal and its rows/columns.
 - Navigation T46 (2026-10-04): reversed left/right look, upward/downward pitch
   return, preserved yaw/held movement, interrupted return and Home reset pass in
   the graphical controller test. Physical mouse feel remains owner-unobserved.
+- T47 navigation rechecked during T48: A/D turn by default and both strafe with
+  right mouse held. The in-world help now describes these controls accurately.
+- T48 launcher: six Python metadata/Exec/environment tests, actual center-click
+  and typed search, camera/input isolation, cancel, eight-slot ordering,
+  deduplicated persistent history, real Vim launch/typing, recent-window switch,
+  terminal exit/relaunch with a shell-written marker and owned child cleanup pass.
+  The complete Godot study suite passes in this session. Eight-entry visual
+  history is a labeled layout fixture; only Terminal/Vim launch compatibility is
+  claimed. See [launcher evidence](evidence/application-launcher/).
 - Standard C++ binding: fresh import and three clean runtime processes, 300
   native instances/calls/releases. Separate build uses consistent generated headers.
 - Real Wayland window protocols: sixteen standalone and sixteen Godot trials.
@@ -143,10 +166,16 @@ This records approval of its appearance, not a terminal/input/comfort trial.
 
 ## Not verified / unfinished
 
-- Compositor close requests and an in-app relaunch workflow. Keyboard,
+- Compositor close requests. In-app terminal relaunch now passes T48. Keyboard,
   selection/scroll, resize and ordinary shell exit pass; full terminal
   usability and physical input are not verified. IME/composed text and selectable
   layouts are not implemented; the current seat/mapping is US.
+- General graphical-app launch compatibility and durable/multiwindow assignment.
+  Weston editor failed because text-input-manager is absent. The launcher records
+  an app only after mapped content; a catalog entry is not a compatibility claim.
+  Flatpak handoff and D-Bus activation remain unsupported. Third-party single-
+  instance IPC may reuse a host instance; private display variables are not a
+  process sandbox. The verified Terminal/Vim paths create owned private clients.
 - Client cursor images, clipboard/primary selection and popup menus. The host
   cursor remains visible; highlighting does not implement copy/paste. A right-click
   menu request can disconnect the client because xdg_popup remains unsupported.

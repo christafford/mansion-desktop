@@ -6,6 +6,7 @@ var terminal: Node
 var player: CharacterBody3D
 var active := false
 var host_focused := true
+var launcher_active := false
 var focused_handle := 0
 var panel: Control
 var view: TextureRect
@@ -23,7 +24,7 @@ func _ready() -> void:
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	panel.add_child(background)
 	var help := Label.new()
-	help.text = "Terminal  •  US keyboard  •  Ctrl+Alt+Esc returns to the room\nDrag to select  •  Wheel to scroll  •  Resize the window to resize the terminal"
+	help.text = "Application  •  US keyboard  •  Ctrl+Alt+Esc returns to the room\nDrag to select  •  Wheel to scroll  •  Resize the window to resize the application"
 	help.position = Vector2(22, 12)
 	help.add_theme_font_size_override("font_size", 16)
 	panel.add_child(help)
@@ -104,7 +105,7 @@ func _process(_delta: float) -> void:
 	if resize_pending and Time.get_ticks_msec() >= resize_due_ms: resize_client()
 
 func _input(event: InputEvent) -> void:
-	if not host_focused:
+	if not host_focused or launcher_active:
 		return
 	if event is InputEventKey:
 		var key: int = event.physical_keycode if event.physical_keycode else event.keycode

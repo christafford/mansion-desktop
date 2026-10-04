@@ -1,8 +1,9 @@
-## Owns the live output session and the one terminal launched by this scene.
+## Owns the compositor session, monitor presentation and launched client processes.
 extends Node
 
 var session
 var child_pid := -1
+var launched_children: Array[int] = []
 var handle := 0
 var revision := 0
 var updates := 0
@@ -96,17 +97,32 @@ func clear_content(message: String) -> void:
 	status.text = message
 	status.visible = true
 
+func select_window(window: int) -> void:
+	if session == null or not session.toplevel_handles().has(window): return
+	handle = window
+	revision = 0
+	clear_content("Opening application…")
+	var frame: Dictionary = session.snapshot(handle, 0)
+	if frame.get("mapped", false):
+		revision = frame.revision
+		show_frame(frame)
+
+func reap_launched_children() -> void:
+	for pid in launched_children.duplicate():
+		if not OS.is_process_running(pid): launched_children.erase(pid)
+
 func _process(_delta: float) -> void:
 	if session == null or closing or not session.is_running():
 		return
 	if not session.pump():
 		fail(session.last_error())
 		return
+	reap_launched_children()
 	var windows: PackedInt64Array = session.toplevel_handles()
 	if handle != 0 and not windows.has(handle):
 		handle = 0
 		revision = 0
-		clear_content("Terminal closed")
+		clear_content("Application closed")
 	if handle == 0 and not windows.is_empty():
 		handle = windows[0]
 		revision = 0
@@ -141,8 +157,14 @@ func shutdown() -> void:
 			push_error(session.last_error())
 	# Give the terminal its ordinary display-disconnect cleanup path first.
 	var deadline := Time.get_ticks_msec() + 1500
-	while child_running() and Time.get_ticks_msec() < deadline:
+	reap_launched_children()
+	while (child_running() or not launched_children.is_empty()) and Time.get_ticks_msec() < deadline:
 		await get_tree().process_frame
+		reap_launched_children()
+	for pid in launched_children.duplicate():
+		var error := OS.kill(pid)
+		if error == OK: launched_children.erase(pid)
+		else: push_error("Could not terminate owned application %d: %s" % [pid, error_string(error)])
 	if child_running():
 		var error := OS.kill(child_pid)
 		if error != OK:
@@ -155,6 +177,10 @@ func _exit_tree() -> void:
 	# Covers script errors/forced scene removal in addition to ordinary close.
 	if session != null and not session.stop():
 		push_error(session.last_error())
+	reap_launched_children()
+	for pid in launched_children:
+		var error := OS.kill(pid)
+		if error != OK: push_error("Could not terminate owned application %d during teardown: %s" % [pid, error_string(error)])
 	if child_running():
 		var error := OS.kill(child_pid)
 		if error != OK:

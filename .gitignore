@@ -115,3 +115,4 @@ tests/godot-binding/bin/
 world/addons/mansion_runtime/*.so
 world/addons/mansion_runtime/*.so.tmp
 world/addons/mansion_runtime/*.uid
+world/addons/advanced_radial_menu/*.import

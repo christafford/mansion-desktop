@@ -150,6 +150,13 @@ func run() -> void:
 	key(player, KEY_A, false)
 	check(player.position.distance_to(before) > 0.3, "A does not strafe while right mouse is held")
 	check(is_equal_approx(player.rotation.y, yaw), "A turns while right mouse is held")
+	var strafe_start: Vector3 = player.position
+	key(player, KEY_D, true)
+	for frame in range(20):
+		await physics_frame
+	key(player, KEY_D, false)
+	check(player.position.x > strafe_start.x + 0.3, "D does not strafe right while right mouse is held: %s -> %s, look=%s yaw=%s" % [strafe_start, player.position, player._look_held, player.rotation.y])
+	check(is_equal_approx(player.rotation.y, yaw), "D turns while right mouse is held")
 	mouse.pressed = false
 	player._unhandled_input(mouse)
 	key(player, KEY_HOME, true)

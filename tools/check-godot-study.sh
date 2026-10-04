@@ -6,6 +6,8 @@ GODOT="${GODOT_BINARY:-$ROOT/tools/Godot_v4.7.2-stable_linux.x86_64}"
 "$ROOT/tools/validate-godot-project.sh"
 LOG_DIR=$(mktemp -d "${TMPDIR:-/tmp}/mansion-study-check.XXXXXX")
 echo "Study check logs: $LOG_DIR"
+export MANSION_LAUNCHER_STATE_DIR="$ROOT/.tools/study-launcher-check-$$"
+python3 "$ROOT/tests/test_desktop_apps.py"
 run() {
     local label=$1 marker=$2
     shift 2
@@ -28,4 +30,5 @@ run terminal 'LIVE_TERMINAL_OK .*sessions=2 failures=0' --script res://tests/liv
 run terminal-input 'TERMINAL_INPUT_OK .*failures=0' --script res://tests/terminal_input.gd
 run terminal-pointer 'TERMINAL_POINTER_OK .*failures=0' --script res://tests/terminal_pointer.gd
 run terminal-resize 'TERMINAL_RESIZE_OK .*failures=0' --script res://tests/terminal_resize.gd
-echo "Study checks passed; inspect .tools/terminal-output-test, .tools/terminal-input-test, .tools/terminal-pointer-test and .tools/terminal-resize-test captures."
+run launcher 'APP_LAUNCHER_OK .*failures=0' --script res://tests/app_launcher.gd
+echo "Study checks passed; inspect .tools/terminal-output-test, .tools/terminal-input-test, .tools/terminal-pointer-test, .tools/terminal-resize-test and .tools/launcher-test-captures."

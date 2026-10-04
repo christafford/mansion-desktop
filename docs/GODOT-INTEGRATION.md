@@ -31,13 +31,25 @@ seat wrapper is separate from each runtime's seat. See
 
 `tools/build-godot-runtime.sh` stages the same tested library in the world's
 `addons/mansion_runtime/`; the run/import helpers invoke it automatically.
-`terminal_screen.gd` owns a session and its one launched terminal process.
+`terminal_screen.gd` owns a session, its initial terminal and additional
+launcher-owned child processes.
 It chooses from `toplevel_handles()` and calls `snapshot(handle, after_revision)`
 to avoid unchanged pixel copies. The monitor applies inverse buffer transforms,
 fits the logical aspect ratio, and clears content on detach/destruction.
 The unshaded screen shader compensates for the study's fixed Filmic tone curve;
 this is tested for Compatibility at exposure/white 1, not a general renderer
 color-management solution. See [live output handoff](handoffs/20-godot-live-terminal.md).
+
+`app_launcher.gd` opens in world mode with Tab or the Applications button. It
+suspends camera/application input while its modal wheel/search owns focus.
+Eight radial slots use the vendored Advanced Radial Menu; a Python helper reads
+GIO desktop entries and GTK icon themes asynchronously. Search text only filters
+metadata; launch resolves a desktop ID again and execs argv with the private
+display environment. `Terminal=true` uses Weston and an exec wrapper. The
+launcher serializes pending launches and selects a newly mapped window; this
+initial candidate association is not durable identity or complete multiwindow
+matching. Verified successful launches populate eight persistent desktop IDs.
+See [Decision 07](decisions/07-application-launcher.md) for dependencies and limits.
 
 `application_mode.gd` implements explicit shell policy: Enter activates the live
 terminal, Ctrl+Alt+Escape returns to world, and host focus loss clears activation.

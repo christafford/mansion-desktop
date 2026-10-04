@@ -3,6 +3,7 @@ extends Node3D
 
 var terminal_screen: Node
 var application_mode: CanvasLayer
+var app_launcher: CanvasLayer
 
 var furniture: Array[Node3D] = []
 
@@ -114,6 +115,11 @@ func _ready() -> void:
 	application_mode.terminal = terminal_screen
 	application_mode.player = get_node("Player")
 	add_child(application_mode)
+	app_launcher = preload("res://scripts/app_launcher.gd").new()
+	app_launcher.terminal = terminal_screen
+	app_launcher.app = application_mode
+	app_launcher.player = get_node("Player")
+	add_child(app_launcher)
 	get_tree().auto_accept_quit = false
 	var environment := WorldEnvironment.new()
 	var env := Environment.new()
@@ -153,7 +159,7 @@ func _ready() -> void:
 	add_child(lamp)
 	var ui := CanvasLayer.new()
 	var help := Label.new()
-	help.text = "WASD walk   •   Hold right mouse to look   •   Esc release   •   Home return   •   M slow walk\nEnter uses the terminal   •   Ctrl+Alt+Esc returns to the room"
+	help.text = "W/S walk   •   A/D turn (hold right mouse to strafe/look)   •   Home return   •   M slow walk\nEnter uses the application   •   Ctrl+Alt+Esc returns to the room   •   Tab opens applications"
 	help.position = Vector2(22, 20)
 	help.add_theme_font_size_override("font_size", 16)
 	help.add_theme_color_override("font_shadow_color", Color.BLACK)
@@ -161,6 +167,7 @@ func _ready() -> void:
 	help.add_theme_constant_override("shadow_offset_y", 2)
 	ui.add_child(help)
 	add_child(ui)
+	app_launcher.world_hud = ui
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--capture="):
 			capture_views(arg.trim_prefix("--capture="))

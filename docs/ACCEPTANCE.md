@@ -21,6 +21,17 @@ The commands below describe the supplied legacy executable and are historical
 procedures for it, not Godot launch commands. P21-T00/T01/T11 must document the
 new actual commands in TOOLCHAIN.md and this file after implementing them.
 
+P21-T48 launcher acceptance (Codex agent, 2026-10-04, based on `7316f78`): real
+installed Vim launched from the radial menu's search dialog, received typing
+inside Weston, and returned to the existing terminal through a recent-app click.
+The original terminal exited and relaunched; a shell-written file confirmed
+typing in the replacement. The graphical test verifies modal/camera isolation,
+ordinary application Tab, eight-slot layout, persistence and cleanup. See
+[labeled rendered captures](evidence/application-launcher/) and
+[handoff 25](handoffs/25-application-launcher.md). Eight populated history slots
+are a layout fixture, not eight app-compatibility passes. General graphical-app
+support, client close requests, physical input and human comfort remain open.
+
 For P21-T09/P21-T19/P21-T28, keep fixed rendered world/application views with
 revision, camera, renderer, resolution, machine and observed defects. Inspect
 the images; never infer visual quality from a successful headless import.

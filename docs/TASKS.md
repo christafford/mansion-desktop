@@ -268,8 +268,9 @@ Do not launch another broad overnight range before the new boundaries pass.
   Physical window-manager drag-resize and human usability are not inferred.
 
 - [ ] **P21-T45 Request client close and explicitly relaunch the terminal.**
-  **Depends:** P21-T44.
-  Read handoff 23. Add a documented application close action using
+  **Depends:** P21-T44, P21-T48.
+  Read handoffs 23 and 25. T48 now implements the wheel, live-window selection
+  and terminal relaunch; reuse those paths and tests. Add a documented application close action using
   `xdg_toplevel.close`. Never destroy the client's resources or kill its process to simulate acceptance.
   Keep this separate from launcher-owned process shutdown. Add an explicit world
   action to launch the terminal after exit; reject duplicate launch while the
@@ -305,6 +306,25 @@ Do not launch another broad overnight range before the new boundaries pass.
   passes. Verified 2026-10-04: controller test 56 textured surfaces, zero
   failures in two consecutive runs; the first version's assertions failed when
   the turn rate was zeroed.
+
+- [x] **P21-T48 Add the recent-application wheel and desktop application search.**
+  **Depends:** P21-T44, P21-T47. Owner-authorized launcher work precedes T45;
+  [Decision 07](decisions/07-application-launcher.md) records this scope and dependencies.
+  Use the requested Advanced Radial Menu asset, eight unique recent desktop IDs
+  clockwise from twelve o'clock, and center-click searchable application names
+  with installed icons. Persist history; do not invent populated recent slots.
+  Discover freedesktop applications without a KDE service dependency. Launch on
+  the private Wayland display, report unsupported/failed launches, preserve
+  application input and own child cleanup. Support Terminal=true entries through
+  Weston; permit selecting an existing recent window and relaunch after exit.
+  **Acceptance:** desktop metadata/Exec/environment tests, graphical center-click,
+  typed search, eight-slot ordering/history/cancel checks; a real installed app
+  launches, receives input, returns to the world, and the terminal can relaunch.
+  Inspect labeled GPU captures and run the study/terminal regression suite.
+  Full graphical-app/protocol compatibility and T45 close requests stay separate.
+  **Verified 2026-10-04:** six Python tests, graphical launcher/real Vim and
+  terminal-relaunch checks, inspected captures and complete Godot study suite;
+  see [handoff 25](handoffs/25-application-launcher.md).
 
 - [ ] **P21-T00 Repair and verify the toolchain baseline.**
   **Depends:** none.
