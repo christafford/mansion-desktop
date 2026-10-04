@@ -41,6 +41,17 @@ binary, `--path world --audio-driver Dummy --max-fps 60 --script`, and each of
 compatibility and the task's diff checks pass. C++/plugin tests were not rerun
 for this GDScript-only change; historical results remain attributed separately.
 
+## P21-T47 addendum (2026-10-04)
+
+At the owner's request, A and D now turn the player left and right at 1.8
+radians per second while the right mouse button is held, and strafe again once
+it is released. `_look_held` tracks the button in `game_world.gd`; focus loss
+and Escape clear it together with the held keys. Five controller assertions in
+`study_smoke.gd` cover turning without displacement, both directions and the
+restored strafe. The controller test passed with zero failures (agent-run,
+injected events), and the new assertions fail when the turn rate is zeroed.
+Import/runtime validation passed. Human feel is not observed.
+
 ## Next
 
 P21-T45 remains the next recovery task: targeted client close and explicit

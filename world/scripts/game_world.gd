@@ -3,12 +3,14 @@ extends CharacterBody3D
 
 const WALK_SPEED := 2.4
 const LOOK_SENSITIVITY := 0.002
+const TURN_SPEED := 1.8
 const DEFAULT_PITCH := -0.08
 const PITCH_RETURN_SECONDS := 0.2
 const SPAWN := Vector3(2.4, 0.05, 3.1)
 var slow_walk := false
 var application_mode := false
 var _held: Dictionary = {}
+var _look_held := false
 var _pitch_return: Tween
 @onready var camera: Camera3D = $Camera3D
 
@@ -25,6 +27,7 @@ func return_to_spawn() -> void:
 func release_pointer() -> void:
 	_cancel_pitch_return()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	_look_held = false
 	_held.clear()
 	velocity = Vector3.ZERO
 
@@ -42,6 +45,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT:
 		_cancel_pitch_return()
+		_look_held = event.pressed
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED if event.pressed else Input.MOUSE_MODE_VISIBLE
 		if not event.pressed:
 			_pitch_return = create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
@@ -68,9 +72,12 @@ func _physics_process(delta: float) -> void:
 	if application_mode:
 		velocity = Vector3.ZERO
 		return
-	var direction := Vector3(
-		float(_held.has(KEY_D)) - float(_held.has(KEY_A)), 0,
-		float(_held.has(KEY_S)) - float(_held.has(KEY_W)))
+	var sideways := float(_held.has(KEY_D)) - float(_held.has(KEY_A))
+	if _look_held:
+		# While looking with the right button, A/D turn instead of strafing.
+		rotation.y -= sideways * TURN_SPEED * delta
+		sideways = 0.0
+	var direction := Vector3(sideways, 0, float(_held.has(KEY_S)) - float(_held.has(KEY_W)))
 	direction = basis * direction.normalized()
 	var speed := 1.0 if slow_walk or _held.has(KEY_SHIFT) else WALK_SPEED
 	velocity.x = direction.x * speed

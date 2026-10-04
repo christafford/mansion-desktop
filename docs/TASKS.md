@@ -295,6 +295,16 @@ Do not launch another broad overnight range before the new boundaries pass.
   Home; import/script validation and existing study/terminal regressions pass.
   See [handoff 24](handoffs/24-godot-navigation.md). Human comfort is not inferred.
 
+- [x] **P21-T47 Turn with A/D while the right mouse button is held.**
+  **Depends:** P21-T46. Separately authorized by the owner on 2026-10-04.
+  While right mouse is held, A turns left and D turns right at a fixed rate
+  instead of strafing; releasing the button restores strafing. Focus loss and
+  Escape clear the look state with the held keys.
+  **Acceptance:** graphical controller assertions that A/D turn without moving
+  while held and strafe without turning after release; import/script validation
+  passes. Verified 2026-10-04: controller test 56 textured surfaces, zero
+  failures, and the assertions fail when the turn rate is zeroed.
+
 - [ ] **P21-T00 Repair and verify the toolchain baseline.**
   **Depends:** none.
   **Reopened:** old version/download/checksum claims are not a reproducible toolchain. Local tools and a working import invocation are now identified.
