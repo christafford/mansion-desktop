@@ -73,8 +73,8 @@ func _physics_process(delta: float) -> void:
 		velocity = Vector3.ZERO
 		return
 	var sideways := float(_held.has(KEY_D)) - float(_held.has(KEY_A))
-	if _look_held:
-		# While looking with the right button, A/D turn instead of strafing.
+	if not _look_held:
+		# A/D turn by default; they strafe only while the right button is held.
 		rotation.y -= sideways * TURN_SPEED * delta
 		sideways = 0.0
 	var direction := Vector3(sideways, 0, float(_held.has(KEY_S)) - float(_held.has(KEY_W)))

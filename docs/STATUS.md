@@ -36,7 +36,7 @@ The launcher builds/stages the standard native extension and starts installed
 `build/mansion-desktop --room-camera` still uses the separate legacy renderer.
 
 WASD walks; hold right mouse to look with reversed horizontal mouse movement.
-While right mouse is held, A and D turn left and right instead of strafing.
+A and D turn left and right; while right mouse is held they strafe instead.
 Releasing right mouse frees the pointer and eases the vertical angle back to its
 arrival value over 0.2 seconds, preserving horizontal direction. Holding right
 mouse again interrupts that return. Escape frees the pointer; Home

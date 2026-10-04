@@ -122,10 +122,25 @@ func run() -> void:
 	check(is_equal_approx(player.camera.rotation.x, pitch), "Pitch return fights mouse after re-grabbing")
 	mouse.pressed = false
 	player._unhandled_input(mouse)
-	# While right mouse is held, A/D turn in place instead of strafing.
+	# A/D turn in place by default and strafe only while right mouse is held.
 	player.position = player.SPAWN
 	player.rotation.y = 0
 	var before: Vector3 = player.position
+	yaw = player.rotation.y
+	key(player, KEY_A, true)
+	for frame in range(20):
+		await physics_frame
+	key(player, KEY_A, false)
+	check(player.rotation.y > yaw + 0.2, "A does not turn left without right mouse")
+	check(player.position.distance_to(before) < 0.06, "A strafes without right mouse")
+	yaw = player.rotation.y
+	key(player, KEY_D, true)
+	for frame in range(20):
+		await physics_frame
+	key(player, KEY_D, false)
+	check(player.rotation.y < yaw - 0.2, "D does not turn right without right mouse")
+	check(player.position.distance_to(before) < 0.06, "D strafes without right mouse")
+	player.rotation.y = 0
 	yaw = player.rotation.y
 	mouse.pressed = true
 	player._unhandled_input(mouse)
@@ -133,24 +148,10 @@ func run() -> void:
 	for frame in range(20):
 		await physics_frame
 	key(player, KEY_A, false)
-	check(player.rotation.y > yaw + 0.2, "A does not turn left while right mouse is held")
-	check(player.position.distance_to(before) < 0.06, "A strafes while right mouse is held")
-	yaw = player.rotation.y
-	key(player, KEY_D, true)
-	for frame in range(20):
-		await physics_frame
-	key(player, KEY_D, false)
-	check(player.rotation.y < yaw - 0.2, "D does not turn right while right mouse is held")
-	check(player.position.distance_to(before) < 0.06, "D strafes while right mouse is held")
+	check(player.position.distance_to(before) > 0.3, "A does not strafe while right mouse is held")
+	check(is_equal_approx(player.rotation.y, yaw), "A turns while right mouse is held")
 	mouse.pressed = false
 	player._unhandled_input(mouse)
-	yaw = player.rotation.y
-	key(player, KEY_A, true)
-	for frame in range(20):
-		await physics_frame
-	key(player, KEY_A, false)
-	check(player.position.distance_to(before) > 0.3, "A does not strafe after right mouse release")
-	check(is_equal_approx(player.rotation.y, yaw), "A turns after right mouse release")
 	key(player, KEY_HOME, true)
 	key(player, KEY_HOME, false)
 	check(player.position.is_equal_approx(player.SPAWN), "Home does not restore spawn")
