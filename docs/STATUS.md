@@ -1,6 +1,6 @@
 # Project status
 
-Current authority: recovery begun 2026-10-03, T44 verified 2026-10-04,
+Current authority: recovery begun 2026-10-03, T44 and navigation T46 verified 2026-10-04,
 starting from `4c0c078` plus the existing
 uncommitted overnight work. [Decision 06](decisions/06-godot-poly-haven.md) remains
 the direction. [Previous status](handoffs/15-status-before-frontend-recovery.md)
@@ -12,6 +12,8 @@ is historical; its extension/visual completion claims were contradicted by tests
 Recovery T36–T44 passes its bounded acceptance: furnished study, retained
 compositor, live output, typing, selection/scroll and actual client resize.
 See [tasks](TASKS.md) and [resize handoff](handoffs/23-godot-terminal-resize.md).
+The owner's navigation adjustment is recorded separately in
+[handoff 24](handoffs/24-godot-navigation.md); it does not complete T45.
 Next send targeted xdg close requests and add explicit relaunch without using
 process termination as a window-close implementation. Cursor images, clipboard
 and popup menus remain unsupported; carry these into concrete follow-up tasks.
@@ -33,7 +35,10 @@ The launcher builds/stages the standard native extension and starts installed
 `tools/run-godot.sh --audio-driver Dummy -- --terminal-demo`.
 `build/mansion-desktop --room-camera` still uses the separate legacy renderer.
 
-WASD walks; hold right mouse to look; release/Escape frees the pointer; Home
+WASD walks; hold right mouse to look with reversed horizontal mouse movement.
+Releasing right mouse frees the pointer and eases the vertical angle back to its
+arrival value over 0.2 seconds, preserving horizontal direction. Holding right
+mouse again interrupts that return. Escape frees the pointer; Home
 returns to arrival; M toggles slow walking and Shift slows while held.
 Enter activates the terminal. Ctrl+Alt+Escape returns to the room. Application
 mode uses physical US keys and native-size text when it fits; ordinary Escape,
@@ -49,6 +54,9 @@ resize the host window to resize the actual terminal and its rows/columns.
 - Graphical scene smoke: 56 textured surfaces, walking/key release, wall
   collision, focus cleanup, mouse capture/look/release and Home assertions pass.
   These are injected controller events, not a physical-input or human trial.
+- Navigation T46 (2026-10-04): reversed left/right look, upward/downward pitch
+  return, preserved yaw/held movement, interrupted return and Home reset pass in
+  the graphical controller test. Physical mouse feel remains owner-unobserved.
 - Standard C++ binding: fresh import and three clean runtime processes, 300
   native instances/calls/releases. Separate build uses consistent generated headers.
 - Real Wayland window protocols: sixteen standalone and sixteen Godot trials.

@@ -79,13 +79,53 @@ func run() -> void:
 	var motion := InputEventMouseMotion.new()
 	motion.screen_relative = Vector2(100, 40)
 	var yaw: float = player.rotation.y
+	var pitch: float = player.camera.rotation.x
 	player._unhandled_input(motion)
-	check(player.rotation.y < yaw - 0.1, "Mouse motion does not turn camera")
+	check(player.rotation.y > yaw + 0.1, "Moving mouse right does not use reversed horizontal look")
+	check(player.camera.rotation.x < pitch - 0.05, "Moving mouse down does not look down")
+	yaw = player.rotation.y
+	pitch = player.camera.rotation.x
+	key(player, KEY_W, true)
 	mouse.pressed = false
 	player._unhandled_input(mouse)
 	check(Input.mouse_mode == Input.MOUSE_MODE_VISIBLE, "Right release does not release")
+	check(player._held.has(KEY_W), "Right release interrupts held walking keys")
+	key(player, KEY_W, false)
+	check(is_equal_approx(player.camera.rotation.x, pitch), "Pitch return snaps instead of animating")
+	player._unhandled_input(motion)
+	check(is_equal_approx(player.rotation.y, yaw), "Released mouse still changes yaw")
+	await create_timer(0.3).timeout
+	check(is_equal_approx(player.camera.rotation.x, player.DEFAULT_PITCH), "Downward look does not return to default pitch")
+	check(is_equal_approx(player.rotation.y, yaw), "Pitch return changes horizontal direction")
+	mouse.pressed = true
+	player._unhandled_input(mouse)
+	motion.screen_relative = Vector2(-100, -200)
+	player._unhandled_input(motion)
+	check(player.rotation.y < yaw - 0.1, "Moving mouse left does not use reversed horizontal look")
+	check(player.camera.rotation.x > player.DEFAULT_PITCH + 0.3, "Moving mouse up does not look up")
+	mouse.pressed = false
+	player._unhandled_input(mouse)
+	await create_timer(0.3).timeout
+	check(is_equal_approx(player.camera.rotation.x, player.DEFAULT_PITCH), "Upward look does not return to default pitch")
+	# Re-grabbing during the return must hand pitch control back to the mouse.
+	mouse.pressed = true
+	player._unhandled_input(mouse)
+	player._unhandled_input(motion)
+	mouse.pressed = false
+	player._unhandled_input(mouse)
+	await create_timer(0.06).timeout
+	mouse.pressed = true
+	player._unhandled_input(mouse)
+	player._unhandled_input(motion)
+	pitch = player.camera.rotation.x
+	await create_timer(0.3).timeout
+	check(is_equal_approx(player.camera.rotation.x, pitch), "Pitch return fights mouse after re-grabbing")
+	mouse.pressed = false
+	player._unhandled_input(mouse)
 	key(player, KEY_HOME, true)
 	key(player, KEY_HOME, false)
 	check(player.position.is_equal_approx(player.SPAWN), "Home does not restore spawn")
+	await create_timer(0.3).timeout
+	check(is_equal_approx(player.camera.rotation.x, player.DEFAULT_PITCH), "Home does not restore default pitch")
 	print("STUDY_SMOKE textured_surfaces=", textured, " failures=", failures)
 	quit(1 if failures else 0)

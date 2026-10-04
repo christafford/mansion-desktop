@@ -284,6 +284,17 @@ Do not launch another broad overnight range before the new boundaries pass.
   Broader human and Project 21 product gates stay open until their evidence exists.
 
 
+- [x] **P21-T46 Adjust world mouse navigation at the owner's request.**
+  **Depends:** P21-T36. Separately authorized on 2026-10-04, before continuing T45.
+  Reverse horizontal mouse look. On right-button release, ease pitch back to the
+  arrival angle over 0.2 seconds; retain yaw and held walking keys. Re-grabbing
+  must interrupt the return. Home, focus cleanup and application mode retain
+  control of the camera/input boundary.
+  **Acceptance:** graphical controller assertions for both horizontal directions,
+  upward/downward return, yaw preservation, held keys, interrupted return and
+  Home; import/script validation and existing study/terminal regressions pass.
+  See [handoff 24](handoffs/24-godot-navigation.md). Human comfort is not inferred.
+
 - [ ] **P21-T00 Repair and verify the toolchain baseline.**
   **Depends:** none.
   **Reopened:** old version/download/checksum claims are not a reproducible toolchain. Local tools and a working import invocation are now identified.
