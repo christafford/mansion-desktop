@@ -1,20 +1,20 @@
 # Project status
 
-Current authority: 2026-10-03 recovery, starting from `4c0c078` plus the existing
+Current authority: recovery begun 2026-10-03, T44 verified 2026-10-04,
+starting from `4c0c078` plus the existing
 uncommitted overnight work. [Decision 06](decisions/06-godot-poly-haven.md) remains
 the direction. [Previous status](handoffs/15-status-before-frontend-recovery.md)
 is historical; its extension/visual completion claims were contradicted by tests.
 
 ## Next task
 
-**P21-T44: resize the terminal through xdg configure.**
-Recovery T36–T43 passes its bounded acceptance: furnished study, retained
-compositor, live output, real shell typing, readable application view, text
-selection and scrollback. See [tasks](TASKS.md) and
-[pointer handoff](handoffs/22-godot-terminal-pointer.md).
-Next request actual client resize and respect configure/ack/committed state;
-scaling a texture does not resize the client. T45 then adds close requests and
-explicit relaunch. Cursor images, clipboard and popup menus remain unsupported.
+**P21-T45: request client close and explicitly relaunch the terminal.**
+Recovery T36–T44 passes its bounded acceptance: furnished study, retained
+compositor, live output, typing, selection/scroll and actual client resize.
+See [tasks](TASKS.md) and [resize handoff](handoffs/23-godot-terminal-resize.md).
+Next send targeted xdg close requests and add explicit relaunch without using
+process termination as a window-close implementation. Cursor images, clipboard
+and popup menus remain unsupported; carry these into concrete follow-up tasks.
 Broader T00–T19 gates remain unchecked until their full evidence exists.
 
 ## Run the visible Godot frontend
@@ -39,7 +39,8 @@ Enter activates the terminal. Ctrl+Alt+Escape returns to the room. Application
 mode uses physical US keys and native-size text when it fits; ordinary Escape,
 Tab, Home and camera keys reach the terminal. Host focus loss returns to world
 mode. Left-drag selects text and the wheel scrolls terminal history. Type `exit`
-to close the shell; restart the study to relaunch for now.
+to close the shell; restart the study to relaunch for now. In application mode,
+resize the host window to resize the actual terminal and its rows/columns.
 
 ## Verified by automated checks in this recovery
 
@@ -79,6 +80,14 @@ to close the shell; restart the study to relaunch for now.
   outside the image, scrollback up/down, held-button mode exit, world control
   recovery, focus-loss notification and disconnect pass. Captures were inspected;
   physical mouse/touchpad input and latency are not inferred.
+- Resize protocol (T44, 2026-10-04): configure/ack/commit separation, retained
+  snapshots during delay/decline, min/max limits, committed geometry, client-chosen
+  sizes, serial validation, bounded pending requests and destruction pass.
+  Native resize AddressSanitizer + UBSan + leak detection also pass.
+- Real Weston resize: four host sizes (1000×700, 1200×780, 900×620, 1280×800)
+  change character grids to 77×22, 95×25, 68×18, 103×26. Typing/selection continue,
+  8,573 sampled opaque pixels match native-size GPU views, and the world preview
+  updates. These are agent-injected window/input checks, not physical drag-resize.
 - Standalone pointer runtime AddressSanitizer + UBSan + enabled leak detection
   pass in T43.
 - Standalone keyboard runtime AddressSanitizer + UBSan + enabled leak detection
@@ -112,6 +121,11 @@ line, earlier/later scrollback and return to the live study. Agent inspection,
 2026-10-03, same engine/renderer/hardware. This is selection/scroll acceptance;
 it does not establish clipboard transfer or popup-menu support.
 
+[Resize evidence](evidence/terminal-resize/) shows four real terminal sizes,
+matching selections and the updated world monitor. Agent inspection, 2026-10-04,
+same renderer/hardware, at the recorded host viewport sizes. Text remains upright
+and at native size. Physical host resizing and human comfort remain unobserved.
+
 ## Verified by a person
 
 Historical owner confirmation on 2026-10-02: legacy launch, input and vertical
@@ -120,8 +134,8 @@ This records approval of its appearance, not a terminal/input/comfort trial.
 
 ## Not verified / unfinished
 
-- Actual client resize, compositor close requests and an in-app relaunch
-  workflow. Keyboard, selection/scroll and ordinary shell exit pass; full terminal
+- Compositor close requests and an in-app relaunch workflow. Keyboard,
+  selection/scroll, resize and ordinary shell exit pass; full terminal
   usability and physical input are not verified. IME/composed text and selectable
   layouts are not implemented; the current seat/mapping is US.
 - Client cursor images, clipboard/primary selection and popup menus. The host

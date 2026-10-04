@@ -10,7 +10,7 @@ xdg-shell configure/ack/commit and seat v1/v4 keyboard setup (T39).
 Owned frame transport now passes exact client-byte tests through Godot (T40).
 The study now starts that server and displays real Weston terminal output (T41).
 T42 adds real keyboard input and a flat application view; T43 adds text selection
-and pointer/scroll routing. Actual client resize remains open.
+and pointer/scroll routing. T44 adds real client resize through xdg configure.
 See [STATUS.md](STATUS.md).
 
 ## Build and ownership
@@ -59,6 +59,16 @@ implicit grab and destruction cleanup. Mode/focus exit releases buttons before
 leave. See [pointer handoff](handoffs/22-godot-terminal-pointer.md) for exact APIs,
 validation and limitations: client cursors, clipboard and popup menus remain
 unsupported even though real text highlighting and scrollback work.
+
+`request_resize(handle, width, height)` suggests a bounded window-geometry size
+through xdg configure; the client chooses when/what to commit. `window_state`
+exposes committed geometry/limits separately from sent/acked/committed serials.
+Both frontends apply xdg metadata after surface state. The Godot viewport follows
+the host size; application mode debounces resize, reserves UI/shadow space and
+allows for client size increments. Old pixels and logical pointer mapping remain
+valid until the client commits. No texture scaling is treated as a client resize.
+See [resize handoff](handoffs/23-godot-terminal-resize.md) for API bounds,
+configure backpressure, native-pixel evidence and unsupported cases.
 
 Godot owns the visible host window and frame loop. GDExtension owns one compositor
 instance with explicit start/pump/stop. Use a nonblocking pump on the owning

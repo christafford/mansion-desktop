@@ -208,7 +208,8 @@ static void surface_commit(struct wl_client* client, struct wl_resource* resourc
     surface->damage_count = 0;
 
     /* Notify xdg-shell of commit (triggers configure). */
-    if (surface->xdg_surface) xdg_shell_on_surface_commit(surface->xdg_surface);
+    if (surface->xdg_surface && xdg_shell_on_surface_commit(surface->xdg_surface))
+        xdg_shell_on_surface_applied(surface->xdg_surface, surface->width, surface->height);
 }
 
 static void surface_frame(struct wl_client* client, struct wl_resource* resource,

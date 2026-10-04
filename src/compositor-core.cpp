@@ -191,6 +191,7 @@ static void surface_commit(struct wl_client* client, struct wl_resource* resourc
     // A callback requested after this commit remains pending until another commit.
     wl_list_insert_list(state.committed_callbacks.prev, &surface->frame_callback_list);
     wl_list_init(&surface->frame_callback_list);
+    if (surface->xdg_surface) xdg_shell_on_surface_applied(surface->xdg_surface, surface->width, surface->height);
     if (surface->commit_callback) surface->commit_callback(resource, surface->commit_callback_user_data);
 }
 

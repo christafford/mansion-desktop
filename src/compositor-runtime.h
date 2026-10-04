@@ -1,6 +1,8 @@
 #pragma once
 
 #include <string>
+#include <optional>
+#include "xdg-shell.h"
 #include "frame-snapshot.h"
 
 struct wl_display;
@@ -28,6 +30,8 @@ public:
     std::vector<int64_t> surface_handles() const;
     std::vector<int64_t> toplevel_handles() const;
     OwnedFrame snapshot(int64_t handle) const;
+    bool request_resize(int64_t handle, int32_t width, int32_t height);
+    std::optional<XdgWindowState> window_state(int64_t handle) const;
     bool focus_keyboard(int64_t handle); // 0 returns to world/no client focus.
     int64_t keyboard_focus_handle() const;
     bool keyboard_key(uint32_t evdev_code, bool pressed);

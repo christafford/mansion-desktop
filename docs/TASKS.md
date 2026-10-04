@@ -28,7 +28,7 @@ P2-T05 GPU import remains open and is not a prerequisite for this CPU bridge.
 
 ## Instructions for the next autonomous run
 
-T36–T43 passed; current recovery continues with T44; do not start a broad
+T36–T44 passed; current recovery continues with T45; do not start a broad
 autocontinue run.
 The eventual first useful product milestone ends at T19.
 Do not use a broad Projects 1–21 scope: that mixes deferred legacy tasks with
@@ -248,7 +248,7 @@ Do not launch another broad overnight range before the new boundaries pass.
   popup menus remain unsupported; a popup request can disconnect a client.
   This checkmark is not the broader terminal usability gate.
 
-- [ ] **P21-T44 Resize the terminal through xdg configure.**
+- [x] **P21-T44 Resize the terminal through xdg configure.**
   **Depends:** P21-T43.
   Read handoff 22. Inspect `xdg-shell.cpp` and existing configure/ack/commit tests
   before adding a runtime resize request. Request a bounded application size when the
@@ -261,11 +261,16 @@ Do not launch another broad overnight range before the new boundaries pass.
   Resize the real terminal twice in both directions; text/rows change without
   distortion, typing and pointer mapping remain correct, and the world preview
   updates. Inspect GPU captures and run scene/bridge/C++ regressions.
+  **Verified 2026-10-04:** configure/ack/commit and constraint/geometry fixture
+  tests, resize sanitizers, four real Weston resize/typing/selection trials,
+  8,573 native-size GPU pixel samples, inspected captures, full scene/bridge
+  checks and 33/33 Meson tests pass. See [handoff 23](handoffs/23-godot-terminal-resize.md).
+  Physical window-manager drag-resize and human usability are not inferred.
 
 - [ ] **P21-T45 Request client close and explicitly relaunch the terminal.**
   **Depends:** P21-T44.
-  Add a documented application close action using `xdg_toplevel.close`. Never
-  destroy the client's resources or kill its process to simulate acceptance.
+  Read handoff 23. Add a documented application close action using
+  `xdg_toplevel.close`. Never destroy the client's resources or kill its process to simulate acceptance.
   Keep this separate from launcher-owned process shutdown. Add an explicit world
   action to launch the terminal after exit; reject duplicate launch while the
   owned client is still running. Clear stale focus/textures/handles and assign

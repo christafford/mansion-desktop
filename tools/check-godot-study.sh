@@ -27,4 +27,5 @@ run color 'SCREEN_COLOR_OK failures=0' --script res://tests/screen_color.gd
 run terminal 'LIVE_TERMINAL_OK .*sessions=2 failures=0' --script res://tests/live_terminal.gd -- --terminal-demo
 run terminal-input 'TERMINAL_INPUT_OK .*failures=0' --script res://tests/terminal_input.gd
 run terminal-pointer 'TERMINAL_POINTER_OK .*failures=0' --script res://tests/terminal_pointer.gd
-echo "Study checks passed; inspect .tools/terminal-output-test, .tools/terminal-input-test and .tools/terminal-pointer-test captures."
+run terminal-resize 'TERMINAL_RESIZE_OK .*failures=0' --script res://tests/terminal_resize.gd
+echo "Study checks passed; inspect .tools/terminal-output-test, .tools/terminal-input-test, .tools/terminal-pointer-test and .tools/terminal-resize-test captures."

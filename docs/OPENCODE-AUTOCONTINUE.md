@@ -6,9 +6,9 @@ model/provider is unchanged. No additional agent framework is required.
 
 ## Current recovery overrides the historical run instructions below
 
-As of 2026-10-03, do not start another broad T00–T19 unattended run. The owner
+As of 2026-10-04, do not start another broad T00–T19 unattended run. The owner
 requested direct recovery after that workflow produced incorrect completion
-claims. Follow STATUS.md and the bounded T36–T43 evidence and next T44 task.
+claims. Follow STATUS.md and the bounded T36–T44 evidence and next T45 task.
 After recovery, assign one eligible task at a time and review the actual acceptance artifacts.
 The plugin does not enforce dependencies or determine whether a render is useful.
 The broad-run setup below is retained for reference, not the current work order.
@@ -16,10 +16,11 @@ The broad-run setup below is retained for reference, not the current work order.
 For the current next task, use only:
 
 ```text
-/autocontinue P21-T44
+/autocontinue P21-T45
 ```
 
-Review its actual client-resize evidence before assigning T45 (close/relaunch).
+Review its target-specific close and real relaunch evidence before the next
+integration task. Keep cursor, clipboard and popup gaps visible.
 Keep all broader and human gates open until their checks pass.
 
 ## Historical broad-run setup (not the current work order)

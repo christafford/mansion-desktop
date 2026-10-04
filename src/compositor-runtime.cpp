@@ -137,6 +137,30 @@ OwnedFrame CompositorRuntime::snapshot(int64_t handle) const {
     return {};
 }
 
+std::optional<XdgWindowState> CompositorRuntime::window_state(int64_t handle) const {
+    if (!compositor_) return {};
+    MansionSurface* surface;
+    wl_list_for_each(surface, &compositor_->surface_list, link) {
+        const auto& frame = surface->core_frame->frame;
+        if (surface->core_frame->handle == handle && frame && frame->mapped &&
+            xdg_surface_has_toplevel(surface->xdg_surface)) return xdg_surface_window_state(surface->xdg_surface);
+    }
+    return {};
+}
+
+bool CompositorRuntime::request_resize(int64_t handle, int32_t width, int32_t height) {
+    if (compositor_) {
+        MansionSurface* surface;
+        wl_list_for_each(surface, &compositor_->surface_list, link) {
+            const auto& frame = surface->core_frame->frame;
+            if (surface->core_frame->handle == handle && frame && frame->mapped &&
+                xdg_shell_request_resize(surface->xdg_surface, width, height)) return true;
+        }
+    }
+    error_ = "resize requires a live mapped toplevel, dimensions/limits within 1..2048 and fewer than 64 pending configures";
+    return false;
+}
+
 int64_t CompositorRuntime::keyboard_focus_handle() const {
     if (!compositor_ || !compositor_->focused_surface_resource) return 0;
     MansionSurface* surface;

@@ -38,3 +38,17 @@ void xdg_surface_restore_toplevel_size(struct MansionXdgSurface* xdg_surface);
 void xdg_shell_cycle_focus(struct MansionSeat* seat,
                             struct MansionCompositor* comp,
                             bool forward);
+
+// Value metadata: geometry/limits and committed_serial apply at surface commit;
+// request/ack fields track protocol progress separately. Geometry is in logical
+// surface coordinates; requested size is in window-geometry units.
+struct XdgWindowState {
+    int32_t x = 0, y = 0, width = 0, height = 0;
+    int32_t min_width = 0, min_height = 0, max_width = 0, max_height = 0;
+    int32_t requested_width = 0, requested_height = 0;
+    uint32_t sent_serial = 0, acked_serial = 0, committed_serial = 0;
+};
+void xdg_shell_on_surface_applied(MansionXdgSurface* surface, int32_t width, int32_t height);
+XdgWindowState xdg_surface_window_state(MansionXdgSurface* surface);
+// Returns false for invalid state/sizes or a full (64-entry) configure queue.
+bool xdg_shell_request_resize(MansionXdgSurface* surface, int32_t width, int32_t height);

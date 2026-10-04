@@ -9,6 +9,9 @@ var host_focused := true
 var focused_handle := 0
 var panel: Control
 var view: TextureRect
+var resize_viewport := Vector2.ZERO
+var resize_due_ms := 0
+var resize_pending := false
 
 func _ready() -> void:
 	layer = 10
@@ -20,7 +23,7 @@ func _ready() -> void:
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	panel.add_child(background)
 	var help := Label.new()
-	help.text = "Terminal  •  US keyboard  •  Ctrl+Alt+Esc returns to the room\nDrag to select  •  Wheel to scroll"
+	help.text = "Terminal  •  US keyboard  •  Ctrl+Alt+Esc returns to the room\nDrag to select  •  Wheel to scroll  •  Resize the window to resize the terminal"
 	help.position = Vector2(22, 12)
 	help.add_theme_font_size_override("font_size", 16)
 	panel.add_child(help)
@@ -45,6 +48,7 @@ func enter_application() -> bool:
 	player.release_pointer()
 	panel.show()
 	update_view()
+	queue_resize()
 	return true
 
 func exit_application() -> void:
@@ -53,6 +57,7 @@ func exit_application() -> void:
 		if not terminal.session.focus_keyboard(0):
 			push_error(terminal.session.last_error())
 	active = false
+	resize_pending = false
 	focused_handle = 0
 	player.application_mode = false
 	player.release_pointer()
@@ -69,6 +74,25 @@ func update_view() -> void:
 	view.size = (native_size * maxf(scale, 0.01)).floor()
 	view.position = (Vector2(16, 64) + (available - view.size) * 0.5).floor()
 
+func queue_resize() -> void:
+	resize_viewport = get_viewport().get_visible_rect().size
+	resize_due_ms = Time.get_ticks_msec() + 120
+	resize_pending = true
+
+func resize_client() -> void:
+	resize_pending = false
+	var state: Dictionary = terminal.session.window_state(focused_handle)
+	if state.is_empty(): return
+	# xdg configure sizes include decorations but exclude shadows. Preserve the
+	# committed surface margins around window geometry when reserving space.
+	var margins: Vector2 = (terminal.logical_size - Vector2(state.width, state.height)).max(Vector2.ZERO)
+	# Leave 16px extra on each side for client size increments (terminal cells).
+	# Rounding a configure upward should not force fractional text scaling.
+	var wanted: Vector2 = (resize_viewport - Vector2(64, 120) - margins).floor().clamp(Vector2(1, 1), Vector2(2048, 2048))
+	if not terminal.session.request_resize(focused_handle, int(wanted.x), int(wanted.y)):
+		# A stalled/oversized client keeps its last valid pixels and input target.
+		push_warning(terminal.session.last_error())
+
 func _process(_delta: float) -> void:
 	if not active:
 		return
@@ -76,6 +100,8 @@ func _process(_delta: float) -> void:
 		exit_application()
 		return
 	update_view()
+	if get_viewport().get_visible_rect().size != resize_viewport: queue_resize()
+	if resize_pending and Time.get_ticks_msec() >= resize_due_ms: resize_client()
 
 func _input(event: InputEvent) -> void:
 	if not host_focused:

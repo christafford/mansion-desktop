@@ -100,6 +100,28 @@ Physical mouse/touchpad input, latency, actual client resize, compositor close/
 relaunch and human usability are not accepted by this evidence. No human task
 is ticked.
 
+## 2026-10-04 agent-run Godot client resize (P21-T44)
+
+Codex changed the real host window size four times after terminal activation:
+1000×700 → 1200×780 → 900×620 → 1280×800. Weston committed new buffers and its
+shell reported 77×22 → 95×25 → 68×18 → 103×26 columns/rows. Typing and selection
+worked at every size. 8,573 sampled opaque pixels matched native-size GPU views;
+return to world showed the updated live monitor. This proves client reflow in
+the tested sizes, not merely scaling an old texture.
+
+[Five GPU captures](evidence/terminal-resize/) were inspected with Godot 4.7.2
+Compatibility, Mesa 26.2.4, AMD Custom GPU 0405, at the listed viewport sizes.
+Client: installed Weston 15.0.1-3, monospace 16, `/bin/sh` (Bash). Revision: T44
+changes committed with [handoff 23](handoffs/23-godot-terminal-resize.md), based on
+`2e304a9`. Reproduce with `tools/check-godot-study.sh`. Native fixture/sanitizer
+checks separately cover delayed/declined choices, pending/committed metadata,
+limits, serials, retained frames, bounded queues and destruction while pending.
+
+Input and host-size changes were injected by the agent. Physical mouse-driven
+host resize, HiDPI host behavior, very small windows, latency and human comfort
+remain unobserved. Compositor close/relaunch, clipboard, client cursors and popup
+menus remain unfinished. No human task is ticked.
+
 ## Legacy baseline and procedures
 
 Run from the repository root in the normal development container/session:

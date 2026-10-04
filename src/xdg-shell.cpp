@@ -51,6 +51,10 @@ struct MansionXdgSurface {
     /* P4-T11: window geometry. */
     int32_t geo_x, geo_y, geo_width, geo_height;
     bool has_geometry = false;
+    bool geometry_pending = false;
+    XdgWindowState state;
+    int32_t pending_min_width = 0, pending_min_height = 0;
+    int32_t pending_max_width = 0, pending_max_height = 0;
 };
 
 namespace {
@@ -126,7 +130,17 @@ void toplevel_resource_destroyed(struct wl_resource* resource) {
 
 void toplevel_ignore(struct wl_client*, struct wl_resource*) {}
 void toplevel_ignore_r(struct wl_client*, struct wl_resource*, struct wl_resource*) {}
-void toplevel_ignore_2i(struct wl_client*, struct wl_resource*, int32_t, int32_t) {}
+void toplevel_size_limit(wl_resource* resource, int32_t width, int32_t height, bool minimum) {
+    if (width < 0 || height < 0) {
+        wl_resource_post_error(resource, XDG_TOPLEVEL_ERROR_INVALID_SIZE, "size limits must be nonnegative");
+        return;
+    }
+    auto* top = user_data<MansionXdgToplevel>(resource);
+    if (!top->xdg_surface) return;
+    auto* s = top->xdg_surface;
+    if (minimum) { s->pending_min_width = width; s->pending_min_height = height; }
+    else { s->pending_max_width = width; s->pending_max_height = height; }
+}
 void toplevel_ignore_ru(struct wl_client*, struct wl_resource*, struct wl_resource*, uint32_t) {}
 void toplevel_ignore_ruu(struct wl_client*, struct wl_resource*, struct wl_resource*, uint32_t, uint32_t) {}
 void toplevel_ignore_ru2i(struct wl_client*, struct wl_resource*, struct wl_resource*, uint32_t, int32_t, int32_t) {}
@@ -151,8 +165,8 @@ const struct xdg_toplevel_interface toplevel_impl = {
     .show_window_menu = toplevel_ignore_ru2i,
     .move = toplevel_ignore_ru,
     .resize = toplevel_ignore_ruu,
-    .set_max_size = toplevel_ignore_2i,
-    .set_min_size = toplevel_ignore_2i,
+    .set_max_size = [](wl_client*, wl_resource* r, int32_t w, int32_t h) { toplevel_size_limit(r, w, h, false); },
+    .set_min_size = [](wl_client*, wl_resource* r, int32_t w, int32_t h) { toplevel_size_limit(r, w, h, true); },
     .set_maximized = toplevel_ignore,
     .unset_maximized = toplevel_ignore,
     .set_fullscreen = toplevel_ignore_r,
@@ -266,7 +280,7 @@ void xdg_surface_set_window_geometry(struct wl_client* client, struct wl_resourc
     xdg_surface->geo_y = y;
     xdg_surface->geo_width = w;
     xdg_surface->geo_height = h;
-    xdg_surface->has_geometry = true;
+    xdg_surface->geometry_pending = true;
     (void)client;
 }
 
@@ -282,6 +296,7 @@ void xdg_surface_ack_configure(struct wl_client* client, struct wl_resource* res
     }
     xdg_surface->pending_configures.erase(xdg_surface->pending_configures.begin(), std::next(found));
     xdg_surface->has_acked_configure = true;
+    xdg_surface->state.acked_serial = serial;
     (void)client;
 }
 
@@ -376,6 +391,9 @@ static void send_configure(MansionXdgSurface* xdg_surface) {
     auto* display = wl_client_get_display(wl_resource_get_client(xdg_surface->resource));
     const uint32_t serial = wl_display_next_serial(display);
     xdg_surface->pending_configures.push_back(serial);
+    xdg_surface->state.sent_serial = serial;
+    xdg_surface->state.requested_width = xdg_surface->toplevel->width;
+    xdg_surface->state.requested_height = xdg_surface->toplevel->height;
     xdg_surface_send_configure(xdg_surface->resource, serial);
     xdg_surface->configured = true;
 }
@@ -394,6 +412,12 @@ bool xdg_shell_on_surface_commit(MansionXdgSurface* xdg_surface) {
                                "buffer committed before configure acknowledgement");
         return false;
     }
+    if ((xdg_surface->pending_max_width && xdg_surface->pending_min_width > xdg_surface->pending_max_width) ||
+        (xdg_surface->pending_max_height && xdg_surface->pending_min_height > xdg_surface->pending_max_height)) {
+        wl_resource_post_error(xdg_surface->toplevel->resource, XDG_TOPLEVEL_ERROR_INVALID_SIZE,
+                               "minimum size exceeds maximum size");
+        return false;
+    }
     if (!xdg_surface->configured) send_configure(xdg_surface);
     return true;
 }
@@ -402,6 +426,10 @@ void xdg_shell_on_surface_unmap(MansionXdgSurface* xdg_surface) {
     xdg_surface->configured = false;
     xdg_surface->has_acked_configure = false;
     xdg_surface->pending_configures.clear();
+    xdg_surface->has_geometry = xdg_surface->geometry_pending = false;
+    xdg_surface->state = {};
+    xdg_surface->pending_min_width = xdg_surface->pending_min_height = 0;
+    xdg_surface->pending_max_width = xdg_surface->pending_max_height = 0;
 }
 
 void xdg_shell_send_configure_resize(struct MansionXdgSurface* xdg_surface,
@@ -553,4 +581,50 @@ void destroy_xdg_shell(struct MansionXdgShell* shell) {
         wl_resource_destroy(wl_resource_from_link(shell->resources.next));
     wl_global_destroy(shell->global);
     delete shell;
+}
+
+void xdg_shell_on_surface_applied(MansionXdgSurface* s, int32_t width, int32_t height) {
+    if (!s || !s->toplevel) return;
+    s->state.min_width = s->pending_min_width; s->state.min_height = s->pending_min_height;
+    s->state.max_width = s->pending_max_width; s->state.max_height = s->pending_max_height;
+    s->state.committed_serial = s->state.acked_serial;
+    if (width <= 0 || height <= 0) return;
+    if (s->geometry_pending) {
+        // No subsurfaces are supported by this frontend yet. Clamp to the root
+        // surface, using wide arithmetic for hostile geometry coordinates.
+        const int64_t left = std::max<int64_t>(0, s->geo_x);
+        const int64_t top = std::max<int64_t>(0, s->geo_y);
+        const int64_t right = std::min<int64_t>(width, int64_t(s->geo_x) + s->geo_width);
+        const int64_t bottom = std::min<int64_t>(height, int64_t(s->geo_y) + s->geo_height);
+        if (right <= left || bottom <= top) {
+            wl_resource_post_error(s->resource, XDG_SURFACE_ERROR_INVALID_SIZE, "window geometry does not intersect surface");
+            return;
+        }
+        s->state.x = left; s->state.y = top;
+        s->state.width = right - left; s->state.height = bottom - top;
+        s->has_geometry = true;
+        s->geometry_pending = false;
+    } else if (!s->has_geometry) {
+        s->state.x = s->state.y = 0;
+        s->state.width = width; s->state.height = height;
+    }
+}
+
+XdgWindowState xdg_surface_window_state(MansionXdgSurface* s) {
+    return s && s->toplevel ? s->state : XdgWindowState{};
+}
+
+bool xdg_shell_request_resize(MansionXdgSurface* s, int32_t width, int32_t height) {
+    if (!s || !s->toplevel || !s->has_acked_configure || width < 1 || height < 1 || width > 2048 || height > 2048)
+        return false;
+    width = std::max(width, s->state.min_width);
+    height = std::max(height, s->state.min_height);
+    if (s->state.max_width) width = std::min(width, s->state.max_width);
+    if (s->state.max_height) height = std::min(height, s->state.max_height);
+    if (width > 2048 || height > 2048) return false;
+    // Do not repeatedly configure a client that rounds or declines our size.
+    if (width == s->state.requested_width && height == s->state.requested_height) return true;
+    if (s->pending_configures.size() >= 64) return false;
+    xdg_shell_send_configure_resize(s, width, height);
+    return true;
 }

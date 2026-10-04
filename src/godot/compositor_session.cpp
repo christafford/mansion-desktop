@@ -5,6 +5,8 @@
 
 namespace mansion {
 void MansionCompositorSession::_bind_methods() {
+    godot::ClassDB::bind_method(godot::D_METHOD("request_resize", "handle", "width", "height"), &MansionCompositorSession::request_resize);
+    godot::ClassDB::bind_method(godot::D_METHOD("window_state", "handle"), &MansionCompositorSession::window_state);
     godot::ClassDB::bind_method(godot::D_METHOD("pointer_motion", "handle", "x", "y"), &MansionCompositorSession::pointer_motion);
     godot::ClassDB::bind_method(godot::D_METHOD("pointer_button", "button", "pressed"), &MansionCompositorSession::pointer_button);
     godot::ClassDB::bind_method(godot::D_METHOD("pointer_axis", "horizontal", "vertical"), &MansionCompositorSession::pointer_axis);
@@ -60,6 +62,20 @@ godot::Dictionary MansionCompositorSession::snapshot(int64_t handle, int64_t aft
     }
     if (!frame->pixels.empty()) std::memcpy(pixels.ptrw(), frame->pixels.data(), frame->pixels.size());
     result["pixels"] = pixels;
+    return result;
+}
+
+godot::Dictionary MansionCompositorSession::window_state(int64_t handle) const {
+    godot::Dictionary result;
+    auto state = runtime_.window_state(handle);
+    if (!state) return result;
+    result["x"] = state->x; result["y"] = state->y;
+    result["width"] = state->width; result["height"] = state->height;
+    result["min_width"] = state->min_width; result["min_height"] = state->min_height;
+    result["max_width"] = state->max_width; result["max_height"] = state->max_height;
+    result["requested_width"] = state->requested_width; result["requested_height"] = state->requested_height;
+    result["sent_serial"] = state->sent_serial; result["acked_serial"] = state->acked_serial;
+    result["committed_serial"] = state->committed_serial;
     return result;
 }
 
