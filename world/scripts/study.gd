@@ -160,7 +160,7 @@ func _ready() -> void:
 	add_child(lamp)
 	var ui := CanvasLayer.new()
 	var help := Label.new()
-	help.text = "W/S walk   •   A/D turn (hold right mouse to strafe/look)   •   Home return   •   M slow walk\nEnter uses the application   •   Ctrl+Alt+Esc returns to the room   •   Tab opens applications"
+	help.text = "WASD move   •   Hold right mouse to look   •   Shift faster   •   Ctrl / M slow\nEnter use application   •   Ctrl+Alt+Esc return   •   Tab applications   •   Home reset view"
 	help.position = Vector2(22, 20)
 	help.add_theme_font_size_override("font_size", 16)
 	help.add_theme_color_override("font_shadow_color", Color.BLACK)

@@ -14,6 +14,24 @@ contents, not a Godot visual or live-client trial. See
 P21-T00/T01/T02/T03/T10 are reopened. A `.so` build, cache size, or legacy test
 pass cannot satisfy their revised explicit checks in [TASKS.md](TASKS.md).
 
+## 2026-10-05 agent-run navigation and carrying (P21-T51)
+
+Based on `c789f37` plus T51, Codex verified the new controls with rendered Godot
+input tests and real Weston Terminal/Vim clients: WASD always strafes/walks,
+mouse-look remains where aimed after release, Shift speeds up, Ctrl/M slows,
+and walking/turning continues while holding a live application. Dropping does
+not stop held movement; wheel up pushes away and down pulls closer. Existing
+collision, cancellation, typing, selection, scrolling and resize checks pass.
+The full study suite passes with host input and isolated GPU-rendered resize;
+see [commands and limitations](handoffs/28-godot-natural-navigation.md).
+
+[Rendered controls and live panels](evidence/natural-navigation/controls-and-panels.png)
+were inspected by Codex at 1280×800, Godot 4.7.2 Compatibility/OpenGL,
+Mesa 26.2.4, AMD Custom GPU 0405. This image shows the new control hints and
+real Terminal/Vim panels after placement; movement claims come from the event
+trials, not this still image. Physical keyboard/mouse feel is not observed.
+Human tasks remain unchecked. The owner trial is described in handoff 28.
+
 ## 2026-10-05 agent-run application objects (P21-T49)
 
 Based on `88f9938` plus T49 and pre-existing uncommitted work, Codex exercised

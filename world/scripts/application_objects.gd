@@ -15,6 +15,8 @@ var dragging := false
 var press_position := Vector2.ZERO
 var original_position := Vector3.ZERO
 var drag_offset := Vector3.ZERO
+var drag_pointer := Vector2.ZERO
+var drag_camera_transform := Transform3D.IDENTITY
 var drag_depth := 2.0
 var next_number := 1
 var hint: Label
@@ -35,7 +37,7 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if app.active: selected = app.focused_handle
 	hint.visible = not app.active and not launcher.opened
-	hint.text = "Double-click an application to use it · Drag to move · Wheel while dragging: near/far · Esc cancels"
+	hint.text = "Double-click to use · Drag to move · Esc cancels\nWhile dragging: WASD move · Right mouse look · Wheel up away / down closer"
 	if pressed != 0 and (app.active or launcher.opened or not app.host_focused): finish_drag(true)
 	if terminal.session == null or not terminal.session.is_running():
 		clear_objects()
@@ -65,6 +67,14 @@ func _process(_delta: float) -> void:
 			bindings[window].label.text = str(launcher.entry(identifier).get("name", "Application")).left(38)
 	for window in bindings:
 		bindings[window].select(window == selected)
+
+func _physics_process(_delta: float) -> void:
+	if pressed == 0 or app.active or launcher.opened or not app.host_focused: return
+	# Keep the grabbed point relative to the view even without a mouse-motion event.
+	if not camera.global_transform.is_equal_approx(drag_camera_transform):
+		dragging = true
+		drag_camera_transform = camera.global_transform
+	if dragging: move_drag(drag_pointer)
 
 func placement_extents(object: Node3D) -> Vector3:
 	var half := ApplicationObject.BOUNDS * 0.5
@@ -136,10 +146,13 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 func _unhandled_input(event: InputEvent) -> void:
-	if app.active or launcher.opened or not app.host_focused or Input.mouse_mode == Input.MOUSE_MODE_CAPTURED: return
+	if app.active or launcher.opened or not app.host_focused: return
+	if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and pressed == 0: return
 	if event is InputEventKey and pressed != 0:
-		if event.pressed and event.physical_keycode == KEY_ESCAPE: finish_drag(true)
-		get_viewport().set_input_as_handled()
+		var key: int = event.physical_keycode if event.physical_keycode else event.keycode
+		if event.pressed and key == KEY_ESCAPE:
+			finish_drag(true)
+			get_viewport().set_input_as_handled()
 	elif event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			if event.pressed:
@@ -155,28 +168,31 @@ func _unhandled_input(event: InputEvent) -> void:
 					press_position = event.position
 					original_position = bindings[window].global_position
 					drag_depth = -camera.to_local(original_position).z
-					drag_offset = original_position - camera.project_position(event.position, drag_depth)
-					player.release_pointer()
-					player.application_mode = true
+					drag_pointer = event.position
+					drag_camera_transform = camera.global_transform
+					drag_offset = camera.global_basis.inverse() * (original_position - camera.project_position(drag_pointer, drag_depth))
 			elif pressed != 0:
 				finish_drag(false)
 			else: return
 			get_viewport().set_input_as_handled()
-		elif pressed != 0:
-			if event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+		elif pressed != 0 and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+			if event.pressed:
 				dragging = true
-				drag_depth = clampf(drag_depth + (-0.25 if event.button_index == MOUSE_BUTTON_WHEEL_UP else 0.25), 1.0, 8.0)
-				move_drag(event.position)
+				drag_depth = clampf(drag_depth + (0.25 if event.button_index == MOUSE_BUTTON_WHEEL_UP else -0.25) * event.factor, 1.0, 8.0)
+				move_drag(drag_pointer)
 			get_viewport().set_input_as_handled()
 	elif event is InputEventMouseMotion and pressed != 0:
+		# Captured motion belongs to mouse-look; keep the same screen-space grab.
+		if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED: return
+		drag_pointer = event.position
 		if event.position.distance_to(press_position) > 6: dragging = true
-		if dragging: move_drag(event.position)
+		if dragging: move_drag(drag_pointer)
 		get_viewport().set_input_as_handled()
 
 func move_drag(position: Vector2) -> void:
 	if not bindings.has(pressed): return
 	var object: Node3D = bindings[pressed]
-	var point := bounded_position(object, camera.project_position(position, drag_depth) + drag_offset)
+	var point := bounded_position(object, camera.project_position(position, drag_depth) + camera.global_basis * drag_offset)
 	if placement_clear(object, point): object.global_position = point
 
 func finish_drag(cancel: bool) -> void:
@@ -184,8 +200,7 @@ func finish_drag(cancel: bool) -> void:
 	if cancel and bindings.has(pressed): bindings[pressed].global_position = original_position
 	pressed = 0
 	dragging = false
-	player.release_pointer()
-	player.application_mode = app.active or launcher.opened
+	if cancel: player.release_pointer()
 
 func remove_object(window: int) -> void:
 	if pressed == window: finish_drag(true)

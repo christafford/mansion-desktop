@@ -358,6 +358,25 @@ Do not launch another broad overnight range before the new boundaries pass.
   five graphical starts, headless startup, real Terminal/Vim interaction and
   launcher override/argv tests pass. See [handoff 27](handoffs/27-godot-startup.md).
 
+- [x] **P21-T51 Make world navigation familiar and predictable.**
+  **Depends:** P21-T49, P21-T50. Owner-authorized control redesign on 2026-10-05;
+  supersedes T46/T47's turning and camera-return behavior for the Godot study.
+  WASD always walks/strafes relative to heading; right-drag looks without camera
+  spring-back; Shift moves faster, Ctrl/M slowly. Wheel up pushes a dragged
+  application farther away and down brings it nearer. Permit walking/looking
+  while carrying a panel, preserving its view-relative grab and held movement
+  when dropped. Preserve collision, focus cleanup, launcher isolation and ordinary
+  application input.
+  **Acceptance:** rendered controller regressions cover axes, diagonal speed,
+  speed modifiers, pitch-independent walking, stable view after release,
+  capture/focus cleanup and collisions; real-client panel tests verify both
+  wheel directions, walking/looking while dragging, drop/cancel and client
+  isolation; import and full study suite pass. Inspect updated rendered controls.
+  **Verified 2026-10-05:** controller and carry/placement trial with two real clients,
+  all study checks (host input; isolated GPU resize), import and inspected capture
+  pass. Physical feel remains for the owner to assess. See
+  [handoff 28](handoffs/28-godot-natural-navigation.md).
+
 - [ ] **P21-T00 Repair and verify the toolchain baseline.**
   **Depends:** none.
   **Reopened:** old version/download/checksum claims are not a reproducible toolchain. Local tools and a working import invocation are now identified.

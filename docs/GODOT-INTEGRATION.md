@@ -117,6 +117,10 @@ ID and transform; runtime bindings are session-only and never persisted. The
 selected panel shares the monitor's uploaded texture, while other panels update
 independent textures. The manager still requests a second owned snapshot for the
 selected panel; this is not a zero-copy or performance acceptance claim.
+T51 keeps world navigation enabled during panel dragging: WASD and right-mouse
+look reach the player, while the manager follows the held panel's screen-space
+grab in each physics update. Drop preserves held navigation; cancellation clears
+it. Application/launcher modes remain owned by their existing policy layers.
 Panels use the same unlit shader and inverse transforms. Nearest front-face
 picking respects room geometry and opaque panel backs. Drag placement clamps
 whole-panel bounds and rejects furniture/player/panel overlap; focus loss,

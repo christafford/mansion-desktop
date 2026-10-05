@@ -1,6 +1,7 @@
 # Project status
 
-Current authority: recovery begun 2026-10-03; T44 and navigation/launcher T46–T48
+Current authority: owner-requested navigation/carrying T51 verified 2026-10-05
+from `c789f37`; recovery begun 2026-10-03; T44 and navigation/launcher T46–T48
 verified 2026-10-04; owner-requested application objects T49 verified 2026-10-05,
 starting from `4c0c078` plus the existing
 uncommitted overnight work. [Decision 06](decisions/06-godot-poly-haven.md) remains
@@ -13,8 +14,9 @@ is historical; its extension/visual completion claims were contradicted by tests
 Recovery T36–T44 passes its bounded acceptance: furnished study, retained
 compositor, live output, typing, selection/scroll and actual client resize.
 See [tasks](TASKS.md) and [resize handoff](handoffs/23-godot-terminal-resize.md).
-The owner's navigation adjustment is recorded separately in
-[handoff 24](handoffs/24-godot-navigation.md); it does not complete T45.
+The owner's latest navigation and application-carrying controls are recorded in
+[handoff 28](handoffs/28-godot-natural-navigation.md); they supersede the earlier
+[handoff 24](handoffs/24-godot-navigation.md) controls and do not complete T45.
 The requested application wheel/search and explicit terminal relaunch now pass
 T48; see [handoff 25](handoffs/25-application-launcher.md). Reuse that launcher.
 The owner-requested movable live application panels are recorded in
@@ -44,12 +46,11 @@ are preserved; see [startup evidence](handoffs/27-godot-startup.md). This is a
 tested workaround for the bundled engine, not an upstream engine repair.
 `build/mansion-desktop --room-camera` still uses the separate legacy renderer.
 
-W/S walks; hold right mouse to look with reversed horizontal mouse movement.
-A and D turn left and right; while right mouse is held they strafe instead.
-Releasing right mouse frees the pointer and eases the vertical angle back to its
-arrival value over 0.2 seconds, preserving horizontal direction. Holding right
-mouse again interrupts that return. Escape frees the pointer; Home
-returns to arrival; M toggles slow walking and Shift slows while held.
+WASD walks relative to your heading; A/D always strafe. Hold right mouse to
+look (mouse right turns right, mouse up looks up); release to free the pointer.
+Your view stays where you aimed, with no automatic return. Shift moves faster;
+hold Ctrl or toggle M for slow walking. Slow mode takes priority over Shift.
+Escape stops movement and frees the pointer; Home stops and resets to arrival.
 Enter activates the terminal. Ctrl+Alt+Escape returns to the room. Application
 mode uses physical US keys and native-size text when it fits; ordinary Escape,
 Tab, Home and camera keys reach the terminal. Host focus loss returns to world
@@ -65,8 +66,10 @@ without duplicating it. Esc returns from search to the wheel, then to the room.
 Tab still belongs to applications in application mode. Recents persist in
 `.tools/launcher-state/recent.json`; tests use an isolated state directory.
 Every mapped window also has a separate live panel in the room. Single-click
-selects it; double-click activates it. Left-drag moves the panel, and the wheel
-while dragging brings it nearer or farther away. Escape cancels the move.
+selects it; double-click activates it. Left-drag moves the panel. Keep holding
+left mouse to carry it while using WASD and right-mouse look; dropping it does
+not interrupt held walking keys. Wheel up pushes it farther away, wheel down
+brings it nearer. Escape cancels the move and stops navigation.
 Panels retain their positions when returning with Ctrl+Alt+Escape, and background
 applications keep updating. Placement lasts for this session; closing a client
 removes its panel. Restart restoration is not implemented.
@@ -76,6 +79,15 @@ Verified clients are Weston terminal and Vim through Terminal=true. Other
 graphical apps may fail; Flatpak launch is explicitly unavailable for now.
 
 ## Verified by automated checks in this recovery
+
+- T51 (2026-10-05): consistent WASD strafing, normal mouse-look without camera
+  return, slow/fast speeds, diagonal normalization, level walking while pitched,
+  collision, GUI release and focus cleanup pass. Real Terminal/Vim tests pass
+  walking/turning while carrying, continued movement after dropping, both wheel
+  directions and fractional steps, cancellation, bounds and input isolation.
+  Import and the full study suite pass using host input and isolated GPU-rendered
+  four-size resize. Updated controls/panels were inspected in a 1280×800 capture.
+  Physical mouse feel and owner comfort remain unobserved; see handoff 28.
 
 - T50 (2026-10-05): supplied crash addresses matched SDL's evdev joystick sort;
   GDB confirms the launcher's classic-backend default avoids that branch.
@@ -88,13 +100,13 @@ graphical apps may fail; Flatpak launch is explicitly unavailable for now.
   cancellation, occlusion, room bounds and client-exit cleanup pass. GPU captures
   inspected; import, existing color/output/keyboard/pointer/launcher checks pass.
   Four-size resize plus world-panel pixel dimensions/aspect pass in an isolated
-  GPU-rendered Weston virtual desktop. The host is currently portrait 800×1280,
-  so its width clamp prevents the existing 900–1280px resize test from passing.
-- Current full-suite limitation: the pre-existing uncommitted navigation test
-  fails `Pitch return fights mouse after re-grabbing`. Reproduced using the
-  unchanged HEAD study without T49. Navigation edits/tests were preserved;
-  this is not a claim that the full study suite is green. Exact logs and commands
-  are in [handoff 26](handoffs/26-application-objects.md).
+  GPU-rendered Weston virtual desktop. At that trial the host was portrait
+  800×1280, so its width clamp prevented the 900–1280px resize test from passing.
+- Historical T49 full-suite limitation: the then-current controller failed
+  `Pitch return fights mouse after re-grabbing`. T51 removes camera-return
+  behavior at the owner's request, replaces those expectations with persistent
+  view regressions, and passes the full suite. Original evidence stays in
+  [handoff 26](handoffs/26-application-objects.md).
 
 - Six glTF packages staged with their manifest-checked buffer/texture dependencies.
 - Godot import and runtime pass; validator rejects an invalid-script fixture.
@@ -220,5 +232,5 @@ This records approval of its appearance, not a terminal/input/comfort trial.
   input and human comfort. No blank capture counts as visual acceptance.
 - Fresh-clone dependency provenance and asset fetching/offline negative checks.
 
-Unrelated overnight edits remain in the working tree. Recovery backup:
+The earlier recovery preserved overnight edits and saved this local backup:
 `.tools/recovery/20261003T185319Z/`. Never sweep them into a recovery commit.

@@ -3,14 +3,17 @@ extends "res://tests/app_launcher.gd"
 
 var objects: Node3D
 
-func mouse(position: Vector2, pressed: bool, double_click := false, button := MOUSE_BUTTON_LEFT) -> void:
+func mouse(position: Vector2, pressed: bool, double_click := false, button := MOUSE_BUTTON_LEFT, factor := 1.0) -> void:
 	var event := InputEventMouseButton.new()
 	event.position = position
 	event.global_position = position
 	event.button_index = button
 	event.pressed = pressed
 	event.double_click = double_click
+	event.factor = factor
 	Input.parse_input_event(event)
+	# Calls from physics_frame can precede dispatch of buffered input next frame.
+	await process_frame
 	await process_frame
 
 func motion(position: Vector2) -> void:
@@ -76,6 +79,39 @@ func run() -> void:
 	await type_text("while true; do date +%T; sleep 0.2; done\n")
 	await return_to_room()
 	check(objects.bindings[first] == first_object and first_object.position == initial, "Room return duplicated or moved object")
+	# Carry a real live terminal while walking and looking, without mouse dragging.
+	await key(KEY_W, true)
+	await mouse(point(first), true)
+	check(player._held.has(KEY_W), "Picking up an application stops held walking")
+	var carry_start: Vector3 = player.position
+	var carried_start: Vector3 = first_object.position
+	var grabbed_local: Vector3 = objects.camera.to_local(first_object.global_position)
+	for frame in range(12): await physics_frame
+	check(player.position.distance_to(carry_start) > 0.3, "Cannot walk while holding an application")
+	check(first_object.position.distance_to(carried_start) > 0.3, "Held application stays behind when walking")
+	check(objects.camera.to_local(first_object.global_position).distance_to(grabbed_local) < 0.06, "Walking changes the view-relative grab")
+	await mouse(point(first), true, false, MOUSE_BUTTON_RIGHT)
+	var carry_yaw: float = player.rotation.y
+	var look := InputEventMouseMotion.new()
+	look.screen_relative = Vector2(40, -20)
+	Input.parse_input_event(look)
+	for frame in range(3): await physics_frame
+	check(player.rotation.y < carry_yaw - 0.05 and player._look_held, "Cannot look while holding an application")
+	check(objects.camera.to_local(first_object.global_position).distance_to(grabbed_local) < 0.06, "Looking loses the view-relative grab")
+	check(not app.active and terminal.session.keyboard_focus_handle() == 0, "Carrying sends movement keys to the client")
+	await mouse(point(first), false)
+	check(objects.pressed == 0 and player._held.has(KEY_W) and player._look_held, "Dropping interrupts held walking or looking: pressed=%s keys=%s look=%s" % [objects.pressed, player._held, player._look_held])
+	carry_start = player.position
+	var dropped_position: Vector3 = first_object.position
+	for frame in range(8): await physics_frame
+	check(player.position.distance_to(carry_start) > 0.2, "Walking stops after dropping")
+	check(first_object.position.is_equal_approx(dropped_position), "Dropped application follows the camera")
+	await key(KEY_W, false)
+	await mouse(point(first), false, false, MOUSE_BUTTON_RIGHT)
+	# Restore the fixture's starting poses for the two-client placement checks.
+	player.return_to_spawn()
+	first_object.position = initial
+	await settle()
 	launcher.open()
 	launcher.launch("vim.desktop")
 	deadline = Time.get_ticks_msec() + 14000
@@ -99,14 +135,22 @@ func run() -> void:
 	check(first_object.revision > revision, "Background application preview stopped updating")
 	check(first_object.texture.get_image().get_data() != pixels, "Background preview pixels are frozen")
 	await capture("two-live-applications.png")
-	# Move via actual unhandled events, with no camera or client input ownership.
+	# Move via actual unhandled events; walking remains available without client input.
 	var position := point(first)
 	await mouse(position, true)
 	await motion(position + Vector2(100, 25))
-	check(objects.dragging and player.application_mode, "Drag did not capture world input")
+	check(objects.dragging and not player.application_mode, "Drag blocks world navigation")
 	await key(KEY_W, true)
 	await key(KEY_W, false)
+	var depth_before: float = -objects.camera.to_local(first_object.global_position).z
 	await mouse(position + Vector2(100, 25), true, false, MOUSE_BUTTON_WHEEL_UP)
+	var depth_farther: float = -objects.camera.to_local(first_object.global_position).z
+	check(depth_farther > depth_before + 0.2, "Wheel up does not push application farther away")
+	await mouse(position + Vector2(100, 25), true, false, MOUSE_BUTTON_WHEEL_DOWN)
+	var depth_nearer: float = -objects.camera.to_local(first_object.global_position).z
+	check(depth_nearer < depth_farther - 0.2 and absf(depth_nearer - depth_before) < 0.01, "Wheel down does not bring application nearer")
+	await mouse(position + Vector2(100, 25), true, false, MOUSE_BUTTON_WHEEL_UP, 0.5)
+	check(absf(-objects.camera.to_local(first_object.global_position).z - depth_before - 0.125) < 0.01, "Fractional wheel step lost its magnitude")
 	await mouse(position + Vector2(100, 25), false)
 	check(first_object.position.distance_to(initial) > 0.2, "Drag/wheel did not move object")
 	check(second_object.position == second_position, "Moving one window moved another")

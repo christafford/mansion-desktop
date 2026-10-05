@@ -68,9 +68,24 @@ func run() -> void:
 		await physics_frame
 	key(player, KEY_W, false)
 	check(player.position.z > -0.65, "Player passed through imported chair")
-	key(player, KEY_D, true)
-	player._notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
-	check(player._held.is_empty(), "Focus loss leaves held keys")
+	# A/D always strafe, independent of capture, and diagonals keep walking speed.
+	for looking in [false, true]:
+		for test in [[KEY_W, Vector3.FORWARD], [KEY_S, Vector3.BACK], [KEY_A, Vector3.LEFT], [KEY_D, Vector3.RIGHT]]:
+			await travel(player, [test[0]], test[1], 2.4, looking)
+	await travel(player, [KEY_W, KEY_D], Vector3(1, 0, -1).normalized(), 2.4)
+	await travel(player, [KEY_W, KEY_S], Vector3.ZERO, 0)
+	await travel(player, [KEY_A, KEY_D], Vector3.ZERO, 0)
+	await travel(player, [KEY_W, KEY_SHIFT], Vector3.FORWARD, 4.0)
+	await travel(player, [KEY_W, KEY_CTRL], Vector3.FORWARD, 1.0)
+	await travel(player, [KEY_W, KEY_CTRL, KEY_SHIFT], Vector3.FORWARD, 1.0)
+	key(player, KEY_M, true)
+	key(player, KEY_M, false)
+	await travel(player, [KEY_W, KEY_SHIFT], Vector3.FORWARD, 1.0)
+	key(player, KEY_M, true)
+	key(player, KEY_M, false)
+	await travel(player, [KEY_W], Vector3.LEFT, 2.4, true, PI / 2, 1.2)
+
+	player.return_to_spawn()
 	var mouse := InputEventMouseButton.new()
 	mouse.button_index = MOUSE_BUTTON_RIGHT
 	mouse.pressed = true
@@ -81,93 +96,114 @@ func run() -> void:
 	var yaw: float = player.rotation.y
 	var pitch: float = player.camera.rotation.x
 	player._unhandled_input(motion)
-	var yaw_after_movement: float = player.rotation.y
-	var pitch_after_movement: float = player.camera.rotation.x
-	check(player.rotation.y < yaw - 0.1, "Moving mouse right does not use reversed horizontal look")
-	check(player.camera.rotation.x < pitch - 0.05, "Moving mouse down does not look down")
+	check(player.rotation.y < yaw - 0.1, "Mouse right does not turn right")
+	check(player.camera.rotation.x < pitch - 0.05, "Mouse down does not look down")
+	var aimed_yaw: float = player.rotation.y
+	var aimed_pitch: float = player.camera.rotation.x
 	key(player, KEY_W, true)
 	mouse.pressed = false
 	player._unhandled_input(mouse)
-	check(Input.mouse_mode == Input.MOUSE_MODE_VISIBLE, "Right release does not release")
-	check(player._held.has(KEY_W), "Right release interrupts held walking keys")
+	check(Input.mouse_mode == Input.MOUSE_MODE_VISIBLE, "Right release does not free pointer")
+	check(player._held.has(KEY_W), "Right release interrupts held walking")
 	key(player, KEY_W, false)
-	check(is_equal_approx(player.camera.rotation.x, pitch_after_movement), "Pitch return snaps instead of animating")
 	player._unhandled_input(motion)
-	check(is_equal_approx(player.rotation.y, yaw_after_movement), "Released mouse still changes yaw")
 	await create_timer(0.3).timeout
-	check(is_equal_approx(player.camera.rotation.x, player.DEFAULT_PITCH), "Downward look does not return to default pitch")
-	check(is_equal_approx(player.rotation.y, yaw), "Horizontal look does not return to initial yaw")
-	check(is_equal_approx(player.rotation.y, yaw), "Pitch return changes horizontal direction")
+	check(is_equal_approx(player.rotation.y, aimed_yaw), "Released view springs back horizontally")
+	check(is_equal_approx(player.camera.rotation.x, aimed_pitch), "Released view springs back vertically")
+	# Repeated grabs start from the last view, including upward and leftward look.
+	for repeat in range(3):
+		mouse.pressed = true
+		player._unhandled_input(mouse)
+		check(is_equal_approx(player.rotation.y, aimed_yaw), "Grabbing resets heading")
+		motion.screen_relative = Vector2(-50, -40)
+		player._unhandled_input(motion)
+		check(player.rotation.y > aimed_yaw and player.camera.rotation.x > aimed_pitch, "Mouse left/up is inverted")
+		aimed_yaw = player.rotation.y
+		aimed_pitch = player.camera.rotation.x
+		mouse.pressed = false
+		player._unhandled_input(mouse)
+		await create_timer(0.3).timeout
+		check(is_equal_approx(player.rotation.y, aimed_yaw) and is_equal_approx(player.camera.rotation.x, aimed_pitch), "View drifts after re-grab/release")
 	mouse.pressed = true
 	player._unhandled_input(mouse)
-	var yaw2: float = player.rotation.y
-	motion.screen_relative = Vector2(-100, -200)
+	motion.screen_relative = Vector2(0, -10000)
 	player._unhandled_input(motion)
-	check(player.rotation.y > yaw2 + 0.1, "Moving mouse left does not use reversed horizontal look")
-	check(player.camera.rotation.x > player.DEFAULT_PITCH + 0.3, "Moving mouse up does not look up")
+	check(is_equal_approx(player.camera.rotation.x, 1.35), "Upward pitch flips camera")
+	motion.screen_relative = Vector2(0, 20000)
+	player._unhandled_input(motion)
+	check(is_equal_approx(player.camera.rotation.x, -1.35), "Downward pitch flips camera")
+
+	# Real event routing must release capture even over a GUI control.
+	var blocker := LineEdit.new()
+	blocker.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.add_child(blocker)
+	blocker.grab_focus()
+	key(player, KEY_W, true)
 	mouse.pressed = false
-	player._unhandled_input(mouse)
-	await create_timer(0.3).timeout
-	check(is_equal_approx(player.camera.rotation.x, player.DEFAULT_PITCH), "Upward look does not return to default pitch")
-	check(is_equal_approx(player.rotation.y, yaw2), "Horizontal look does not return to initial yaw after upward look")
-	# Re-grabbing during the return must hand pitch control back to the mouse.
+	mouse.position = Vector2(40, 40)
+	Input.parse_input_event(mouse)
+	var release := InputEventKey.new()
+	release.physical_keycode = KEY_W
+	Input.parse_input_event(release)
+	await process_frame
+	check(not player._look_held and Input.mouse_mode == Input.MOUSE_MODE_VISIBLE, "GUI swallows mouse-look release")
+	check(player._held.is_empty(), "GUI swallows walking release")
+	blocker.queue_free()
+	await process_frame
+
 	mouse.pressed = true
 	player._unhandled_input(mouse)
-	player._unhandled_input(motion)
-	mouse.pressed = false
-	player._unhandled_input(mouse)
-	await create_timer(0.06).timeout
-	mouse.pressed = true
-	player._unhandled_input(mouse)
-	var yaw3: float = player.rotation.y
-	player._unhandled_input(motion)
-	var pitch_after_grab: float = player.camera.rotation.x
-	mouse.pressed = false
-	player._unhandled_input(mouse)
-	await create_timer(0.3).timeout
-	check(is_equal_approx(player.camera.rotation.x, pitch_after_grab), "Pitch return fights mouse after re-grabbing")
-	check(is_equal_approx(player.rotation.y, yaw3), "Yaw return fights mouse after re-grabbing")
-	# A/D turn in place by default and strafe only while right mouse is held.
-	player.position = player.SPAWN
-	player.rotation.y = 0
-	var before: Vector3 = player.position
-	yaw = player.rotation.y
-	key(player, KEY_A, true)
-	for frame in range(20):
-		await physics_frame
-	key(player, KEY_A, false)
-	check(player.rotation.y > yaw + 0.2, "A does not turn left without right mouse")
-	check(player.position.distance_to(before) < 0.06, "A strafes without right mouse")
-	yaw = player.rotation.y
 	key(player, KEY_D, true)
-	for frame in range(20):
-		await physics_frame
-	key(player, KEY_D, false)
-	check(player.rotation.y < yaw - 0.2, "D does not turn right without right mouse")
-	check(player.position.distance_to(before) < 0.06, "D strafes without right mouse")
-	player.rotation.y = 0
-	yaw = player.rotation.y
-	mouse.pressed = true
+	player._notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
+	check(player._held.is_empty() and player.velocity == Vector3.ZERO, "Focus loss leaves held movement")
+	check(not player._look_held and Input.mouse_mode == Input.MOUSE_MODE_VISIBLE, "Focus loss leaves capture")
+	key(player, KEY_W, true)
 	player._unhandled_input(mouse)
-	key(player, KEY_A, true)
-	for frame in range(20):
-		await physics_frame
-	key(player, KEY_A, false)
-	check(player.position.distance_to(before) > 0.3, "A does not strafe while right mouse is held")
-	check(is_equal_approx(player.rotation.y, yaw), "A turns while right mouse is held")
-	var strafe_start: Vector3 = player.position
+	check(player._held.is_empty() and not player._look_held, "Unfocused input starts navigation")
+	player._notification(Node.NOTIFICATION_APPLICATION_FOCUS_IN)
+	player._unhandled_input(mouse)
+	key(player, KEY_W, true)
+	key(player, KEY_ESCAPE, true)
+	check(player._held.is_empty() and not player._look_held, "Escape leaves movement/capture")
+	player._unhandled_input(mouse)
 	key(player, KEY_D, true)
-	for frame in range(20):
-		await physics_frame
-	key(player, KEY_D, false)
-	check(player.position.x > strafe_start.x + 0.3, "D does not strafe right while right mouse is held: %s -> %s, look=%s yaw=%s" % [strafe_start, player.position, player._look_held, player.rotation.y])
-	check(is_equal_approx(player.rotation.y, yaw), "D turns while right mouse is held")
-	mouse.pressed = false
-	player._unhandled_input(mouse)
 	key(player, KEY_HOME, true)
-	key(player, KEY_HOME, false)
 	check(player.position.is_equal_approx(player.SPAWN), "Home does not restore spawn")
-	await create_timer(0.3).timeout
-	check(is_equal_approx(player.camera.rotation.x, player.DEFAULT_PITCH), "Home does not restore default pitch")
+	check(is_equal_approx(player.camera.rotation.x, player.DEFAULT_PITCH), "Home does not restore pitch")
+	check(player._held.is_empty() and not player._look_held, "Home leaves held movement/capture")
+	player.application_mode = true
+	player._unhandled_input(mouse)
+	key(player, KEY_W, true)
+	key(player, KEY_SHIFT, true)
+	check(player._held.is_empty() and not player._look_held, "Application mode accepts navigation")
+	player.application_mode = false
 	print("STUDY_SMOKE textured_surfaces=", textured, " failures=", failures)
 	quit(1 if failures else 0)
+
+func travel(player: Node, keys: Array, expected_direction: Vector3, expected_speed: float, looking := false, yaw := 0.0, pitch := -0.08) -> void:
+	player.release_pointer()
+	player.position = Vector3(1.5, 0.05, 2.4)
+	player.rotation.y = yaw
+	player.camera.rotation.x = pitch
+	for frame in range(4): await physics_frame
+	var start: Vector3 = player.position
+	if looking:
+		var mouse := InputEventMouseButton.new()
+		mouse.button_index = MOUSE_BUTTON_RIGHT
+		mouse.pressed = true
+		player._unhandled_input(mouse)
+	for code in keys: key(player, code, true)
+	for frame in range(12): await physics_frame
+	var horizontal: Vector3 = player.velocity * Vector3(1, 0, 1)
+	check(horizontal.is_equal_approx(expected_direction * expected_speed), "Wrong movement velocity for %s (look=%s): %s" % [keys, looking, horizontal])
+	check(is_equal_approx(player.rotation.y, yaw), "Walking keys changed heading")
+	check(absf(player.position.y - start.y) < 0.03, "Camera pitch lifts player off the floor")
+	var offset: Vector3 = (player.position - start) * Vector3(1, 0, 1)
+	if expected_speed > 0:
+		check(offset.dot(expected_direction) > expected_speed * 0.1, "Walking did not translate in the expected direction")
+	else:
+		check(offset.length() < 0.01, "Opposing keys did not cancel")
+	for code in keys: key(player, code, false)
+	for frame in range(2): await physics_frame
+	check((player.velocity * Vector3(1, 0, 1)).length() < 0.01, "Walking coasts after release")
+	player.release_pointer()
