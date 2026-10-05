@@ -1,5 +1,5 @@
 [configuration]
-entry_symbol = "GDExtensionInit"
+entry_symbol = "godot_gdnative_init"
 version = "1.0"
 compatibility_minimum = "4.1"
 

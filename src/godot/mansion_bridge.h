@@ -29,6 +29,18 @@ typedef struct MansionSurfaceInfo {
     bool needs_upload;
 } MansionSurfaceInfo;
 
+/* ─── Shm frame snapshot (owned pixel data for Godot) ───
+ *
+ * An owned pixel buffer snapshot that survives the lifetime of the
+ * original Wayland shm buffer. Pixels are stored in ARGB8888 format
+ * (0xAARRGGBB, little-endian) for direct texture upload to Godot.
+ *
+ * All memory is owned by the adapter; callers must not free pointers
+ * except via mansion_snapshot_destroy().
+ *
+ * Note: MansionShmSnapshot is defined in mansion_gdextension_adapter.h
+ * to avoid circular dependencies between C and C++ code. */
+
 /* ─── Callback for surface discovery ───
  * Called once per surface during enumeration.
  * user_data is forwarded from the caller.
@@ -83,6 +95,19 @@ void mansion_adapter_enumerate_surfaces(void *handle,
  * Returns the number of callbacks fired.
  * Must be called after rendering each frame. */
 int mansion_adapter_fire_frame_callbacks(void *handle);
+
+/* ─── Shm frame snapshot ───
+ * Copy committed shm pixels into owned snapshots.
+ *
+ * mansion_adapter_create_snapshot:
+ *   Create a snapshot of the current committed buffer for a surface.
+ *   Returns owned pixel data in ARGB8888 format (no raw Wayland pointers).
+ *   Returns NULL if no buffer is committed or copy fails.
+ *
+ * mansion_adapter_destroy_snapshot:
+ *   Free a snapshot and its pixel buffer. Safe to call with NULL. */
+MansionShmSnapshot *mansion_adapter_create_snapshot(void *handle, uint32_t client_serial);
+void mansion_adapter_destroy_snapshot(MansionShmSnapshot *snapshot);
 
 /* ─── Client launch ───
  * Launch a client on this adapter's socket. `command` is a

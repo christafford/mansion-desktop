@@ -21,14 +21,22 @@
 #include "input.h"
 #include "launch.h"
 #include "xdg-shell.h"
-
-namespace {
+#include "godot/mansion_gdextension_adapter.h"
 
 /* Client Wayland display — events from the real compositor must be
  * dispatched from the event loop so input and configure events are
  * processed. */
 static struct wl_display* g_client_display = nullptr;
 static struct wl_event_source* g_client_display_source = nullptr;
+
+/* GDExtension adapter — used for room-camera mode to pump Wayland
+ * events and render compositor surfaces in Godot.
+ * The actual struct is defined in mansion_gdextension_adapter.h. */
+struct MansionGDExtensionAdapter;
+
+namespace {
+
+static struct MansionGDExtensionAdapter* g_gdextension_adapter = nullptr;
 
 struct Options {
     std::vector<std::string> launch;
@@ -364,6 +372,11 @@ int main(int argc, char** argv) {
             wl_event_source_remove(g_client_display_source);
             g_client_display_source = nullptr;
         }
+        /* Cleanup GDExtension adapter if initialized */
+        if (g_gdextension_adapter) {
+            mansion_gdextension_adapter_destroy(g_gdextension_adapter);
+            g_gdextension_adapter = nullptr;
+        }
         if (input_started) input_destroy();
         destroy_seat(seat);
         destroy_xdg_shell(xdg_shell);
@@ -378,6 +391,23 @@ int main(int argc, char** argv) {
         std::cerr << "Failed to create compositor" << std::endl;
         cleanup();
         return 1;
+    }
+
+    /* Initialize GDExtension adapter for room-camera mode if requested.
+     * The adapter uses the existing compositor and display. */
+    if (opts.room_camera) {
+        MansionGDExtensionConfig adapter_config = {0};
+        adapter_config.display = wl_display;
+        adapter_config.compositor = compositor;
+        adapter_config.socket_name = nullptr;
+        adapter_config.debug_logging = 0;
+
+        g_gdextension_adapter = mansion_gdextension_adapter_create(&adapter_config);
+        if (g_gdextension_adapter) {
+            std::cerr << "[GDExtension] Adapter initialized for room-camera mode" << std::endl;
+        } else {
+            std::cerr << "[GDExtension] Failed to initialize adapter" << std::endl;
+        }
     }
 
     g_compositor = compositor;
@@ -550,6 +580,14 @@ int main(int argc, char** argv) {
             break;
         }
         wl_display_flush_clients(wl_display);
+
+        /* GDExtension adapter: pump events from the Wayland display.
+         * This is only needed in room-camera mode where the GDExtension
+         * adapter is managing the event loop. */
+        if (g_gdextension_adapter) {
+            mansion_gdextension_adapter_pump(g_gdextension_adapter);
+            mansion_gdextension_adapter_flush(g_gdextension_adapter);
+        }
 
         if (g_client_display && wl_display_get_error(g_client_display)) {
             std::cerr << "Host Wayland connection failed: "

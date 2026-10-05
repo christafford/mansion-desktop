@@ -388,6 +388,26 @@ struct MansionSurface* compositor_surface_from_resource(struct wl_resource* reso
     return static_cast<MansionSurface*>(wl_resource_get_user_data(resource));
 }
 
+struct MansionSurface* compositor_surface_from_serial(struct MansionCompositor* compositor, uint32_t serial) {
+    if (!compositor) return nullptr;
+
+    struct MansionSurface *surface;
+    wl_list_for_each(surface, &compositor->surface_list, link) {
+        if (surface->client_serial == serial) {
+            return surface;
+        }
+    }
+
+    /* Also check orphaned surfaces */
+    wl_list_for_each(surface, &compositor->orphaned_surfaces, link) {
+        if (surface->client_serial == serial) {
+            return surface;
+        }
+    }
+
+    return nullptr;
+}
+
 void compositor_surface_set_size(struct MansionSurface* surface, int32_t width, int32_t height) {
     if (surface) {
         surface->width = width;

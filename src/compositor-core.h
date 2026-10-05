@@ -40,6 +40,9 @@ uint32_t compositor_core_get_focus_serial(struct MansionCompositor* compositor);
 /* Check if surface list is empty. */
 int compositor_core_surface_list_empty(struct MansionCompositor* compositor);
 
+/* Find a surface by its client serial. */
+struct MansionSurface* compositor_surface_from_serial(struct MansionCompositor* compositor, uint32_t serial);
+
 /* Check if orphaned surfaces list is empty. */
 int compositor_core_orphaned_surfaces_empty(struct MansionCompositor* compositor);
 

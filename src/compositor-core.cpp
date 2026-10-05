@@ -499,6 +499,26 @@ void compositor_core_surface_set_user_data(struct wl_resource* resource,
     wl_resource_set_user_data(resource, user_data);
 }
 
+struct MansionSurface* compositor_surface_from_serial(struct MansionCompositor* compositor, uint32_t serial) {
+    if (!compositor) return nullptr;
+
+    struct MansionSurface *surface, *next;
+    wl_list_for_each_safe(surface, next, &compositor->surface_list, link) {
+        if (surface->client_serial == serial) {
+            return surface;
+        }
+    }
+
+    /* Also check orphaned surfaces */
+    wl_list_for_each_safe(surface, next, &compositor->orphaned_surfaces, link) {
+        if (surface->client_serial == serial) {
+            return surface;
+        }
+    }
+
+    return nullptr;
+}
+
 struct wl_resource* compositor_core_create_surface(struct MansionCompositor* compositor,
                                                    struct wl_client* client,
                                                    uint32_t id) {
@@ -540,6 +560,7 @@ struct wl_resource* compositor_core_create_surface(struct MansionCompositor* com
     surface->pending_y_damage = 0;
     surface->pending_w_damage = 0;
     surface->pending_h_damage = 0;
+    surface->client_serial = 0;  /* Will be set by caller */
     wl_list_init(&surface->frame_callback_list);
     surface->commit_callback = nullptr;
     surface->commit_callback_user_data = nullptr;

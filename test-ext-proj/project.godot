@@ -1,0 +1,17 @@
+config_version=5
+
+[application]
+config/name="Test Extension"
+run/main_scene="res://empty.tscn"
+
+[autoload]
+
+[display]
+window/size/viewport_width=1280
+window/size/viewport_height=800
+
+[rendering]
+renderer/rendering_method="compatibility"
+
+[gdextension]
+extension_list=PackedStringArray("res://addons/mansion_godot")

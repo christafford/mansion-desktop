@@ -42,6 +42,9 @@ struct MansionSurface {
     struct wl_listener buffer_destroy_listener;        /* notified when pending_buffer is destroyed */
     bool buffer_destroyed;
 
+    /* Client serial for snapshot lookup */
+    uint32_t client_serial;
+
     /* Surface position (from configure/commit) */
     int32_t pending_x, pending_y;
     bool has_pending_position;

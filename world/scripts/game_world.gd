@@ -12,6 +12,8 @@ var application_mode := false
 var _held: Dictionary = {}
 var _look_held := false
 var _pitch_return: Tween
+var _yaw_return: Tween
+var _initial_yaw: float
 @onready var camera: Camera3D = $Camera3D
 
 func _ready() -> void:
@@ -19,6 +21,7 @@ func _ready() -> void:
 
 func return_to_spawn() -> void:
 	_cancel_pitch_return()
+	_cancel_yaw_return()
 	position = SPAWN
 	rotation = Vector3(0, 0.38, 0)
 	camera.rotation = Vector3(DEFAULT_PITCH, 0, 0)
@@ -26,6 +29,7 @@ func return_to_spawn() -> void:
 
 func release_pointer() -> void:
 	_cancel_pitch_return()
+	_cancel_yaw_return()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_look_held = false
 	_held.clear()
@@ -36,8 +40,15 @@ func _cancel_pitch_return() -> void:
 		_pitch_return.kill()
 		_pitch_return = null
 
+func _cancel_yaw_return() -> void:
+	if _yaw_return != null:
+		_yaw_return.kill()
+		_yaw_return = null
+
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		_cancel_pitch_return()
+		_cancel_yaw_return()
 		release_pointer()
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -45,11 +56,16 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT:
 		_cancel_pitch_return()
+		_cancel_yaw_return()
 		_look_held = event.pressed
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED if event.pressed else Input.MOUSE_MODE_VISIBLE
-		if not event.pressed:
+		if event.pressed:
+			_initial_yaw = rotation.y
+		else:
 			_pitch_return = create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 			_pitch_return.tween_property(camera, "rotation:x", DEFAULT_PITCH, PITCH_RETURN_SECONDS)
+			_yaw_return = create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+			_yaw_return.tween_property(self, "rotation:y", _initial_yaw, PITCH_RETURN_SECONDS)
 	if event is InputEventKey:
 		if event.echo:
 			return
@@ -65,7 +81,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		if event.pressed and key == KEY_M:
 			slow_walk = not slow_walk
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		rotation.y += event.screen_relative.x * LOOK_SENSITIVITY
+		rotation.y -= event.screen_relative.x * LOOK_SENSITIVITY
 		camera.rotation.x = clampf(camera.rotation.x - event.screen_relative.y * LOOK_SENSITIVITY, -1.35, 1.35)
 
 func _physics_process(delta: float) -> void:

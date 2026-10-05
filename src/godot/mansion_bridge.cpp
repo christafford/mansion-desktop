@@ -30,6 +30,7 @@
 
 #include <wayland-server.h>
 #include <wayland-util.h>
+#include <wayland-shm.h>
 
 #include "compositor.h"
 #include "compositor-private.h"
@@ -214,6 +215,7 @@ void mansion_adapter_enumerate_surfaces(void *handle,
 
     struct MansionSurface *surface;
     wl_list_for_each(surface, &adapter->compositor->surface_list, link) {
+        surface->client_serial = adapter->next_serial;
         MansionSurfaceInfo info;
         info.width = surface->width;
         info.height = surface->height;
@@ -226,6 +228,7 @@ void mansion_adapter_enumerate_surfaces(void *handle,
 
     /* Also enumerate orphaned surfaces */
     wl_list_for_each(surface, &adapter->compositor->orphaned_surfaces, link) {
+        surface->client_serial = adapter->next_serial;
         MansionSurfaceInfo info;
         info.width = surface->width;
         info.height = surface->height;
@@ -281,6 +284,119 @@ uint32_t mansion_adapter_get_focused_serial(void *handle) {
     if (!handle) return 0;
     auto *adapter = static_cast<MansionAdapter *>(handle);
     return adapter->compositor->keyboard_focus_serial;
+}
+
+/* ─── Shm frame snapshot implementation ─── */
+
+/* Create a snapshot of the committed shm buffer pixels.
+ * Pixels are copied into an owned ARGB8888 buffer (0xAARRGGBB, little-endian).
+ * Returns NULL if no buffer is committed or copy fails.
+ */
+MansionShmSnapshot *mansion_adapter_create_snapshot(void *handle, uint32_t client_serial) {
+    if (!handle) return nullptr;
+
+    auto *adapter = static_cast<MansionAdapter *>(handle);
+
+    /* Find the surface by client serial */
+    struct MansionSurface *surface = compositor_surface_from_serial(adapter->compositor, client_serial);
+    if (!surface) {
+        if (adapter->debug) {
+            fprintf(stderr, "[mansion] snapshot: no surface for serial %u\\n\", client_serial);
+        }
+        return nullptr;
+    }
+
+    /* Check if there's a committed buffer */
+    if (!surface->buffer_resource || surface->buffer_destroyed) {
+        if (adapter->debug) {
+            fprintf(stderr, "[mansion] snapshot: no buffer for serial %u\\n\", client_serial);
+        }
+        return nullptr;
+    }
+
+    struct wl_shm_buffer *shm_buf = wl_shm_buffer_get(surface->buffer_resource);
+    if (!shm_buf) {
+        if (adapter->debug) {
+            fprintf(stderr, "[mansion] snapshot: buffer is not shm for serial %u\\n\", client_serial);
+        }
+        return nullptr;
+    }
+
+    /* Get buffer properties */
+    int32_t width = wl_shm_buffer_get_width(shm_buf);
+    int32_t height = wl_shm_buffer_get_height(shm_buf);
+    int32_t stride = wl_shm_buffer_get_stride(shm_buf);
+    int32_t format = wl_shm_buffer_get_format(shm_buf);
+
+    /* Validate stride */
+    int32_t min_stride = width * 4;  /* ARGB8888 = 4 bytes/pixel */
+    if (stride < min_stride || stride % 4 != 0) {
+        if (adapter->debug) {
+            fprintf(stderr, "[mansion] snapshot: invalid stride %d for width %d\\n\", stride, width);
+        }
+        return nullptr;
+    }
+
+    /* Allocate snapshot */
+    MansionShmSnapshot *snapshot = new MansionShmSnapshot;
+    snapshot->width = width;
+    snapshot->height = height;
+    snapshot->stride = stride;
+    snapshot->format = format;
+    snapshot->revision = 1;  /* First snapshot */
+    snapshot->pixels_size = stride * height;
+    snapshot->pixels = (uint8_t *)malloc(snapshot->pixels_size);
+
+    if (!snapshot->pixels) {
+        delete snapshot;
+        return nullptr;
+    }
+
+    /* Access and copy pixels */
+    wl_shm_buffer_begin_access(shm_buf);
+    void *data = wl_shm_buffer_get_data(shm_buf);
+
+    if (data) {
+        /* Convert to ARGB8888 format (0xAARRGGBB, little-endian) */
+        for (int32_t y = 0; y < height; ++y) {
+            uint8_t *src_row = (uint8_t *)data + y * stride;
+            uint8_t *dst_row = snapshot->pixels + y * width * 4;
+
+            for (int32_t x = 0; x < width; ++x) {
+                uint32_t pixel;
+
+                if (format == WL_SHM_FORMAT_ABGR8888 || format == WL_SHM_FORMAT_XBGR8888) {
+                    /* ABGR8888 on little-endian: bytes are [R, G, B, A] */
+                    uint8_t r = src_row[x * 4 + 0];
+                    uint8_t g = src_row[x * 4 + 1];
+                    uint8_t b = src_row[x * 4 + 2];
+                    uint8_t a = (format == WL_SHM_FORMAT_ABGR8888) ? src_row[x * 4 + 3] : 0xFF;
+                    pixel = (a << 24) | (r << 16) | (g << 8) | b;  /* ARGB8888 */
+                } else {
+                    /* Default: ARGB8888 / XRGB8888 on little-endian have bytes [B, G, R, A] */
+                    uint8_t b = src_row[x * 4 + 0];
+                    uint8_t g = src_row[x * 4 + 1];
+                    uint8_t r = src_row[x * 4 + 2];
+                    uint8_t a = (format == WL_SHM_FORMAT_ARGB8888) ? src_row[x * 4 + 3] : 0xFF;
+                    pixel = (a << 24) | (r << 16) | (g << 8) | b;  /* ARGB8888 */
+                }
+
+                /* Store as 32-bit ARGB8888 (little-endian: 0xAARRGGBB) */
+                ((uint32_t *)dst_row)[x] = pixel;
+            }
+        }
+    }
+
+    wl_shm_buffer_end_access(shm_buf);
+
+    return snapshot;
+}
+
+/* Destroy a snapshot and free its pixel buffer */
+void mansion_adapter_destroy_snapshot(MansionShmSnapshot *snapshot) {
+    if (!snapshot) return;
+    free(snapshot->pixels);
+    delete snapshot;
 }
 
 void mansion_adapter_shutdown(void *handle) {
