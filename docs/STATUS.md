@@ -1,8 +1,8 @@
 # Project status
 
-Current authority: owner-requested navigation/carrying T51 verified 2026-10-05
-from `c789f37`; recovery begun 2026-10-03; T44 and navigation/launcher T46–T48
-verified 2026-10-04; owner-requested application objects T49 verified 2026-10-05,
+Current authority: owner-requested application rotation T52 verified 2026-10-05
+from `cabde04`, following navigation/carrying T51; recovery begun 2026-10-03;
+T44 and navigation/launcher T46–T48 verified 2026-10-04; owner-requested application objects T49 verified 2026-10-05,
 starting from `4c0c078` plus the existing
 uncommitted overnight work. [Decision 06](decisions/06-godot-poly-haven.md) remains
 the direction. [Previous status](handoffs/15-status-before-frontend-recovery.md)
@@ -14,7 +14,9 @@ is historical; its extension/visual completion claims were contradicted by tests
 Recovery T36–T44 passes its bounded acceptance: furnished study, retained
 compositor, live output, typing, selection/scroll and actual client resize.
 See [tasks](TASKS.md) and [resize handoff](handoffs/23-godot-terminal-resize.md).
-The owner's latest navigation and application-carrying controls are recorded in
+The independent panel rotation follow-up is recorded in
+[handoff 29](handoffs/29-godot-application-rotation.md).
+The owner's navigation and application-carrying controls are recorded in
 [handoff 28](handoffs/28-godot-natural-navigation.md); they supersede the earlier
 [handoff 24](handoffs/24-godot-navigation.md) controls and do not complete T45.
 The requested application wheel/search and explicit terminal relaunch now pass
@@ -69,7 +71,10 @@ Every mapped window also has a separate live panel in the room. Single-click
 selects it; double-click activates it. Left-drag moves the panel. Keep holding
 left mouse to carry it while using WASD and right-mouse look; dropping it does
 not interrupt held walking keys. Wheel up pushes it farther away, wheel down
-brings it nearer. Escape cancels the move and stops navigation.
+brings it nearer. While both mouse buttons are held, wheel up turns the panel
+left and wheel down turns it right (10° per notch), keeping its center/depth
+and your view unchanged. Release right mouse to adjust depth again. Escape
+restores both the original position and orientation and stops navigation.
 Panels retain their positions when returning with Ctrl+Alt+Escape, and background
 applications keep updating. Placement lasts for this session; closing a client
 removes its panel. Restart restoration is not implemented.
@@ -79,6 +84,14 @@ Verified clients are Weston terminal and Vim through Terminal=true. Other
 graphical apps may fail; Flatpak launch is explicitly unavailable for now.
 
 ## Verified by automated checks in this recovery
+
+- T52 (2026-10-05): both buttons + wheel rotates only the held panel, preserving
+  camera/center/depth and other clients. Fractional steps, switching back to
+  depth, retained orientation, full-transform cancellation, blocked rotations,
+  live Terminal/Vim interaction and the full study suite pass. An inspected
+  1280×800 capture shows the rotated terminal and updated hint. Mouse-capture
+  release no longer ends the drag early. See handoff 29; physical feel remains
+  owner-unobserved for this change.
 
 - T51 (2026-10-05): consistent WASD strafing, normal mouse-look without camera
   return, slow/fast speeds, diagonal normalization, level walking while pitched,

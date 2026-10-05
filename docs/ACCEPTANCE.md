@@ -14,6 +14,20 @@ contents, not a Godot visual or live-client trial. See
 P21-T00/T01/T02/T03/T10 are reopened. A `.so` build, cache size, or legacy test
 pass cannot satisfy their revised explicit checks in [TASKS.md](TASKS.md).
 
+## 2026-10-05 agent-run application rotation (P21-T52)
+
+Based on `cabde04` plus T52, Codex verified both-buttons + wheel yaw through
+injected events on a real Weston Terminal, alongside Vim. Camera, panel center,
+depth and the other client stay unchanged. Both directions/fractional steps,
+return to depth adjustment, orientation retained after drop/application return,
+full-transform cancellation and rejected obstructed rotations pass. The full
+study suite passes with the host input seat and isolated GPU resize.
+[Rendered rotation](evidence/application-rotation/rotating-terminal.png) inspected
+at 1280×800, Godot 4.7.2 Compatibility/OpenGL, Mesa 26.2.4, AMD Custom GPU 0405:
+terminal visibly angled, Vim unchanged, and contextual rotation hint visible.
+See [handoff 29](handoffs/29-godot-application-rotation.md) for commands and logs.
+Physical feel is not observed; no human gate is ticked.
+
 ## 2026-10-05 agent-run navigation and carrying (P21-T51)
 
 Based on `c789f37` plus T51, Codex verified the new controls with rendered Godot

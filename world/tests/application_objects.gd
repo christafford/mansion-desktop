@@ -151,7 +151,35 @@ func run() -> void:
 	check(depth_nearer < depth_farther - 0.2 and absf(depth_nearer - depth_before) < 0.01, "Wheel down does not bring application nearer")
 	await mouse(position + Vector2(100, 25), true, false, MOUSE_BUTTON_WHEEL_UP, 0.5)
 	check(absf(-objects.camera.to_local(first_object.global_position).z - depth_before - 0.125) < 0.01, "Fractional wheel step lost its magnitude")
+	# Both buttons + wheel turn only the held application, never camera or depth.
+	await mouse(position, true, false, MOUSE_BUTTON_RIGHT)
+	var rotation_start: float = first_object.rotation.y
+	var rotation_center: Vector3 = first_object.global_position
+	var rotation_depth: float = objects.drag_depth
+	var camera_basis: Basis = objects.camera.global_basis
+	var other_transform: Transform3D = second_object.global_transform
+	await mouse(position, true, false, MOUSE_BUTTON_WHEEL_UP)
+	check(is_equal_approx(first_object.rotation.y, rotation_start - deg_to_rad(10.0)), "Both buttons + wheel up does not turn panel left")
+	await mouse(position, true, false, MOUSE_BUTTON_WHEEL_DOWN)
+	check(is_equal_approx(first_object.rotation.y, rotation_start), "Wheel down does not undo panel rotation")
+	await mouse(position, true, false, MOUSE_BUTTON_WHEEL_UP, 0.5)
+	check(is_equal_approx(first_object.rotation.y, rotation_start - deg_to_rad(5.0)), "Rotation loses fractional wheel steps")
+	var half_turn: float = first_object.rotation.y
+	await mouse(position, false, false, MOUSE_BUTTON_WHEEL_UP)
+	check(is_equal_approx(first_object.rotation.y, half_turn), "Wheel release rotates twice")
+	await mouse(position, true, false, MOUSE_BUTTON_WHEEL_UP, 2.5)
+	check(is_equal_approx(first_object.rotation.y, rotation_start - deg_to_rad(30.0)), "Repeated rotation did not accumulate")
+	check(first_object.global_position.is_equal_approx(rotation_center) and is_equal_approx(objects.drag_depth, rotation_depth), "Rotation changes center or drag depth")
+	check(objects.camera.global_basis.is_equal_approx(camera_basis), "Panel rotation rotates the camera")
+	check(second_object.global_transform.is_equal_approx(other_transform), "Panel rotation changes another application")
+	check(terminal.session.keyboard_focus_handle() == 0 and not app.active, "Panel rotation activates the client")
+	await capture("rotating-application.png")
+	await mouse(position, false, false, MOUSE_BUTTON_RIGHT)
+	var rotated: Vector3 = first_object.rotation
+	await mouse(position, true, false, MOUSE_BUTTON_WHEEL_DOWN, 0.5)
+	check(is_equal_approx(objects.drag_depth, rotation_depth - 0.125) and first_object.rotation.is_equal_approx(rotated), "Right release does not restore wheel depth adjustment: held=%s mode=%s depth=%s expected=%s rotation=%s expected_rotation=%s" % [objects.pressed, Input.mouse_mode, objects.drag_depth, rotation_depth - 0.125, first_object.rotation, rotated])
 	await mouse(position + Vector2(100, 25), false)
+	check(first_object.rotation.is_equal_approx(rotated), "Dropping resets rotation")
 	check(first_object.position.distance_to(initial) > 0.2, "Drag/wheel did not move object")
 	check(second_object.position == second_position, "Moving one window moved another")
 	check(first_object.entity_id == identity and not player.application_mode and player._held.is_empty(), "Drag changed identity or left held navigation")
@@ -161,7 +189,7 @@ func run() -> void:
 	await type_text("printf TARGET > '" + marker + "'\n")
 	check(await wait_file("target.txt") == "TARGET", "Double-click did not route real shell input to its target")
 	await return_to_room()
-	check(first_object.position == moved and first_object.entity_id == identity, "Activation/return lost placement")
+	check(first_object.position == moved and first_object.rotation.is_equal_approx(rotated) and first_object.entity_id == identity, "Activation/return lost placement or rotation")
 	await capture("moved-applications.png")
 	# Escape, launcher and host focus loss cancel an in-progress move.
 	for cause in ["escape", "launcher", "focus"]:
@@ -169,6 +197,9 @@ func run() -> void:
 		await mouse(position, true)
 		await motion(position + Vector2(0, -60))
 		check(objects.dragging, "Missing cancellation drag")
+		await mouse(position, true, false, MOUSE_BUTTON_RIGHT)
+		await mouse(position, true, false, MOUSE_BUTTON_WHEEL_UP)
+		check(not first_object.rotation.is_equal_approx(rotated), "Missing cancellation rotation")
 		if cause == "escape": await tap(KEY_ESCAPE)
 		elif cause == "launcher":
 			await tap(KEY_TAB)
@@ -179,7 +210,8 @@ func run() -> void:
 			app._notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
 			app._notification(Node.NOTIFICATION_APPLICATION_FOCUS_IN)
 		await mouse(position, false)
-		check(objects.pressed == 0 and first_object.position == moved and not player.application_mode, "Drag cancellation failed: " + cause)
+		await mouse(position, false, false, MOUSE_BUTTON_RIGHT)
+		check(objects.pressed == 0 and first_object.position == moved and first_object.rotation.is_equal_approx(rotated) and not player.application_mode, "Drag/rotation cancellation failed: " + cause)
 	await mouse(point(first), true)
 	await mouse(launcher.open_button.get_global_rect().get_center(), false)
 	check(objects.pressed == 0 and not player.application_mode and not launcher.opened, "GUI swallowed world drag release")
@@ -202,6 +234,24 @@ func run() -> void:
 	check(objects.pick(point(first)) == 0, "Picked through an opaque panel back")
 	first_object.rotation.y -= PI
 	second_object.position = second_position
+	# Rotation at fixed centers must respect both room bounds and other panels.
+	var saved_transform: Transform3D = first_object.global_transform
+	var saved_other: Transform3D = second_object.global_transform
+	objects.pressed = first
+	first_object.rotation = Vector3.ZERO
+	first_object.position = Vector3(0, 1.7, 4.25)
+	check(objects.placement_clear(first_object, first_object.position), "Wall rotation fixture is initially blocked")
+	objects.rotate_drag(PI / 4)
+	check(first_object.rotation.is_zero_approx() and first_object.position == Vector3(0, 1.7, 4.25), "Rotation crossed room bounds or moved center")
+	first_object.position = Vector3(0, 1.7, 2)
+	second_object.rotation = Vector3.ZERO
+	second_object.position = Vector3(0, 1.7, 2.3)
+	check(objects.placement_clear(first_object, first_object.position), "Panel rotation fixture is initially blocked")
+	objects.rotate_drag(PI / 4)
+	check(first_object.rotation.is_zero_approx() and first_object.position == Vector3(0, 1.7, 2), "Rotation overlaps another panel or moves center")
+	objects.pressed = 0
+	first_object.global_transform = saved_transform
+	second_object.global_transform = saved_other
 	# A real client exits itself while its world object is being dragged.
 	await activate(first)
 	await type_text("sleep 1; exit\n")

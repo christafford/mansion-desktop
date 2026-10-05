@@ -377,6 +377,21 @@ Do not launch another broad overnight range before the new boundaries pass.
   pass. Physical feel remains for the owner to assess. See
   [handoff 28](handoffs/28-godot-natural-navigation.md).
 
+- [x] **P21-T52 Rotate a held application with both buttons and the wheel.**
+  **Depends:** P21-T51. Owner-requested on 2026-10-05.
+  While left-dragging and holding right mouse to look, wheel up/down rotates
+  only the held panel left/right. Left-drag alone retains depth adjustment.
+  Preserve the center/depth, live content, camera orientation, placement limits,
+  walking/look controls and other applications. Cancellation restores orientation
+  as well as position. Update the visible controls and acceptance evidence.
+  **Acceptance:** real-client events verify both directions/fractional steps,
+  release back to depth mode, retained rotation after drop/application return,
+  cancellation and blocked rotation near room geometry/other panels; graphical
+  controller/input regressions and Godot import pass. Inspect a rotated capture.
+  **Verified 2026-10-05:** real two-client trial, full study suite (host input,
+  isolated GPU resize), import and inspected rotation capture pass. See
+  [handoff 29](handoffs/29-godot-application-rotation.md).
+
 - [ ] **P21-T00 Repair and verify the toolchain baseline.**
   **Depends:** none.
   **Reopened:** old version/download/checksum claims are not a reproducible toolchain. Local tools and a working import invocation are now identified.
