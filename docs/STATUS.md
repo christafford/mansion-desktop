@@ -38,6 +38,10 @@ dependencies fail explicitly. Fresh-machine bootstrap remains unfinished.
 The launcher builds/stages the standard native extension and starts installed
 `/usr/bin/weston-terminal` with `/bin/sh`. For a changing clock/counter, use
 `tools/run-godot.sh --audio-driver Dummy -- --terminal-demo`.
+The launcher now defaults to SDL's classic Linux joystick path to avoid the
+reported pre-render startup crash. Explicit `SDL_JOYSTICK_LINUX_CLASSIC` overrides
+are preserved; see [startup evidence](handoffs/27-godot-startup.md). This is a
+tested workaround for the bundled engine, not an upstream engine repair.
 `build/mansion-desktop --room-camera` still uses the separate legacy renderer.
 
 W/S walks; hold right mouse to look with reversed horizontal mouse movement.
@@ -73,6 +77,12 @@ graphical apps may fail; Flatpak launch is explicitly unavailable for now.
 
 ## Verified by automated checks in this recovery
 
+- T50 (2026-10-05): supplied crash addresses matched SDL's evdev joystick sort;
+  GDB confirms the launcher's classic-backend default avoids that branch.
+  Five graphical starts, headless startup, real Terminal/Vim object interaction,
+  and launcher environment/argv tests pass. Exact intermittent trigger remains
+  unproven. The earlier `bssh` GTK-seat warnings remain a separate unverified
+  client compatibility issue.
 - T49 (2026-10-05): real Terminal and Vim coexist with independent live textures,
   entity IDs and placements. Injected drag/wheel, targeted double-click typing,
   cancellation, occlusion, room bounds and client-exit cleanup pass. GPU captures

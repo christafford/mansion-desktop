@@ -9,6 +9,7 @@
 #
 # Environment:
 #   GODOT_BINARY=<path>  override the default binary location
+#   SDL_JOYSTICK_LINUX_CLASSIC=0  opt back into SDL's evdev joystick backend
 
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -33,4 +34,9 @@ if [ ! -x "$GODOT_BIN" ]; then
 fi
 
 "$SCRIPT_DIR/build-godot-runtime.sh"
+# The pinned engine can crash in SDL's evdev device sort before opening a window
+# on Steam Deck. Classic joystick enumeration avoids that sysfs-ordering path;
+# keyboard/mouse input still comes from the focused host window. Respect an
+# explicit override. See docs/handoffs/27-godot-startup.md for address-level proof.
+export SDL_JOYSTICK_LINUX_CLASSIC="${SDL_JOYSTICK_LINUX_CLASSIC:-1}"
 exec "$GODOT_BIN" --path "$PROJECT_DIR" "$@"

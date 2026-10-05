@@ -345,6 +345,19 @@ Do not launch another broad overnight range before the new boundaries pass.
   retains a reproduced pre-existing failure; see
   [handoff 26](handoffs/26-application-objects.md) for exact limits/evidence.
 
+- [x] **P21-T50 Mitigate the reported Godot startup crash.**
+  **Depends:** P21-T49. Owner-reported startup SIGSEGV on 2026-10-05.
+  Identify the supplied crash path, apply a repository-local launcher workaround
+  without changing host devices/services or replacing the engine, and preserve
+  explicit caller overrides. Keep separate client-compatibility warnings honest.
+  **Acceptance:** evidence links crash addresses to the affected subsystem and
+  demonstrates that the workaround avoids that path; repeated graphical startup,
+  real terminal/room interaction and launcher argument/environment checks pass.
+  An intermittent upstream crash mitigation is not an engine repair claim.
+  **Verified 2026-10-05:** matching GDB caller addresses, evdev-sort bypass,
+  five graphical starts, headless startup, real Terminal/Vim interaction and
+  launcher override/argv tests pass. See [handoff 27](handoffs/27-godot-startup.md).
+
 - [ ] **P21-T00 Repair and verify the toolchain baseline.**
   **Depends:** none.
   **Reopened:** old version/download/checksum claims are not a reproducible toolchain. Local tools and a working import invocation are now identified.

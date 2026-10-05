@@ -8,6 +8,7 @@ LOG_DIR=$(mktemp -d "${TMPDIR:-/tmp}/mansion-study-check.XXXXXX")
 echo "Study check logs: $LOG_DIR"
 export MANSION_LAUNCHER_STATE_DIR="$ROOT/.tools/study-launcher-check-$$"
 python3 "$ROOT/tests/test_desktop_apps.py"
+python3 "$ROOT/tests/test_godot_launcher.py"
 run() {
     local label=$1 marker=$2
     shift 2

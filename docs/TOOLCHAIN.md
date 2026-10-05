@@ -47,6 +47,16 @@ fresh project cache and repeated native instantiation/calls/release and shutdown
 The old `tools/godot-cpp/build/` has inconsistent generated headers and is not
 used or overwritten. Do not mix those headers with a different binding library.
 
+## Runtime startup joystick workaround (2026-10-05)
+
+The owner's pre-render startup SIGSEGV maps to the bundled SDL Linux joystick
+device sort. `tools/run-godot.sh` now defaults `SDL_JOYSTICK_LINUX_CLASSIC=1`,
+preserving an explicit override. GDB confirms this avoids the affected evdev
+comparison branch; five graphical starts and real Terminal/Vim interaction pass.
+This is a bounded engine workaround, not a proven repair of the intermittent
+underlying fault. Direct engine invocations do not inherit the launcher default.
+See [startup handoff](handoffs/27-godot-startup.md) for addresses and limitations.
+
 ## Local editor import shutdown defect
 
 Bare `--import` reproducibly crashes on fresh small projects, including a project
