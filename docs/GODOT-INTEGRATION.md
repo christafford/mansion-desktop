@@ -109,8 +109,20 @@ and test a real native software-rendered terminal first.
 
 Render client content unlit inside the monitor aperture in world mode. In
 application mode, show the same live content at a readable pixel scale with
-defined letterboxing. Both views share one active-window binding and coordinate
-mapping. Moving furniture moves the screen slot. Closing/remapping a client
+defined letterboxing. The desk monitor and flat view share the selected-window
+binding and coordinate mapping. T49 adds `application_objects.gd`, a world presentation/placement
+manager. It uses the existing runtime handles and revision-filtered snapshots
+for every mapped toplevel. Each `application_object.gd` has its own random entity
+ID and transform; runtime bindings are session-only and never persisted. The
+selected panel shares the monitor's uploaded texture, while other panels update
+independent textures. The manager still requests a second owned snapshot for the
+selected panel; this is not a zero-copy or performance acceptance claim.
+Panels use the same unlit shader and inverse transforms. Nearest front-face
+picking respects room geometry and opaque panel backs. Drag placement clamps
+whole-panel bounds and rejects furniture/player/panel overlap; focus loss,
+launcher entry, Escape and destruction cancel ownership cleanly. Closing a window
+removes its session-only panel. Durable inactive artifacts/restoration remain
+future work. Moving furniture moves the screen slot. Closing/remapping a client
 invalidates focus and content immediately; an inactive artifact is visibly
 inactive rather than displaying a stale screenshot as a live session.
 

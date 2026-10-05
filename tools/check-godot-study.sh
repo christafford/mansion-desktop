@@ -31,4 +31,5 @@ run terminal-input 'TERMINAL_INPUT_OK .*failures=0' --script res://tests/termina
 run terminal-pointer 'TERMINAL_POINTER_OK .*failures=0' --script res://tests/terminal_pointer.gd
 run terminal-resize 'TERMINAL_RESIZE_OK .*failures=0' --script res://tests/terminal_resize.gd
 run launcher 'APP_LAUNCHER_OK .*failures=0' --script res://tests/app_launcher.gd
+run application-objects 'APPLICATION_OBJECTS_OK .*failures=0' --script res://tests/application_objects.gd
 echo "Study checks passed; inspect .tools/terminal-output-test, .tools/terminal-input-test, .tools/terminal-pointer-test, .tools/terminal-resize-test and .tools/launcher-test-captures."

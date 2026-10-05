@@ -80,6 +80,9 @@ func run() -> void:
 		state = await wait_resize(state.sent_serial)
 		check(app.active and root.size == viewports[i], "Resize lost focus or host size")
 		check(terminal.last_image != old_image, "Resize did not produce new client content")
+		var object: Node3D = study.application_objects.bindings[terminal.handle]
+		check(object.texture.get_size() == Vector2(terminal.last_image.get_size()), "World object retained pre-resize pixels")
+		check(absf((object.screen.mesh as QuadMesh).size.aspect() - terminal.logical_size.aspect()) < 0.001, "World object distorted resized client")
 		if i % 2:
 			check(terminal.last_image.get_width() > old_image.get_width() and terminal.last_image.get_height() > old_image.get_height(), "Growing did not enlarge the committed client buffer")
 		else:

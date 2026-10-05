@@ -14,6 +14,27 @@ contents, not a Godot visual or live-client trial. See
 P21-T00/T01/T02/T03/T10 are reopened. A `.so` build, cache size, or legacy test
 pass cannot satisfy their revised explicit checks in [TASKS.md](TASKS.md).
 
+## 2026-10-05 agent-run application objects (P21-T49)
+
+Based on `88f9938` plus T49 and pre-existing uncommitted work, Codex exercised
+real Weston Terminal and Vim simultaneously using injected Godot input. Separate
+live previews keep updating; dragging one preserves the other's placement;
+double-clicking the terminal then typing writes the expected `TARGET` file.
+Room return preserves identity/placement, and real client exit during drag clears
+only that client's object. Cancellation, occlusion, bounds and owned shutdown
+also pass. [Rendered host captures](evidence/application-objects/) show both
+applications in the furnished room before/after movement. Observer: Codex agent,
+Godot 4.7.2 Compatibility/OpenGL, Mesa 26.2.4, AMD Custom GPU 0405, 800×800 window
+on the current portrait host. No physical-input or human comfort trial is claimed.
+
+Use `tools/run-godot.sh --audio-driver Dummy`, launch an application from Tab,
+then Ctrl+Alt+Escape to return. Double-click its panel to resume; left-drag to
+move, wheel during drag for distance, Escape to cancel. Place Terminal and Vim,
+move each, resume each and confirm ordinary typing/selection. Restart placement
+restoration and general application compatibility are not implemented by T49.
+See [handoff 26](handoffs/26-application-objects.md) for fresh regression results,
+the pre-existing navigation failure and isolated four-size resize evidence.
+
 ## Current Project 21 acceptance
 
 Use Decision 06, ART-DIRECTION.md and GODOT-INTEGRATION.md for the new frontend.

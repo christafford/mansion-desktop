@@ -326,6 +326,25 @@ Do not launch another broad overnight range before the new boundaries pass.
   terminal-relaunch checks, inspected captures and complete Godot study suite;
   see [handoff 25](handoffs/25-application-launcher.md).
 
+- [x] **P21-T49 Place and move live application objects in the study.**
+  **Depends:** P21-T44, P21-T48. Explicit owner request on 2026-10-05;
+  bounded session-local placement may precede T45 and broader workspace gates.
+  Give mapped windows independent live panels, retained across room/application
+  transitions. Left-drag moves a panel, wheel during drag changes distance,
+  Escape cancels and double-click activates the targeted live window. Keep
+  entity identity independent of runtime handles, clear destroyed/unmapped
+  content, prevent world clicks from typing, and preserve existing launcher/input.
+  **Acceptance:** real simultaneous clients with changing previews, independent
+  movement and retained transforms/identity, double-click targeted shell input,
+  occlusion/bounds and focus/drag/destruction cleanup; inspected GPU captures,
+  import validation and relevant study regressions. Restart persistence, broad
+  client compatibility and human acceptance remain separate.
+  **Verified 2026-10-05:** two real clients, injected interaction/lifecycle checks,
+  inspected GPU captures and affected regression checks pass. Four-size resize
+  passes on an isolated GPU-rendered virtual desktop. The full controller suite
+  retains a reproduced pre-existing failure; see
+  [handoff 26](handoffs/26-application-objects.md) for exact limits/evidence.
+
 - [ ] **P21-T00 Repair and verify the toolchain baseline.**
   **Depends:** none.
   **Reopened:** old version/download/checksum claims are not a reproducible toolchain. Local tools and a working import invocation are now identified.

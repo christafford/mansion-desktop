@@ -1,7 +1,7 @@
 # Project status
 
 Current authority: recovery begun 2026-10-03; T44 and navigation/launcher T46–T48
-verified 2026-10-04,
+verified 2026-10-04; owner-requested application objects T49 verified 2026-10-05,
 starting from `4c0c078` plus the existing
 uncommitted overnight work. [Decision 06](decisions/06-godot-poly-haven.md) remains
 the direction. [Previous status](handoffs/15-status-before-frontend-recovery.md)
@@ -17,7 +17,9 @@ The owner's navigation adjustment is recorded separately in
 [handoff 24](handoffs/24-godot-navigation.md); it does not complete T45.
 The requested application wheel/search and explicit terminal relaunch now pass
 T48; see [handoff 25](handoffs/25-application-launcher.md). Reuse that launcher.
-Next send targeted xdg close requests without using
+The owner-requested movable live application panels are recorded in
+[handoff 26](handoffs/26-application-objects.md). This bounded request does not
+start a broader roadmap run. Next send targeted xdg close requests without using
 process termination as a window-close implementation. Cursor images, clipboard
 and popup menus remain unsupported; carry these into concrete follow-up tasks.
 Broader T00–T19 gates remain unchecked until their full evidence exists.
@@ -58,11 +60,31 @@ double-click or Launch starts the selected app; a recent live app is restored
 without duplicating it. Esc returns from search to the wheel, then to the room.
 Tab still belongs to applications in application mode. Recents persist in
 `.tools/launcher-state/recent.json`; tests use an isolated state directory.
+Every mapped window also has a separate live panel in the room. Single-click
+selects it; double-click activates it. Left-drag moves the panel, and the wheel
+while dragging brings it nearer or farther away. Escape cancels the move.
+Panels retain their positions when returning with Ctrl+Alt+Escape, and background
+applications keep updating. Placement lasts for this session; closing a client
+removes its panel. Restart restoration is not implemented.
+
 Discovery uses freedesktop entries and icon themes without a KDE service.
 Verified clients are Weston terminal and Vim through Terminal=true. Other
 graphical apps may fail; Flatpak launch is explicitly unavailable for now.
 
 ## Verified by automated checks in this recovery
+
+- T49 (2026-10-05): real Terminal and Vim coexist with independent live textures,
+  entity IDs and placements. Injected drag/wheel, targeted double-click typing,
+  cancellation, occlusion, room bounds and client-exit cleanup pass. GPU captures
+  inspected; import, existing color/output/keyboard/pointer/launcher checks pass.
+  Four-size resize plus world-panel pixel dimensions/aspect pass in an isolated
+  GPU-rendered Weston virtual desktop. The host is currently portrait 800×1280,
+  so its width clamp prevents the existing 900–1280px resize test from passing.
+- Current full-suite limitation: the pre-existing uncommitted navigation test
+  fails `Pitch return fights mouse after re-grabbing`. Reproduced using the
+  unchanged HEAD study without T49. Navigation edits/tests were preserved;
+  this is not a claim that the full study suite is green. Exact logs and commands
+  are in [handoff 26](handoffs/26-application-objects.md).
 
 - Six glTF packages staged with their manifest-checked buffer/texture dependencies.
 - Godot import and runtime pass; validator rejects an invalid-script fixture.

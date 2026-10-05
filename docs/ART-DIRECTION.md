@@ -17,8 +17,12 @@ The desk, chair, lamp, bookcase and monitor should read as actual objects with
 thickness, plausible proportions and contact with the floor. Use pre-built
 models; combine or model a missing monitor housing deliberately if the catalog
 lacks one. Blockout boxes are allowed while arranging the room, not for passing
-the finished-room gate. Application content belongs inside the monitor's screen
-aperture, not floating against a wall or rotating independently of the desk.
+the finished-room gate. The fixed desk monitor keeps application content inside
+its screen aperture.
+The owner's explicit 2026-10-05 request additionally authorizes independent live
+application panels (P21-T49): thin dark frames, restrained selection accents and
+unlit client content, movable separately from furniture. These session-local
+panels do not complete the finished-room or durable-workspace gates.
 
 Choose Poly Haven models, texture sets and an HDRI by inspecting their current
 catalog. Record chosen asset IDs and reasons; do not invent download URLs or

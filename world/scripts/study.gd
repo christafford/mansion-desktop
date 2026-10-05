@@ -4,6 +4,7 @@ extends Node3D
 var terminal_screen: Node
 var application_mode: CanvasLayer
 var app_launcher: CanvasLayer
+var application_objects: Node3D
 
 var furniture: Array[Node3D] = []
 
@@ -168,6 +169,12 @@ func _ready() -> void:
 	ui.add_child(help)
 	add_child(ui)
 	app_launcher.world_hud = ui
+	application_objects = preload("res://scripts/application_objects.gd").new()
+	application_objects.terminal = terminal_screen
+	application_objects.app = application_mode
+	application_objects.launcher = app_launcher
+	application_objects.player = get_node("Player")
+	add_child(application_objects)
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--capture="):
 			capture_views(arg.trim_prefix("--capture="))
