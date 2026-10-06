@@ -1,7 +1,7 @@
 # Project status
 
 Current authority: owner-requested furnishings, walls, instances and transitions
-T56–T59 in progress; T56–T57 verified 2026-10-06 from `e618487`.
+T56–T59 in progress; T56–T58 verified 2026-10-06 from `e618487`.
 Previous authority:  owner-requested room details and physics T53–T55 verified
 2026-10-06, starting from `35d6b3d`. Application rotation T52 verified 2026-10-05
 from `cabde04`, following navigation/carrying T51; recovery begun 2026-10-03;
@@ -13,9 +13,8 @@ is historical; its extension/visual completion claims were contradicted by tests
 
 ## Next task
 
-Continue the bounded owner request with T58 independent instances and T59 animated
-entry/return. T56 shared furniture dragging/push physics and T57 walnut walls
-are verified; see [handoff 31](handoffs/31-furnishings-and-transitions.md).
+Continue the bounded owner request with T59 animated entry/return. T56 furniture
+controls, T57 walnut walls and T58 independent instances are verified; see [handoff 31](handoffs/31-furnishings-and-transitions.md).
 The broader roadmap task below remains outside this request.
 
 **P21-T45: finish targeted client close and its lifecycle acceptance.**
@@ -71,8 +70,8 @@ resize the host window to resize the actual terminal and its rows/columns.
 Tab in world mode (or the Applications button) opens eight recent-app slots.
 Newest is at twelve o'clock, then clockwise; unused slots stay empty. Click the
 center to search installed application names/keywords with their icons. Enter,
-double-click or Launch starts the selected app; a recent live app is restored
-without duplicating it. Esc returns from search to the wheel, then to the room.
+double-click or Launch starts a new instance, including selections in recents.
+Double-click an existing room panel to use that particular instance. Esc returns from search to the wheel, then to the room.
 Tab still belongs to applications in application mode. Recents persist in
 `.tools/launcher-state/recent.json`; tests use an isolated state directory.
 Every mapped window also has a separate live panel in the room. Single-click
@@ -88,8 +87,9 @@ floor. Holding it pauses gravity; Escape restores its previous placement and
 falling state. Moving the supporting chair away lets it fall again. A single
 click or opening an untouched application does not drop it. Settled panels
 retain their positions when returning with Ctrl+Alt+Escape, and background
-applications keep updating. Walking into the chair pushes it across the floor;
-it stays upright and comes to rest. Placement lasts for this session; closing
+applications keep updating. The chair, potted plant and bookcase use the same left-drag, wheel and
+carrying controls. Walking into them pushes them across the floor; they stay
+upright and come to rest. The desk and its accessories remain fixed. Placement lasts for this session; closing
 a client removes its panel. Restart restoration is not implemented.
 
 Discovery uses freedesktop entries and icon themes without a KDE service.

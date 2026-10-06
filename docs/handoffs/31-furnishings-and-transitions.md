@@ -41,7 +41,23 @@ The visible room has continuous vertical wood grain, distinct panel seams and
 horizontal joinery, with the opening, decorations and downward lighting intact.
 These are agent visual observations, not human comfort/performance acceptance.
 
+## T58: independent application instances
+
+Launcher selections always invoke a fresh desktop-entry launch. Window labels
+now map each transient window to its desktop ID, allowing multiple siblings;
+closed bindings are pruned and recents remain deduplicated by application.
+Existing room panels still activate their own window. Applications that enforce
+their own singleton policy remain subject to that client policy.
+
+Verified 2026-10-06: import/runtime and expanded graphical launcher trial pass,
+`APP_LAUNCHER_OK entries=16 failures=0`. Actual UI selection creates a second
+Weston terminal alongside the original; both keep their labels and accept shell
+input. A variable set in one is absent in the other. Closing the second leaves
+the original alive, removes only its binding, and another launch accepts input.
+Vim, keyboard ownership, search, wheel layout, MRU persistence and owned-process
+cleanup also pass. Logs: `.tools/t58/import.log`, `launcher.log`.
+
 ## Continuation
 
-T58 independent launcher instances and T59 live transitions remain.
-No human usability or broad roadmap gate is claimed.
+T59 live entry/return transitions remains. No human usability or broad roadmap
+gate is claimed.

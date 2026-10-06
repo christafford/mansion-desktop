@@ -428,11 +428,12 @@ Do not launch another broad overnight range before the new boundaries pass.
   collision, light and live client color checks remain valid. Verified 2026-10-06;
   see [handoff 31](handoffs/31-furnishings-and-transitions.md).
 
-- [ ] **P21-T58 Launch independent instances of an application.**
+- [x] **P21-T58 Launch independent instances of an application.**
   **Depends:** P21-T55. Each launcher selection requests a fresh process/window;
   preserve per-window labels, focus, recents and lifecycle ownership.
   **Acceptance:** two terminals launched through the UI coexist, accept separate
-  input and close independently; launcher regressions pass.
+  input and close independently; launcher regressions pass. Verified 2026-10-06;
+  see [handoff 31](handoffs/31-furnishings-and-transitions.md).
 
 - [ ] **P21-T59 Animate application entry and return.**
   **Depends:** P21-T56, P21-T58. Quick live 3D panel flight into the camera and

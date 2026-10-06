@@ -10,6 +10,7 @@ var world_hud: CanvasLayer
 var entries: Array = []
 var recent: Array[String] = []
 var icons: Dictionary = {}
+# Transient window handle -> desktop ID; each launch may have its own window.
 var live_windows: Dictionary = {}
 var pending: Dictionary = {}
 var catalog_pid := -1
@@ -207,7 +208,7 @@ func open() -> void:
 	search_panel.hide()
 	heading.text = "Recent applications"
 	if catalog_pid <= 0 and pending.is_empty() and not entries.is_empty():
-		notice.text = "Newest at the top · Clockwise by recency\nClick the center to find an application · Esc to return"
+		notice.text = "Click to launch a new instance · Newest at the top\nClick the center to find an application · Esc to return"
 	_refresh_wheel()
 
 func close() -> void:
@@ -316,9 +317,6 @@ func launch(identifier: String) -> void:
 	if terminal.session == null or not terminal.session.is_running():
 		notice.text = "The Mansion display is unavailable"
 		return
-	if live_windows.has(identifier) and terminal.session.toplevel_handles().has(live_windows[identifier]):
-		_activate(live_windows[identifier])
-		return
 	var error_path := cache_directory.path_join("launch-%d.json" % Time.get_ticks_usec())
 	var pid := OS.create_process("/usr/bin/python3", PackedStringArray([helper, "launch", "--id", identifier, "--socket", terminal.session.socket_path(), "--output", error_path]))
 	if pid <= 0:
@@ -356,8 +354,11 @@ func _process(_delta: float) -> void:
 			notice.text = "Application discovery timed out"
 	if not initial_recorded and terminal.handle != 0 and terminal.screen.visible and not entry(TERMINAL_ID).is_empty():
 		initial_recorded = true
-		live_windows[TERMINAL_ID] = terminal.handle
+		live_windows[terminal.handle] = TERMINAL_ID
 		remember(TERMINAL_ID)
+	if terminal.session != null:
+		for window in live_windows.keys():
+			if not terminal.session.toplevel_handles().has(window): live_windows.erase(window)
 	if pending.is_empty(): return
 	if FileAccess.file_exists(pending.error):
 		var error = JSON.parse_string(FileAccess.get_file_as_string(pending.error))
@@ -368,7 +369,7 @@ func _process(_delta: float) -> void:
 		if not pending.before.has(handle):
 			var frame: Dictionary = terminal.session.snapshot(handle, 0)
 			if frame.get("mapped", false):
-				live_windows[pending.id] = handle
+				live_windows[handle] = pending.id
 				remember(pending.id)
 				pending.clear()
 				_activate(handle)

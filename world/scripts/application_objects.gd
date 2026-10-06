@@ -64,8 +64,8 @@ func _process(_delta: float) -> void:
 		# The selected preview shares the already-uploaded monitor texture.
 		object.show_frame(frame, terminal.texture if window == terminal.handle else null)
 		if not object.visible and pressed == window: finish_drag(true)
-	for identifier in launcher.live_windows:
-		var window: int = launcher.live_windows[identifier]
+	for window in launcher.live_windows:
+		var identifier: String = launcher.live_windows[window]
 		if bindings.has(window):
 			bindings[window].label.text = str(launcher.entry(identifier).get("name", "Application")).left(38)
 	for window in bindings:

@@ -110,15 +110,31 @@ func run() -> void:
 		await capture("two-recent-applications.png")
 		var terminal_slot: Control = launcher.wheel.get_child(2)
 		await click_at(terminal_slot.get_global_rect().get_center())
-		check(app.active and terminal.handle == original_handle, "Recent terminal did not restore its live window")
+		deadline = Time.get_ticks_msec() + 14000
+		while not launcher.pending.is_empty() and Time.get_ticks_msec() < deadline: await process_frame
+		var second_handle: int = terminal.handle
+		check(app.active and second_handle != original_handle and terminal.session.toplevel_handles().has(original_handle), "Recent terminal did not create an independent window")
+		check(launcher.live_windows.get(second_handle) == launcher.TERMINAL_ID and launcher.live_windows.get(original_handle) == launcher.TERMINAL_ID, "Both terminal instances must retain their labels")
+		await settle()
+		for name in ["instance-second.txt", "instance-first.txt"]:
+			if FileAccess.file_exists(output_dir.path_join(name)): DirAccess.remove_absolute(output_dir.path_join(name))
+		await type_text("MANSION_INSTANCE=SECOND; printf '%s\\n' \"$MANSION_INSTANCE\" > '" + output_dir.path_join("instance-second.txt") + "'\n")
+		check(await wait_file("instance-second.txt") == "SECOND\n", "Second terminal did not accept independent input")
+		launcher._activate(original_handle)
+		await settle()
+		await type_text("printf '%s\\n' \"${MANSION_INSTANCE-unset}\" > '" + output_dir.path_join("instance-first.txt") + "'\n")
+		check(await wait_file("instance-first.txt") == "unset\n", "First terminal inherited the second terminal's shell state")
+		launcher._activate(second_handle)
+		await settle()
 		await tap(KEY_TAB)
 		check(not launcher.opened, "Terminal Tab was stolen by the launcher")
 		await chord(KEY_CTRL, KEY_U)
 		await type_text("exit\n")
 		deadline = Time.get_ticks_msec() + 4000
-		while terminal.session.toplevel_handles().has(original_handle) and Time.get_ticks_msec() < deadline: await process_frame
-		check(not terminal.session.toplevel_handles().has(original_handle), "Original terminal failed to exit")
+		while terminal.session.toplevel_handles().has(second_handle) and Time.get_ticks_msec() < deadline: await process_frame
+		check(not terminal.session.toplevel_handles().has(second_handle) and terminal.session.toplevel_handles().has(original_handle), "Closing one terminal affected its sibling")
 		await settle()
+		check(not launcher.live_windows.has(second_handle) and launcher.live_windows.has(original_handle), "Closed instance binding was not pruned")
 		launcher.open()
 		launcher.launch(launcher.TERMINAL_ID)
 		deadline = Time.get_ticks_msec() + 14000
