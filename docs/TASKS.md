@@ -392,6 +392,26 @@ Do not launch another broad overnight range before the new boundaries pass.
   isolated GPU resize), import and inspected rotation capture pass. See
   [handoff 29](handoffs/29-godot-application-rotation.md).
 
+- [x] **P21-T53 Ceiling lighting and home-office wall details.**
+  **Depends:** P21-T52. Owner-requested 2026-10-05.
+  Twin-tube fluorescent fittings, downward dynamic shadows, subtle flicker,
+  framed artwork and office decorations. **Acceptance:** import, rendered
+  arrival/desk/reverse/detail captures inspected, bounded flicker and shadow
+  comparison, unlit client color regression. Verified 2026-10-05; see
+  [handoff 30](handoffs/30-study-details-and-physics.md).
+
+- [ ] **P21-T54 Pushable study chair.**
+  **Depends:** P21-T53. Replace static chair collision with a stable upright
+  dynamic body. **Acceptance:** walking pushes it, coasting stops, floor/wall
+  and furniture collisions hold; existing controller checks pass.
+
+- [ ] **P21-T55 Gravity for released application panels.**
+  **Depends:** P21-T54, P21-T52. Released moved panels fall onto room furniture
+  or floor while preserving orientation, live pixels and input.
+  **Acceptance:** desk/floor/bookcase/chair contacts, removed support, regrab,
+  cancellation and client lifecycle regressions; rendered live client evidence
+  and full study suite.
+
 - [ ] **P21-T00 Repair and verify the toolchain baseline.**
   **Depends:** none.
   **Reopened:** old version/download/checksum claims are not a reproducible toolchain. Local tools and a working import invocation are now identified.

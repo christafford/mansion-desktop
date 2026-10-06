@@ -133,7 +133,7 @@ func _ready() -> void:
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = Color(0.78, 0.83, 0.91)
-	env.ambient_light_energy = 0.55
+	env.ambient_light_energy = 0.3
 	# Screen material inverts this fixed curve; its GPU color test guards changes.
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	env.tonemap_exposure = 1.0
@@ -143,19 +143,16 @@ func _ready() -> void:
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-35, -65, 0)
 	sun.light_color = Color(1, 0.88, 0.7)
-	sun.light_energy = 1.8
+	sun.light_energy = 0.65
 	sun.shadow_enabled = true
 	add_child(sun)
-	var fill := OmniLight3D.new()
-	fill.position = Vector3(-1, 2.6, 0)
-	fill.light_energy = 1.1
-	fill.omni_range = 7
-	fill.light_color = Color(1, 0.86, 0.68)
-	add_child(fill)
+	var details := preload("res://scripts/study_details.gd").new()
+	details.name = "Details"
+	add_child(details)
 	var lamp := OmniLight3D.new()
 	lamp.position = Vector3(-0.65, 1.3, -2.15)
 	lamp.light_color = Color(1, 0.65, 0.3)
-	lamp.light_energy = 0.5
+	lamp.light_energy = 0.3
 	lamp.omni_range = 1.7
 	add_child(lamp)
 	var ui := CanvasLayer.new()

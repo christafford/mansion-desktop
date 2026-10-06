@@ -26,6 +26,7 @@ run transforms 'SCREEN_TRANSFORM_OK cases=8 failures=0' --headless --script res:
 run keyboard-map 'KEYBOARD_MAP_OK cases=27 failures=0' --headless --script res://tests/keyboard_map.gd
 run pointer-map 'POINTER_MAP_OK .*failures=0' --headless --script res://tests/pointer_map.gd
 run controller 'STUDY_SMOKE .*failures=0' --script res://tests/study_smoke.gd -- --no-terminal
+run details 'STUDY_DETAILS_OK .*failures=0' --script res://tests/study_details.gd
 run color 'SCREEN_COLOR_OK failures=0' --script res://tests/screen_color.gd
 run terminal 'LIVE_TERMINAL_OK .*sessions=2 failures=0' --script res://tests/live_terminal.gd -- --terminal-demo
 run terminal-input 'TERMINAL_INPUT_OK .*failures=0' --script res://tests/terminal_input.gd

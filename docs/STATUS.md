@@ -10,6 +10,9 @@ is historical; its extension/visual completion claims were contradicted by tests
 
 ## Next task
 
+Active owner request: T53 room details verified; continue T54 pushable chair,
+then T55 released-panel gravity. See [handoff 30](handoffs/30-study-details-and-physics.md).
+
 **P21-T45: finish targeted client close and its lifecycle acceptance.**
 Recovery T36–T44 passes its bounded acceptance: furnished study, retained
 compositor, live output, typing, selection/scroll and actual client resize.
@@ -84,6 +87,10 @@ Verified clients are Weston terminal and Vim through Terminal=true. Other
 graphical apps may fail; Flatpak launch is explicitly unavailable for now.
 
 ## Verified by automated checks in this recovery
+
+- T53 (2026-10-05): fluorescent downlights, bounded subtle flicker, original
+  botanical prints, clock and noticeboard. Import, rendered shadow comparison
+  and client RGB test pass; fixed GPU views inspected by the agent. See handoff 30.
 
 - T52 (2026-10-05): both buttons + wheel rotates only the held panel, preserving
   camera/center/depth and other clients. Fractional steps, switching back to
