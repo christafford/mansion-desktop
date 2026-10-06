@@ -97,4 +97,10 @@ func _physics_process(delta: float) -> void:
 		velocity.y -= 9.8 * delta
 	else:
 		velocity.y = 0
+	var walking_velocity := velocity * Vector3(1, 0, 1)
 	move_and_slide()
+	for i in range(get_slide_collision_count()):
+		var contact := get_slide_collision(i)
+		var body := contact.get_collider()
+		if body is RigidBody3D and body.is_in_group("pushable_furniture"):
+			body.push(walking_velocity, contact.get_normal(), delta)

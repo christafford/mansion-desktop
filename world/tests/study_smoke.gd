@@ -60,14 +60,35 @@ func run() -> void:
 	key(player, KEY_W, false)
 	check(player.position.z > -4.25, "Player passed through room wall")
 	check(player.position.z < -4.05, "Player failed to approach room wall")
-	# Approach the actual imported chair, rather than a separately guessed box.
+	# Walk into the visible chair: it yields while remaining a solid obstacle.
+	var chair = study.get_node("Chair")
+	var chair_start: Vector3 = chair.position
 	player.position = Vector3(0.15, 0.05, 0.3)
 	player.rotation.y = 0
 	key(player, KEY_W, true)
 	for frame in range(45):
 		await physics_frame
 	key(player, KEY_W, false)
-	check(player.position.z > -0.65, "Player passed through imported chair")
+	check(chair.position.distance_to(chair_start) > 0.15, "Walking does not push the chair")
+	check(player.position.z > chair.position.z + 0.25, "Player passed through moving chair")
+	for frame in range(90): await physics_frame
+	check(chair.linear_velocity.length() < 0.06, "Chair does not stop after pushing")
+	check(absf(chair.position.y) < 0.03 and absf(chair.rotation.x) < 0.01 and absf(chair.rotation.z) < 0.01, "Chair falls through floor or tips")
+	check(chair.position.z > -1.75, "Chair passed through desk")
+	# Repeat against a room wall, with the same walking input.
+	chair.freeze = true
+	chair.position = Vector3(3.25, 0.01, 2.2)
+	chair.rotation = Vector3.ZERO
+	chair.linear_velocity = Vector3.ZERO
+	player.position = Vector3(2.3, 0.05, 2.2)
+	player.rotation.y = -PI / 2
+	for frame in range(3): await physics_frame
+	chair.freeze = false
+	key(player, KEY_W, true)
+	for frame in range(75): await physics_frame
+	key(player, KEY_W, false)
+	check(chair.position.x > 3.5 and chair.position.x < 3.72, "Pushed chair does not stop against wall")
+	check(player.position.x < chair.position.x - 0.35, "Player clips through chair at wall")
 	# A/D always strafe, independent of capture, and diagonals keep walking speed.
 	for looking in [false, true]:
 		for test in [[KEY_W, Vector3.FORWARD], [KEY_S, Vector3.BACK], [KEY_A, Vector3.LEFT], [KEY_D, Vector3.RIGHT]]:

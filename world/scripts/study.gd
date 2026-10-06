@@ -36,11 +36,20 @@ func box(label: String, size: Vector3, pos: Vector3, mat: Material, solid: bool 
 		node.add_child(body)
 	return node
 
-func model(label: String, asset: String, pos: Vector3, yaw: float = 0) -> Node3D:
+func model(label: String, asset: String, pos: Vector3, yaw: float = 0, movable := false) -> Node3D:
 	var scene: PackedScene = load("res://assets/" + asset + ".gltf")
 	assert(scene != null, "Missing imported model: " + asset)
 	var node := scene.instantiate() as Node3D
 	node.name = label
+	if movable:
+		var body := preload("res://scripts/pushable_chair.gd").new()
+		body.name = label
+		add_child(body)
+		body.position = pos
+		body.rotation.y = yaw
+		body.add_child(node)
+		furniture.append(body)
+		return body
 	add_child(node)
 	node.position = pos
 	node.rotation.y = yaw
@@ -76,7 +85,7 @@ func _ready() -> void:
 	box("WindowGlass", Vector3(0.04, 1.75, 3), Vector3(-4, 1.725, -0.4), glass)
 	box("Rug", Vector3(3.2, 0.012, 2.8), Vector3(0.2, 0.01, 0.2), material(Color(0.22, 0.3, 0.28)), false)
 	model("Desk", "metal_office_desk", Vector3(0, 0, -2.2))
-	model("Chair", "dining_chair_02", Vector3(0.15, 0, -0.85), PI + 0.2)
+	model("Chair", "dining_chair_02", Vector3(0.15, 0, -0.85), PI + 0.2, true)
 	model("Bookshelf", "wooden_bookshelf_worn", Vector3(2.9, 0, -3.9))
 	model("Plant", "potted_plant_02", Vector3(-2.8, 0, -2.8))
 	model("Lamp", "desk_lamp_arm_01", Vector3(-0.65, 0.8, -2.15))

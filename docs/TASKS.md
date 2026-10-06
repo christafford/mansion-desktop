@@ -400,10 +400,11 @@ Do not launch another broad overnight range before the new boundaries pass.
   comparison, unlit client color regression. Verified 2026-10-05; see
   [handoff 30](handoffs/30-study-details-and-physics.md).
 
-- [ ] **P21-T54 Pushable study chair.**
+- [x] **P21-T54 Pushable study chair.**
   **Depends:** P21-T53. Replace static chair collision with a stable upright
   dynamic body. **Acceptance:** walking pushes it, coasting stops, floor/wall
-  and furniture collisions hold; existing controller checks pass.
+  and furniture collisions hold; existing controller checks pass. Verified
+  2026-10-05: import and expanded graphical controller trial pass; handoff 30.
 
 - [ ] **P21-T55 Gravity for released application panels.**
   **Depends:** P21-T54, P21-T52. Released moved panels fall onto room furniture

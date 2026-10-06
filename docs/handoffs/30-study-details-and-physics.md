@@ -37,6 +37,20 @@ Implementation uses Godot's documented
 [SpotLight3D](https://docs.godotengine.org/en/stable/classes/class_spotlight3d.html)
 direction and shadow support; no new asset or runtime dependency.
 
+## T54: pushable chair
+
+The imported chair now sits under a 7kg upright RigidBody3D. Six fitted box
+colliders describe its seat/back/legs; the detailed triangle mesh is visual
+only. Walking contact applies a bounded horizontal impulse based on relative
+speed. Floor friction and damping bring it to rest. Pitch/roll locks keep it
+usable as furniture, while room and desk collision remain solid.
+
+Verified this session: import/runtime validation and expanded graphical
+`res://tests/study_smoke.gd -- --no-terminal`, `STUDY_SMOKE textured_surfaces=56
+failures=0`. It checks actual walking displacement, player/chair separation,
+coasting, upright floor contact, desk blocking and a separate walk against the
+right wall; all previous movement/capture/focus assertions also pass.
+
 ## Continuation
 
-T54 pushable chair, then T55 panel gravity and full regression suite.
+T55 panel gravity and full regression suite.
