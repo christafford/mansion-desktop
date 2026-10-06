@@ -24,7 +24,24 @@ Initial test teleports raced physics synchronization; the fixture now waits
 while frozen before and after repositioning. The furniture-only trial passes
 `--no-terminal` so a real panel does not legitimately block its fixture space.
 
+## T57: walnut wall paneling
+
+Reused the already verified Poly Haven walnut veneer photo with meter-scaled
+vertical grain on separate quads, 65cm panel bays, recessed joints and rails.
+The solid wall backing retains collision and the real window opening. Layered
+veneer does not cast duplicate self-shadows; solid walls still occlude lights.
+No new assets or dependencies. This supersedes the earlier plaster direction.
+
+Verified 2026-10-06: import/runtime, fixed-view scene trial (225641 sampled
+shadow-difference pixels), all 11 client-color patches and controller/window/
+wall collision regressions pass. Logs: `.tools/t57/`.
+Agent-observed GPU renders at 1280×800, same renderer as T56:
+[arrival](../evidence/t57/arrival.png), [reverse](../evidence/t57/reverse.png).
+The visible room has continuous vertical wood grain, distinct panel seams and
+horizontal joinery, with the opening, decorations and downward lighting intact.
+These are agent visual observations, not human comfort/performance acceptance.
+
 ## Continuation
 
-T57 wall paneling, T58 independent launcher instances and T59 live transitions
-remain. No human usability or broad roadmap gate is claimed.
+T58 independent launcher instances and T59 live transitions remain.
+No human usability or broad roadmap gate is claimed.

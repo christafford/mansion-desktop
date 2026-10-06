@@ -62,17 +62,20 @@ func model(label: String, asset: String, pos: Vector3, yaw: float = 0, movable :
 
 func _ready() -> void:
 	var wood := material(Color(0.8, 0.73, 0.62), "res://assets/textures/walnut_veneer_4k_jpg.jpg", 3)
-	var plaster := material(Color(0.92, 0.89, 0.8), "res://assets/textures/beige_wall_001_4k_jpg.jpg", 3)
+	var panel_backing := material(Color("30271f"))
 	var trim := material(Color(0.18, 0.22, 0.2))
 	box("Floor", Vector3(8, 0.16, 9), Vector3(0, -0.08, 0), wood)
-	box("BackWall", Vector3(8, 3.2, 0.16), Vector3(0, 1.6, -4.5), plaster)
-	box("FrontWall", Vector3(8, 3.2, 0.16), Vector3(0, 1.6, 4.5), plaster)
-	box("RightWall", Vector3(0.16, 3.2, 9), Vector3(4, 1.6, 0), plaster)
+	box("BackWall", Vector3(8, 3.2, 0.16), Vector3(0, 1.6, -4.5), panel_backing)
+	box("FrontWall", Vector3(8, 3.2, 0.16), Vector3(0, 1.6, 4.5), panel_backing)
+	box("RightWall", Vector3(0.16, 3.2, 9), Vector3(4, 1.6, 0), panel_backing)
 	# A real opening in the left wall admits daylight.
-	box("LeftWallLower", Vector3(0.16, 0.85, 9), Vector3(-4, 0.425, 0), plaster)
-	box("LeftWallUpper", Vector3(0.16, 0.6, 9), Vector3(-4, 2.9, 0), plaster)
-	box("LeftWallBack", Vector3(0.16, 1.75, 2.6), Vector3(-4, 1.725, -3.2), plaster)
-	box("LeftWallFront", Vector3(0.16, 1.75, 3.4), Vector3(-4, 1.725, 2.8), plaster)
+	box("LeftWallLower", Vector3(0.16, 0.85, 9), Vector3(-4, 0.425, 0), panel_backing)
+	box("LeftWallUpper", Vector3(0.16, 0.6, 9), Vector3(-4, 2.9, 0), panel_backing)
+	box("LeftWallBack", Vector3(0.16, 1.75, 2.6), Vector3(-4, 1.725, -3.2), panel_backing)
+	box("LeftWallFront", Vector3(0.16, 1.75, 3.4), Vector3(-4, 1.725, 2.8), panel_backing)
+	var paneling := preload("res://scripts/wood_paneling.gd").new()
+	paneling.name = "WoodPaneling"
+	add_child(paneling)
 	box("Ceiling", Vector3(8, 0.12, 9), Vector3(0, 3.26, 0), material(Color(0.9, 0.87, 0.8)))
 	for z in [-4.39, 4.39]:
 		box("Skirting", Vector3(7.8, 0.14, 0.06), Vector3(0, 0.07, z), trim, false)

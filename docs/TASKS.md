@@ -422,10 +422,11 @@ Do not launch another broad overnight range before the new boundaries pass.
   cancellation/focus/launcher cleanup, collision and panel support regressions.
   Verified 2026-10-06; see [handoff 31](handoffs/31-furnishings-and-transitions.md).
 
-- [ ] **P21-T57 Walnut wall paneling.** **Depends:** P21-T53.
+- [x] **P21-T57 Walnut wall paneling.** **Depends:** P21-T53.
   Replace plaster with correctly scaled wood grain, joints and joinery.
   **Acceptance:** import and fixed rendered views inspected; window opening,
-  collision, light and live client color checks remain valid.
+  collision, light and live client color checks remain valid. Verified 2026-10-06;
+  see [handoff 31](handoffs/31-furnishings-and-transitions.md).
 
 - [ ] **P21-T58 Launch independent instances of an application.**
   **Depends:** P21-T55. Each launcher selection requests a fresh process/window;

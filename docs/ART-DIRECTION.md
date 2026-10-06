@@ -7,7 +7,7 @@ another plan or make screenshots of a concept render stand in for runtime work.
 ## First room
 
 Create a warm, believable, quietly luxurious study: oak/walnut furniture, a
-textured timber floor, warm plaster walls, a lighter ceiling, soft daylight
+textured timber floor, walnut-paneled walls (owner direction, 2026-10-06), a lighter ceiling, soft daylight
 through a framed window and a warm desk lamp. Restrained brass/black details,
 books, a rug and a plant give scale and life. Use a coherent palette and leave
 space to walk. Avoid identical materials on all architectural surfaces,
