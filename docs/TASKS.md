@@ -415,6 +415,30 @@ Do not launch another broad overnight range before the new boundaries pass.
   Terminal/Vim, support removal and inspected GPU captures; see
   [handoff 30](handoffs/30-study-details-and-physics.md).
 
+- [x] **P21-T56 Shared dragging and push physics for room furnishings.**
+  **Depends:** P21-T55. Chair, plant and bookcase use left-drag, wheel depth,
+  both-buttons wheel rotation and walking push. Desk/accessories remain fixed.
+  **Acceptance:** all three can be picked, carried, rotated, dropped and pushed;
+  cancellation/focus/launcher cleanup, collision and panel support regressions.
+  Verified 2026-10-06; see [handoff 31](handoffs/31-furnishings-and-transitions.md).
+
+- [ ] **P21-T57 Walnut wall paneling.** **Depends:** P21-T53.
+  Replace plaster with correctly scaled wood grain, joints and joinery.
+  **Acceptance:** import and fixed rendered views inspected; window opening,
+  collision, light and live client color checks remain valid.
+
+- [ ] **P21-T58 Launch independent instances of an application.**
+  **Depends:** P21-T55. Each launcher selection requests a fresh process/window;
+  preserve per-window labels, focus, recents and lifecycle ownership.
+  **Acceptance:** two terminals launched through the UI coexist, accept separate
+  input and close independently; launcher regressions pass.
+
+- [ ] **P21-T59 Animate application entry and return.**
+  **Depends:** P21-T56, P21-T58. Quick live 3D panel flight into the camera and
+  reverse to its current room placement; retain native-size application mode.
+  **Acceptance:** inspect entry/exit intermediate frames, exact endpoints,
+  interruption/re-entry/focus/resize/client-close behavior, full study suite.
+
 - [ ] **P21-T00 Repair and verify the toolchain baseline.**
   **Depends:** none.
   **Reopened:** old version/download/checksum claims are not a reproducible toolchain. Local tools and a working import invocation are now identified.

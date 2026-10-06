@@ -1,6 +1,8 @@
 # Project status
 
-Current authority: owner-requested room details and physics T53–T55 verified
+Current authority: owner-requested furnishings, walls, instances and transitions
+T56–T59 in progress; T56 verified 2026-10-06 from `e618487`.
+Previous authority:  owner-requested room details and physics T53–T55 verified
 2026-10-06, starting from `35d6b3d`. Application rotation T52 verified 2026-10-05
 from `cabde04`, following navigation/carrying T51; recovery begun 2026-10-03;
 T44 and navigation/launcher T46–T48 verified 2026-10-04; owner-requested application objects T49 verified 2026-10-05,
@@ -11,9 +13,10 @@ is historical; its extension/visual completion claims were contradicted by tests
 
 ## Next task
 
-The owner-requested room details, pushable chair and released-panel gravity
-(T53–T55) are verified. See [handoff 30](handoffs/30-study-details-and-physics.md).
-This completes the bounded request; the general roadmap next task remains below.
+Continue the bounded owner request with T57 wood paneling, then T58 independent
+instances and T59 animated entry/return. T56 shared furniture dragging and push
+physics is verified; see [handoff 31](handoffs/31-furnishings-and-transitions.md).
+The broader roadmap task below remains outside this request.
 
 **P21-T45: finish targeted client close and its lifecycle acceptance.**
 Recovery T36–T44 passes its bounded acceptance: furnished study, retained

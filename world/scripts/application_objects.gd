@@ -11,6 +11,7 @@ var camera: Camera3D
 var bindings: Dictionary = {}
 var selected := 0
 var pressed := 0
+var furniture: RigidBody3D
 var dragging := false
 var press_position := Vector2.ZERO
 var original_transform := Transform3D.IDENTITY
@@ -38,9 +39,9 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if app.active: selected = app.focused_handle
 	hint.visible = not app.active and not launcher.opened
-	hint.text = "Double-click to use · Drag to move · Release to drop · Esc cancels\nWhile dragging: WASD move · Right mouse look\n"
-	hint.text += "Both buttons + wheel: up turns left / down turns right" if pressed != 0 and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED else "Wheel: up away / down closer · Both buttons + wheel: rotate"
-	if pressed != 0 and (app.active or launcher.opened or not app.host_focused): finish_drag(true)
+	hint.text = "Apps: double-click to use · Apps/furniture: drag to move · Esc cancels\nWhile dragging: WASD move · Right mouse look\n"
+	hint.text += "Both buttons + wheel: up turns left / down turns right" if has_grab() and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED else "Wheel: up away / down closer · Both buttons + wheel: rotate"
+	if has_grab() and (app.active or launcher.opened or not app.host_focused): finish_drag(true)
 	if terminal.session == null or not terminal.session.is_running():
 		clear_objects()
 		return
@@ -71,33 +72,44 @@ func _process(_delta: float) -> void:
 		bindings[window].select(window == selected)
 
 func _physics_process(_delta: float) -> void:
-	if pressed == 0 or app.active or launcher.opened or not app.host_focused: return
+	if not has_grab() or app.active or launcher.opened or not app.host_focused: return
 	# Keep the grabbed point relative to the view even without a mouse-motion event.
 	if not camera.global_transform.is_equal_approx(drag_camera_transform):
 		dragging = true
 		drag_camera_transform = camera.global_transform
 	if dragging: move_drag(drag_pointer)
 
+func has_grab() -> bool:
+	return pressed != 0 or is_instance_valid(furniture)
+
+func grabbed_object() -> Node3D:
+	return furniture if is_instance_valid(furniture) else bindings.get(pressed)
+
+func local_bounds(object: Node3D) -> AABB:
+	return object.placement_box if object is RigidBody3D else AABB(-ApplicationObject.BOUNDS * 0.5, ApplicationObject.BOUNDS)
+
 func placement_extents(object: Node3D) -> Vector3:
-	var half := ApplicationObject.BOUNDS * 0.5
+	var half := local_bounds(object).size * 0.5
 	return object.global_basis.x.abs() * half.x + object.global_basis.y.abs() * half.y + object.global_basis.z.abs() * half.z
 
 func bounded_position(object: Node3D, point: Vector3) -> Vector3:
 	var extents := placement_extents(object)
-	return point.clamp(Vector3(-3.86, 0.08, -4.36) + extents, Vector3(3.86, 3.15, 4.36) - extents)
+	var offset := object.global_basis * local_bounds(object).get_center()
+	return (point + offset).clamp(Vector3(-3.86, 0.08, -4.36) + extents, Vector3(3.86, 3.15, 4.36) - extents) - offset
 
 func placement_clear(object: Node3D, point: Vector3) -> bool:
 	var query := PhysicsShapeQueryParameters3D.new()
 	var shape := BoxShape3D.new()
-	shape.size = ApplicationObject.BOUNDS + Vector3.ONE * 0.04
+	shape.size = local_bounds(object).size + Vector3.ONE * 0.04
 	query.shape = shape
 	query.exclude = [object.get_rid()]
 	query.collision_mask = 7
-	query.transform = Transform3D(object.global_basis, point)
+	var center := point + object.global_basis * local_bounds(object).get_center()
+	query.transform = Transform3D(object.global_basis, center)
 	# Include the player: panels must not materialize inside the camera.
 	if not get_world_3d().direct_space_state.intersect_shape(query, 1).is_empty(): return false
 	var extents := placement_extents(object) + Vector3.ONE * 0.02
-	var bounds := AABB(point - extents, extents * 2)
+	var bounds := AABB(center - extents, extents * 2)
 	for other in bindings.values():
 		var other_extents := placement_extents(other)
 		if other != object and bounds.intersects(AABB(other.global_position - other_extents, other_extents * 2)):
@@ -143,17 +155,54 @@ func pick(position: Vector2) -> int:
 			result = window if bindings[window].ray_distance(origin, direction) < INF else 0
 	return result
 
+func pick_furniture(position: Vector2) -> RigidBody3D:
+	var origin := camera.project_ray_origin(position)
+	var direction := camera.project_ray_normal(position)
+	var candidates := get_tree().get_nodes_in_group("pushable_furniture")
+	var query := PhysicsRayQueryParameters3D.create(origin, origin + direction * 20, 1)
+	# Array-valued properties return copies; assign the completed exclusions.
+	var exclusions: Array[RID] = []
+	for body in candidates: exclusions.append(body.get_rid())
+	query.exclude = exclusions
+	var obstacle := get_world_3d().direct_space_state.intersect_ray(query)
+	var nearest: float = origin.distance_to(obstacle.position) if not obstacle.is_empty() else 20.0
+	for object in bindings.values(): nearest = minf(nearest, object.occlusion_distance(origin, direction))
+	var result: RigidBody3D
+	for body in candidates:
+		var hit = body.placement_box.intersects_ray(body.to_local(origin), body.global_basis.inverse() * direction)
+		if hit != null:
+			var distance := origin.distance_to(body.to_global(hit))
+			if distance < nearest:
+				nearest = distance
+				result = body
+	return result
+
+func begin_drag(object: Node3D, pointer: Vector2) -> void:
+	press_position = pointer
+	original_transform = object.global_transform
+	if object is RigidBody3D:
+		furniture = object
+		furniture.begin_hold()
+	else:
+		original_gravity = object.gravity_active
+		original_fall_speed = object.fall_speed
+		object.held = true
+	drag_depth = -camera.to_local(original_transform.origin).z
+	drag_pointer = pointer
+	drag_camera_transform = camera.global_transform
+	drag_offset = camera.global_basis.inverse() * (original_transform.origin - camera.project_position(drag_pointer, drag_depth))
+
 func _input(event: InputEvent) -> void:
 	# Capture transitions can emit mouse_exited while left remains held. End on
 	# release/cancellation; GUI controls must not swallow the release.
-	if pressed != 0 and event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
+	if has_grab() and event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
 		finish_drag(false)
 		get_viewport().set_input_as_handled()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if app.active or launcher.opened or not app.host_focused: return
-	if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and pressed == 0: return
-	if event is InputEventKey and pressed != 0:
+	if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and not has_grab(): return
+	if event is InputEventKey and has_grab():
 		var key: int = event.physical_keycode if event.physical_keycode else event.keycode
 		if event.pressed and key == KEY_ESCAPE:
 			finish_drag(true)
@@ -161,6 +210,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			if event.pressed:
+				var body := pick_furniture(event.position)
+				if body != null:
+					begin_drag(body, event.position)
+					get_viewport().set_input_as_handled()
+					return
 				var window := pick(event.position)
 				if window == 0: return
 				selected = window
@@ -170,20 +224,12 @@ func _unhandled_input(event: InputEvent) -> void:
 					app.enter_application()
 				else:
 					pressed = window
-					press_position = event.position
-					original_transform = bindings[window].global_transform
-					original_gravity = bindings[window].gravity_active
-					original_fall_speed = bindings[window].fall_speed
-					bindings[window].held = true
-					drag_depth = -camera.to_local(original_transform.origin).z
-					drag_pointer = event.position
-					drag_camera_transform = camera.global_transform
-					drag_offset = camera.global_basis.inverse() * (original_transform.origin - camera.project_position(drag_pointer, drag_depth))
-			elif pressed != 0:
+					begin_drag(bindings[window], event.position)
+			elif has_grab():
 				finish_drag(false)
 			else: return
 			get_viewport().set_input_as_handled()
-		elif pressed != 0 and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+		elif has_grab() and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
 			if event.pressed and is_finite(event.factor) and event.factor > 0:
 				dragging = true
 				var step: float = event.factor if event.button_index == MOUSE_BUTTON_WHEEL_UP else -event.factor
@@ -193,7 +239,7 @@ func _unhandled_input(event: InputEvent) -> void:
 					drag_depth = clampf(drag_depth + 0.25 * step, 1.0, 8.0)
 					move_drag(drag_pointer)
 			get_viewport().set_input_as_handled()
-	elif event is InputEventMouseMotion and pressed != 0:
+	elif event is InputEventMouseMotion and has_grab():
 		# Captured motion belongs to mouse-look; keep the same screen-space grab.
 		if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED: return
 		drag_pointer = event.position
@@ -202,14 +248,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 func move_drag(position: Vector2) -> void:
-	if not bindings.has(pressed): return
-	var object: Node3D = bindings[pressed]
+	var object := grabbed_object()
+	if object == null: return
 	var point := bounded_position(object, camera.project_position(position, drag_depth) + camera.global_basis * drag_offset)
 	if placement_clear(object, point): object.global_position = point
 
 func rotate_drag(angle: float) -> void:
-	if not bindings.has(pressed): return
-	var object: Node3D = bindings[pressed]
+	var object := grabbed_object()
+	if object == null: return
 	var previous_basis := object.basis
 	object.rotation.y = wrapf(object.rotation.y + angle, -PI, PI)
 	# Rotate in place: reject blocked orientations instead of moving the panel
@@ -218,8 +264,12 @@ func rotate_drag(angle: float) -> void:
 		object.basis = previous_basis
 
 func finish_drag(cancel: bool) -> void:
-	if pressed == 0: return
-	if bindings.has(pressed):
+	if not has_grab(): return
+	if is_instance_valid(furniture):
+		if cancel: furniture.global_transform = original_transform
+		furniture.end_hold(cancel)
+		furniture = null
+	elif bindings.has(pressed):
 		var object = bindings[pressed]
 		object.held = false
 		if cancel: object.global_transform = original_transform

@@ -42,12 +42,14 @@ func model(label: String, asset: String, pos: Vector3, yaw: float = 0, movable :
 	var node := scene.instantiate() as Node3D
 	node.name = label
 	if movable:
-		var body := preload("res://scripts/pushable_chair.gd").new()
+		var body := preload("res://scripts/pushable_furniture.gd").new()
 		body.name = label
+		body.kind = asset
 		add_child(body)
 		body.position = pos
 		body.rotation.y = yaw
 		body.add_child(node)
+		body.measure_visuals()
 		furniture.append(body)
 		return body
 	add_child(node)
@@ -86,8 +88,8 @@ func _ready() -> void:
 	box("Rug", Vector3(3.2, 0.012, 2.8), Vector3(0.2, 0.01, 0.2), material(Color(0.22, 0.3, 0.28)), false)
 	model("Desk", "metal_office_desk", Vector3(0, 0, -2.2))
 	model("Chair", "dining_chair_02", Vector3(0.15, 0, -0.85), PI + 0.2, true)
-	model("Bookshelf", "wooden_bookshelf_worn", Vector3(2.9, 0, -3.9))
-	model("Plant", "potted_plant_02", Vector3(-2.8, 0, -2.8))
+	model("Bookshelf", "wooden_bookshelf_worn", Vector3(2.9, 0, -3.9), 0, true)
+	model("Plant", "potted_plant_02", Vector3(-2.8, 0, -2.8), 0, true)
 	model("Lamp", "desk_lamp_arm_01", Vector3(-0.65, 0.8, -2.15))
 	model("Books", "book_encyclopedia_set_01", Vector3(0.62, 0.8, -2.2))
 	var monitor := Node3D.new()
