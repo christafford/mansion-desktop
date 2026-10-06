@@ -290,3 +290,21 @@ An agent may collect separately labeled GUI evidence where its tools permit;
 tasks explicitly marked (human) still require a person's observation. Leave
 unperformed steps "not observed" and product gates pending. A test exit code or
 successful mapping log does not prove text readability or interactive comfort.
+
+## Owner-requested room details and physical placement: T53–T55
+
+2026-10-05–06 automated and agent-rendered evidence is recorded in
+[handoff 30](handoffs/30-study-details-and-physics.md). This does not tick a human
+gate. Personal comfort/appearance observation for these changes: **not observed**.
+
+Run `tools/run-godot.sh --audio-driver Dummy`. Look up at both twin-tube fittings,
+inspect the soft brightness variation and moving shadows below them, then view
+the botanical prints, clock and noticeboard. Walk into the chair from the back
+and side; it should yield and stop against furniture/walls without tipping.
+Drag the live terminal over the floor, desk, chair seat and bookcase top; release
+it and check that its bottom stops at the first surface it meets. Lift it again,
+rotate with both mouse buttons plus wheel, and cancel with Escape. Move the chair
+out from underneath a supported panel. Confirm the panel falls again, stays
+live and still accepts typing after double-click activation. Record comfort,
+readability, visual defects and measured performance separately from automated
+collision/input evidence. Session placements are not restored after restarting.

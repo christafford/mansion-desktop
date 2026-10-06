@@ -124,6 +124,16 @@ it. T52 maps the wheel to panel yaw while mouse-look is captured during a drag;
 otherwise it adjusts depth. Rotation validates the new bounds in place, and
 cancellation restores the original full transform. Application/launcher modes
 remain owned by their existing policy layers.
+T54 makes the chair an upright rigid body with six fitted convex box shapes;
+walking applies bounded horizontal impulses. Other imported furniture retains
+static collision. T55 makes live panels upright CharacterBody3D objects with
+collision sized to the rendered frame. New panels stay at their initial visible
+placement until moved. Releasing a drag enables gravity; a swept whole-panel
+motion stops at furniture/floor contact and keeps probing for removed support.
+Grabbing pauses gravity, and cancellation restores transform and falling state.
+Physics layers are room/furniture=1, player=2, panels=4. Drop queries ignore the
+player, placement queries include it, and picking tests panel faces separately
+from room occlusion. This is Godot world behavior; no compositor state changes.
 Panels use the same unlit shader and inverse transforms. Nearest front-face
 picking respects room geometry and opaque panel backs. Drag placement clamps
 whole-panel bounds and rejects furniture/player/panel overlap; focus loss,

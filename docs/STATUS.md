@@ -1,6 +1,7 @@
 # Project status
 
-Current authority: owner-requested application rotation T52 verified 2026-10-05
+Current authority: owner-requested room details and physics T53–T55 verified
+2026-10-06, starting from `35d6b3d`. Application rotation T52 verified 2026-10-05
 from `cabde04`, following navigation/carrying T51; recovery begun 2026-10-03;
 T44 and navigation/launcher T46–T48 verified 2026-10-04; owner-requested application objects T49 verified 2026-10-05,
 starting from `4c0c078` plus the existing
@@ -10,8 +11,9 @@ is historical; its extension/visual completion claims were contradicted by tests
 
 ## Next task
 
-Active owner request: T53 room details and T54 pushable chair verified; continue
-T55 released-panel gravity. See [handoff 30](handoffs/30-study-details-and-physics.md).
+The owner-requested room details, pushable chair and released-panel gravity
+(T53–T55) are verified. See [handoff 30](handoffs/30-study-details-and-physics.md).
+This completes the bounded request; the general roadmap next task remains below.
 
 **P21-T45: finish targeted client close and its lifecycle acceptance.**
 Recovery T36–T44 passes its bounded acceptance: furnished study, retained
@@ -78,15 +80,26 @@ brings it nearer. While both mouse buttons are held, wheel up turns the panel
 left and wheel down turns it right (10° per notch), keeping its center/depth
 and your view unchanged. Release right mouse to adjust depth again. Escape
 restores both the original position and orientation and stops navigation.
-Panels retain their positions when returning with Ctrl+Alt+Escape, and background
-applications keep updating. Placement lasts for this session; closing a client
-removes its panel. Restart restoration is not implemented.
+After a move, releasing the panel lets it fall upright onto furniture or the
+floor. Holding it pauses gravity; Escape restores its previous placement and
+falling state. Moving the supporting chair away lets it fall again. A single
+click or opening an untouched application does not drop it. Settled panels
+retain their positions when returning with Ctrl+Alt+Escape, and background
+applications keep updating. Walking into the chair pushes it across the floor;
+it stays upright and comes to rest. Placement lasts for this session; closing
+a client removes its panel. Restart restoration is not implemented.
 
 Discovery uses freedesktop entries and icon themes without a KDE service.
 Verified clients are Weston terminal and Vim through Terminal=true. Other
 graphical apps may fail; Flatpak launch is explicitly unavailable for now.
 
 ## Verified by automated checks in this recovery
+
+- T55 (2026-10-06): real application panels fall onto floor, desk, bookcase and
+  chair, including edge contact; moving support away resumes falling. Re-grab,
+  cancellation, live updates and close pass. Import, all 13 Godot study trials
+  and 7 Python tests pass (host input; isolated GPU resize). Agent-inspected
+  landing captures are in handoff 30; owner comfort remains unobserved.
 
 - T54 (2026-10-05): walking pushes the chair, friction/damping stop it, and
   desk/wall/floor collision and upright constraints pass. Import and expanded

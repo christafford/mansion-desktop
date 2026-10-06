@@ -14,6 +14,8 @@ var pressed := 0
 var dragging := false
 var press_position := Vector2.ZERO
 var original_transform := Transform3D.IDENTITY
+var original_gravity := false
+var original_fall_speed := 0.0
 var drag_offset := Vector3.ZERO
 var drag_pointer := Vector2.ZERO
 var drag_camera_transform := Transform3D.IDENTITY
@@ -36,7 +38,7 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if app.active: selected = app.focused_handle
 	hint.visible = not app.active and not launcher.opened
-	hint.text = "Double-click to use · Drag to move · Esc cancels\nWhile dragging: WASD move · Right mouse look\n"
+	hint.text = "Double-click to use · Drag to move · Release to drop · Esc cancels\nWhile dragging: WASD move · Right mouse look\n"
 	hint.text += "Both buttons + wheel: up turns left / down turns right" if pressed != 0 and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED else "Wheel: up away / down closer · Both buttons + wheel: rotate"
 	if pressed != 0 and (app.active or launcher.opened or not app.host_focused): finish_drag(true)
 	if terminal.session == null or not terminal.session.is_running():
@@ -89,6 +91,8 @@ func placement_clear(object: Node3D, point: Vector3) -> bool:
 	var shape := BoxShape3D.new()
 	shape.size = ApplicationObject.BOUNDS + Vector3.ONE * 0.04
 	query.shape = shape
+	query.exclude = [object.get_rid()]
+	query.collision_mask = 7
 	query.transform = Transform3D(object.global_basis, point)
 	# Include the player: panels must not materialize inside the camera.
 	if not get_world_3d().direct_space_state.intersect_shape(query, 1).is_empty(): return false
@@ -127,7 +131,7 @@ func visible_placement(object: Node3D, point: Vector3) -> bool:
 func pick(position: Vector2) -> int:
 	var origin := camera.project_ray_origin(position)
 	var direction := camera.project_ray_normal(position)
-	var query := PhysicsRayQueryParameters3D.create(origin, origin + direction * 20)
+	var query := PhysicsRayQueryParameters3D.create(origin, origin + direction * 20, 1)
 	query.exclude = [player.get_rid()]
 	var obstacle := get_world_3d().direct_space_state.intersect_ray(query)
 	var nearest: float = origin.distance_to(obstacle.position) if not obstacle.is_empty() else 20.0
@@ -168,6 +172,9 @@ func _unhandled_input(event: InputEvent) -> void:
 					pressed = window
 					press_position = event.position
 					original_transform = bindings[window].global_transform
+					original_gravity = bindings[window].gravity_active
+					original_fall_speed = bindings[window].fall_speed
+					bindings[window].held = true
 					drag_depth = -camera.to_local(original_transform.origin).z
 					drag_pointer = event.position
 					drag_camera_transform = camera.global_transform
@@ -212,7 +219,12 @@ func rotate_drag(angle: float) -> void:
 
 func finish_drag(cancel: bool) -> void:
 	if pressed == 0: return
-	if cancel and bindings.has(pressed): bindings[pressed].global_transform = original_transform
+	if bindings.has(pressed):
+		var object = bindings[pressed]
+		object.held = false
+		if cancel: object.global_transform = original_transform
+		object.gravity_active = original_gravity if cancel else (original_gravity or dragging)
+		object.fall_speed = original_fall_speed if cancel or not dragging else 0.0
 	pressed = 0
 	dragging = false
 	if cancel: player.release_pointer()

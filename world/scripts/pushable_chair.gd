@@ -2,6 +2,7 @@
 extends RigidBody3D
 
 func _ready() -> void:
+	collision_mask = 3 # Room and player; panels probe/support themselves.
 	mass = 7.0
 	linear_damp = 3.0
 	angular_damp = 5.0

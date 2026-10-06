@@ -105,11 +105,14 @@ func run() -> void:
 	var dropped_position: Vector3 = first_object.position
 	for frame in range(8): await physics_frame
 	check(player.position.distance_to(carry_start) > 0.2, "Walking stops after dropping")
-	check(first_object.position.is_equal_approx(dropped_position), "Dropped application follows the camera")
+	check(Vector2(first_object.position.x, first_object.position.z).distance_to(Vector2(dropped_position.x, dropped_position.z)) < 0.01, "Dropped application follows the camera")
+	check(first_object.position.y < dropped_position.y - 0.04, "Released moved application does not fall")
 	await key(KEY_W, false)
 	await mouse(point(first), false, false, MOUSE_BUTTON_RIGHT)
 	# Restore the fixture's starting poses for the two-client placement checks.
 	player.return_to_spawn()
+	first_object.gravity_active = false
+	first_object.fall_speed = 0.0
 	first_object.position = initial
 	await settle()
 	launcher.open()
@@ -183,6 +186,9 @@ func run() -> void:
 	check(first_object.position.distance_to(initial) > 0.2, "Drag/wheel did not move object")
 	check(second_object.position == second_position, "Moving one window moved another")
 	check(first_object.entity_id == identity and not player.application_mode and player._held.is_empty(), "Drag changed identity or left held navigation")
+	# Allow the released panel to reach a support before testing saved placement.
+	for frame in range(90): await physics_frame
+	check(first_object.support != null and first_object.fall_speed == 0, "Dropped application does not settle")
 	var moved: Vector3 = first_object.position
 	await activate(first)
 	await chord(KEY_CTRL, KEY_C)

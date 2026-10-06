@@ -83,6 +83,14 @@ func run() -> void:
 		await terminal.shutdown()
 		quit(1)
 		return
+	# Match the pointer/launcher trials: wait for host activation before injection.
+	root.grab_focus()
+	await create_timer(0.25).timeout
+	check(root.has_focus() and app.host_focused, "Keyboard test lacks host focus")
+	if failures:
+		await terminal.shutdown()
+		quit(1)
+		return
 	await tap(KEY_ENTER)
 	check(app.active, "Enter did not activate the terminal through Godot input")
 	check(terminal.session.keyboard_focus_handle() == terminal.handle, "Wrong keyboard focus")

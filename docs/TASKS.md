@@ -406,12 +406,14 @@ Do not launch another broad overnight range before the new boundaries pass.
   and furniture collisions hold; existing controller checks pass. Verified
   2026-10-05: import and expanded graphical controller trial pass; handoff 30.
 
-- [ ] **P21-T55 Gravity for released application panels.**
+- [x] **P21-T55 Gravity for released application panels.**
   **Depends:** P21-T54, P21-T52. Released moved panels fall onto room furniture
   or floor while preserving orientation, live pixels and input.
   **Acceptance:** desk/floor/bookcase/chair contacts, removed support, regrab,
   cancellation and client lifecycle regressions; rendered live client evidence
-  and full study suite.
+  and full study suite. Verified 2026-10-06: all checks pass, including real
+  Terminal/Vim, support removal and inspected GPU captures; see
+  [handoff 30](handoffs/30-study-details-and-physics.md).
 
 - [ ] **P21-T00 Repair and verify the toolchain baseline.**
   **Depends:** none.

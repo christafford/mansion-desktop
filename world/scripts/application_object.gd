@@ -1,5 +1,5 @@
 ## A session-local world entity; the manager owns its transient window binding.
-extends Node3D
+extends CharacterBody3D
 
 const APERTURE := Vector2(1.3, 0.82)
 const BOUNDS := Vector3(1.4, 1.02, 0.08)
@@ -12,8 +12,37 @@ var rim: StandardMaterial3D
 var housing: MeshInstance3D
 var accent: MeshInstance3D
 var bounds := BOUNDS
+var gravity_active := false
+var held := false
+var fall_speed := 0.0
+var collider: CollisionShape3D
+var support: WeakRef
+
+func _physics_process(delta: float) -> void:
+	if held or not gravity_active or not visible: return
+	fall_speed = minf(fall_speed + 9.8 * delta, 12.0)
+	# Sweep the whole panel, including its edges, rather than raycasting its center.
+	# Keep probing after contact so removing a chair/support resumes the fall.
+	support = null
+	var motion := Vector3.DOWN * fall_speed * delta
+	for attempt in range(3):
+		var hit := move_and_collide(motion)
+		if hit == null: break
+		if hit.get_normal().y > 0.5:
+			fall_speed = 0.0
+			support = weakref(hit.get_collider())
+			break
+		motion = hit.get_remainder().slide(hit.get_normal())
+		if motion.length_squared() < 0.000001: break
 
 func _ready() -> void:
+	collision_layer = 4
+	collision_mask = 5 # World/furniture and other panels; never land on the player.
+	safe_margin = 0.001
+	collider = CollisionShape3D.new()
+	collider.shape = BoxShape3D.new()
+	(collider.shape as BoxShape3D).size = bounds
+	add_child(collider)
 	housing = MeshInstance3D.new()
 	housing.mesh = BoxMesh.new()
 	(housing.mesh as BoxMesh).size = BOUNDS
@@ -45,6 +74,7 @@ func _ready() -> void:
 func show_frame(frame: Dictionary, shared_texture: ImageTexture = null) -> void:
 	revision = frame.revision
 	visible = frame.mapped
+	collider.disabled = not visible
 	if not visible:
 		texture = null
 		(screen.material_override as ShaderMaterial).set_shader_parameter("client_pixels", null)
@@ -63,6 +93,7 @@ func show_frame(frame: Dictionary, shared_texture: ImageTexture = null) -> void:
 	if size.x > APERTURE.x: size = Vector2(APERTURE.x, APERTURE.x / aspect)
 	(screen.mesh as QuadMesh).size = size
 	bounds = Vector3(size.x + 0.08, size.y + 0.17, BOUNDS.z)
+	(collider.shape as BoxShape3D).size = bounds
 	(housing.mesh as BoxMesh).size = bounds
 	(accent.mesh as BoxMesh).size = Vector3(bounds.x, 0.012, 0.012)
 	accent.position = Vector3(0, bounds.y * 0.5 - 0.006, 0.04)
