@@ -124,8 +124,8 @@ func initial_position(object: Node3D) -> Vector3:
 		for side in [0.0, -1.55, 1.55, -3.1, 3.1]:
 			var point := bounded_position(object, camera.global_position + forward * depth + right * side)
 			if placement_clear(object, point) and visible_placement(object, point): return point
-	# Crowded rooms may overlap previews, but every live window remains accessible
-	# through the launcher and can be dragged to a new position.
+	# Crowded rooms may overlap previews; put the new panel near the camera
+	# so it can be dragged away to reveal the older panels.
 	return bounded_position(object, camera.global_position + forward * 1.6)
 
 func visible_placement(object: Node3D, point: Vector3) -> bool:

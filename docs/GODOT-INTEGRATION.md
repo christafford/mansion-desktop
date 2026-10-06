@@ -48,14 +48,21 @@ metadata; launch resolves a desktop ID again and execs argv with the private
 display environment. `Terminal=true` uses Weston and an exec wrapper. The
 launcher serializes pending launches and selects a newly mapped window; this
 initial candidate association is not durable identity or complete multiwindow
-matching. Verified successful launches populate eight persistent desktop IDs.
+matching. Every launcher selection starts a fresh instance; live labels map
+window handles to desktop IDs, while recents deduplicate by desktop ID.
+Verified successful launches populate eight persistent desktop IDs.
 See [Decision 07](decisions/07-application-launcher.md) for dependencies and limits.
 
 `application_mode.gd` implements explicit shell policy: Enter activates the live
 terminal, Ctrl+Alt+Escape returns to world, and host focus loss clears activation.
 Its TextureRect shares the monitor's current texture, displays native pixels
 when they fit, and bypasses the 3D world environment. `keyboard_map.gd` maps
-physical US Godot keys to Linux evdev codes. The runtime resolves only live,
+physical US Godot keys to Linux evdev codes. `application_transition.gd` uses a
+live shared-material 3D proxy for 220ms entry/return, then hands off to the flat
+view. It changes presentation only: player/world transforms and compositor
+ownership remain untouched. Keyboard focus starts immediately; pointer input
+waits for the native endpoint. Cancellation restores the world's visual nodes.
+The runtime resolves only live,
 mapped toplevel handles for `focus_keyboard`, `keyboard_focus_handle` and
 `keyboard_key`. `seat.cpp` owns XKB, held keys, focused-client routing, late
 keyboard enter and a surface-destroy listener. Duplicate presses are suppressed;

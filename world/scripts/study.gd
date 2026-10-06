@@ -186,6 +186,11 @@ func _ready() -> void:
 	application_objects.launcher = app_launcher
 	application_objects.player = get_node("Player")
 	add_child(application_objects)
+	var transition := preload("res://scripts/application_transition.gd").new()
+	transition.app = application_mode
+	transition.objects = application_objects
+	application_mode.transition = transition
+	add_child(transition)
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--capture="):
 			capture_views(arg.trim_prefix("--capture="))

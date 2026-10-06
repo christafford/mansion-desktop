@@ -73,6 +73,11 @@ func settle() -> void:
 	for i in range(12): await process_frame
 	await RenderingServer.frame_post_draw
 
+func wait_application_view() -> void:
+	var deadline := Time.get_ticks_msec() + 2000
+	while app.transition.running and Time.get_ticks_msec() < deadline: await process_frame
+	check(app.active and app.panel.visible and not app.transition.running, "Application did not reach its pointer-input endpoint")
+
 func capture(name: String) -> void:
 	await settle()
 	check(root.get_texture().get_image().save_png(output_dir.path_join(name)) == OK, "Capture " + name)
@@ -189,6 +194,7 @@ func run() -> void:
 	check(player.position.distance_to(position) < 0.001, "World movement stuck")
 	await capture("world-after-drag.png")
 	await tap(KEY_ENTER)
+	await wait_application_view()
 	await button(start, MOUSE_BUTTON_LEFT, true)
 	check(app.active and terminal.session.pointer_grabbed(), "No held drag before focus loss")
 	app._notification(NOTIFICATION_APPLICATION_FOCUS_OUT)
@@ -196,6 +202,7 @@ func run() -> void:
 	await button(start, MOUSE_BUTTON_LEFT, false)
 	app._notification(NOTIFICATION_APPLICATION_FOCUS_IN)
 	await tap(KEY_ENTER)
+	await wait_application_view()
 	await button(start, MOUSE_BUTTON_LEFT, true)
 	check(app.active and terminal.session.pointer_grabbed(), "No held drag before disconnect")
 	check(OS.kill(terminal.child_pid) == OK, "Kill owned terminal")

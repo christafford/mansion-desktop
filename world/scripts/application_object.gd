@@ -14,6 +14,7 @@ var accent: MeshInstance3D
 var bounds := BOUNDS
 var gravity_active := false
 var held := false
+var presentation_hidden := false
 var fall_speed := 0.0
 var collider: CollisionShape3D
 var support: WeakRef
@@ -102,8 +103,12 @@ func show_frame(frame: Dictionary, shared_texture: ImageTexture = null) -> void:
 func select(selected: bool) -> void:
 	rim.albedo_color = Color("d8b36c") if selected else Color("426460")
 
+func set_presentation_hidden(hidden: bool) -> void:
+	presentation_hidden = hidden
+	for visual in [housing, accent, screen, label]: visual.visible = not hidden
+
 func ray_distance(origin: Vector3, direction: Vector3) -> float:
-	if not visible: return INF
+	if not visible or presentation_hidden: return INF
 	var local_origin := to_local(origin)
 	var local_direction := global_basis.inverse() * direction
 	# Only the visible front face is interactive; never activate through the back.
@@ -115,6 +120,6 @@ func ray_distance(origin: Vector3, direction: Vector3) -> float:
 	return distance
 
 func occlusion_distance(origin: Vector3, direction: Vector3) -> float:
-	if not visible: return INF
+	if not visible or presentation_hidden: return INF
 	var hit = AABB(-bounds * 0.5, bounds).intersects_ray(to_local(origin), global_basis.inverse() * direction)
 	return origin.distance_to(to_global(hit)) if hit != null else INF

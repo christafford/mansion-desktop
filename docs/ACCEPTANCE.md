@@ -308,3 +308,21 @@ out from underneath a supported panel. Confirm the panel falls again, stays
 live and still accepts typing after double-click activation. Record comfort,
 readability, visual defects and measured performance separately from automated
 collision/input evidence. Session placements are not restored after restarting.
+
+## Owner-requested furnishings and application transitions: T56–T59
+
+2026-10-06 agent-run evidence, commands and rendered captures are recorded in
+[handoff 31](handoffs/31-furnishings-and-transitions.md), starting from `e618487`.
+Human comfort/physical input observation remains **not observed**.
+
+In the visible study, left-drag the chair, plant and bookcase, carry them with
+WASD, change distance with the wheel and rotate with both buttons plus wheel.
+Release to drop them; Escape restores the original placement. Walk into each
+and inspect floor/wall/furniture contact. Check walnut grain and panel joints
+around the window and decorations. Launch Terminal twice through the wheel;
+type different commands, return to the room, reopen each panel and close one.
+The other should retain its shell state. Double-click a room panel to see its
+live surface approach the camera; Ctrl+Alt+Escape sends it back. Try reversing
+quickly, resizing, losing host focus and closing the client. Confirm comfortable
+motion and readable native text separately from the agent's geometry, pixel
+and input assertions. Session placements still reset when Mansion restarts.

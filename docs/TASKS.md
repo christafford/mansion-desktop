@@ -435,11 +435,13 @@ Do not launch another broad overnight range before the new boundaries pass.
   input and close independently; launcher regressions pass. Verified 2026-10-06;
   see [handoff 31](handoffs/31-furnishings-and-transitions.md).
 
-- [ ] **P21-T59 Animate application entry and return.**
+- [x] **P21-T59 Animate application entry and return.**
   **Depends:** P21-T56, P21-T58. Quick live 3D panel flight into the camera and
   reverse to its current room placement; retain native-size application mode.
   **Acceptance:** inspect entry/exit intermediate frames, exact endpoints,
   interruption/re-entry/focus/resize/client-close behavior, full study suite.
+  Verified 2026-10-06: all 15 Godot trials and 7 Python tests pass; GPU frames
+  inspected. See [handoff 31](handoffs/31-furnishings-and-transitions.md).
 
 - [ ] **P21-T00 Repair and verify the toolchain baseline.**
   **Depends:** none.

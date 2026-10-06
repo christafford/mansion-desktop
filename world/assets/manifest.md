@@ -67,7 +67,12 @@
 | **Alt 1** | `wooden_floor_01` | 16384 × 16384 | Lacquered, varnished wooden floor, natural grain, subtle weathering | weathered, wood, wooden plank, lacquered, coated finish, coated wood, coated, indoor | Poly Haven | CC0 |
 | **Alt 2** | `plank_flooring_04` | 8192 × 8192 | Varnished dark timber planks, subtle grain, narrow seams, soft satin sheen | wooden planks, plank flooring, wooden flooring, plank, timber, coated, varnished, wooden floor | Poly Haven | CC0 |
 
-### 3.2 Walls — Warm Beige Plaster
+### 3.2 Walls — Walnut Paneling
+
+Owner direction, 2026-10-06: the visible study now reuses `walnut_veneer`
+from the verified local photo cache on 65cm panel bays with recessed joints and
+rails. No new download or license. The plaster candidates below are historical.
+See [T57 evidence](../../docs/handoffs/31-furnishings-and-transitions.md).
 
 | Priority | Asset ID | Resolution | Description | Tags | Author | License |
 |----------|----------|------------|-------------|------|--------|---------|

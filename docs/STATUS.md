@@ -1,8 +1,8 @@
 # Project status
 
 Current authority: owner-requested furnishings, walls, instances and transitions
-T56–T59 in progress; T56–T58 verified 2026-10-06 from `e618487`.
-Previous authority:  owner-requested room details and physics T53–T55 verified
+T56–T59 verified 2026-10-06, starting from `e618487`.
+Previous authority: owner-requested room details and physics T53–T55 verified
 2026-10-06, starting from `35d6b3d`. Application rotation T52 verified 2026-10-05
 from `cabde04`, following navigation/carrying T51; recovery begun 2026-10-03;
 T44 and navigation/launcher T46–T48 verified 2026-10-04; owner-requested application objects T49 verified 2026-10-05,
@@ -13,9 +13,10 @@ is historical; its extension/visual completion claims were contradicted by tests
 
 ## Next task
 
-Continue the bounded owner request with T59 animated entry/return. T56 furniture
-controls, T57 walnut walls and T58 independent instances are verified; see [handoff 31](handoffs/31-furnishings-and-transitions.md).
-The broader roadmap task below remains outside this request.
+The bounded owner request T56–T59 is complete: shared furniture controls,
+walnut walls, independent instances and live entry/return animations. See
+[handoff 31](handoffs/31-furnishings-and-transitions.md). The broader roadmap
+task below remains outside this request.
 
 **P21-T45: finish targeted client close and its lifecycle acceptance.**
 Recovery T36–T44 passes its bounded acceptance: furnished study, retained
@@ -75,7 +76,10 @@ Double-click an existing room panel to use that particular instance. Esc returns
 Tab still belongs to applications in application mode. Recents persist in
 `.tools/launcher-state/recent.json`; tests use an isolated state directory.
 Every mapped window also has a separate live panel in the room. Single-click
-selects it; double-click activates it. Left-drag moves the panel. Keep holding
+selects it; double-click activates it with a quick 220ms zoom toward the camera.
+Ctrl+Alt+Escape reverses the animation to its current room placement. Your
+position stays unchanged. Typing starts immediately; pointer input starts when
+the image settles. Left-drag moves the panel. Keep holding
 left mouse to carry it while using WASD and right-mouse look; dropping it does
 not interrupt held walking keys. Wheel up pushes it farther away, wheel down
 brings it nearer. While both mouse buttons are held, wheel up turns the panel
@@ -97,6 +101,13 @@ Verified clients are Weston terminal and Vim through Terminal=true. Other
 graphical apps may fail; Flatpak launch is explicitly unavailable for now.
 
 ## Verified by automated checks in this recovery
+
+- T56–T59 (2026-10-06): chair/plant/bookcase picking, carrying, rotation, release,
+  cancellation and walking pushes; real independent terminal instances and
+  isolated shell state; live 220ms entry/return, endpoints, native pixels,
+  interruption/focus/resize/close. Import, 15 Godot trials and 7 Python tests
+  pass from `c60d037` plus T59. Walnut and transition GPU captures inspected by
+  the agent; see handoff 31. Human comfort remains unobserved.
 
 - T55 (2026-10-06): real application panels fall onto floor, desk, bookcase and
   chair, including edge contact; moving support away resumes falling. Re-grab,

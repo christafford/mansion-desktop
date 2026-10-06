@@ -328,7 +328,7 @@ func launch(identifier: String) -> void:
 
 func _activate(handle: int) -> void:
 	close()
-	app.exit_application()
+	app.exit_application(false)
 	terminal.select_window(handle)
 	app.enter_application()
 

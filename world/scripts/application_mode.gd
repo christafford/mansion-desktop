@@ -10,6 +10,7 @@ var launcher_active := false
 var focused_handle := 0
 var panel: Control
 var view: TextureRect
+var transition: Node3D
 var resize_viewport := Vector2.ZERO
 var resize_due_ms := 0
 var resize_pending := false
@@ -47,12 +48,17 @@ func enter_application() -> bool:
 	active = true
 	player.application_mode = true
 	player.release_pointer()
-	panel.show()
 	update_view()
+	panel.hide()
+	transition.begin(focused_handle, true)
 	queue_resize()
 	return true
 
-func exit_application() -> void:
+func exit_application(animated := true) -> void:
+	if active and animated:
+		transition.begin(focused_handle, false)
+	elif not animated and transition != null:
+		transition.cancel()
 	if terminal.session != null and terminal.session.is_running():
 		terminal.session.pointer_reset()
 		if not terminal.session.focus_keyboard(0):
@@ -94,15 +100,17 @@ func resize_client() -> void:
 		# A stalled/oversized client keeps its last valid pixels and input target.
 		push_warning(terminal.session.last_error())
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if not active:
+		transition.advance(delta)
 		return
 	if terminal.session == null or not terminal.session.is_running() or not terminal.screen.visible or terminal.session.keyboard_focus_handle() != focused_handle:
-		exit_application()
+		exit_application(false)
 		return
 	update_view()
 	if get_viewport().get_visible_rect().size != resize_viewport: queue_resize()
 	if resize_pending and Time.get_ticks_msec() >= resize_due_ms: resize_client()
+	transition.advance(delta)
 
 func _input(event: InputEvent) -> void:
 	if not host_focused or launcher_active:
@@ -125,10 +133,10 @@ func _input(event: InputEvent) -> void:
 			exit_application()
 	elif active and event is InputEventMouse:
 		get_viewport().set_input_as_handled()
-		route_pointer(event)
+		if not transition.running: route_pointer(event)
 	elif active and event is InputEventPanGesture:
 		get_viewport().set_input_as_handled()
-		if move_pointer(event.position) and image_rect().has_point(event.position):
+		if not transition.running and move_pointer(event.position) and image_rect().has_point(event.position):
 			if not terminal.session.pointer_axis(event.delta.x * 10, event.delta.y * 10): exit_application()
 	elif active and (event is InputEventJoypadButton or event is InputEventJoypadMotion):
 		get_viewport().set_input_as_handled()
@@ -173,6 +181,6 @@ func pointer_left_window() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
 		host_focused = false
-		if active: exit_application()
+		exit_application(false)
 	elif what == NOTIFICATION_APPLICATION_FOCUS_IN:
 		host_focused = true
