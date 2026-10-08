@@ -291,7 +291,7 @@
       "hash": {
         "texture": "sha256:10e83615504c2d2a8f5a8665ab0d36f550b0ab2a60c6188dc9a317a65e7362ec"
       },
-      "art_director_notes": "Walnut veneer photo reused for the study floor and wall panels (owner direction, 2026-10-06)",
+      "art_director_notes": "Walnut veneer photo reused for the study floor, wall panels and hallway joinery (2026-10-08)",
       "dependencies": []
     },
     {
@@ -343,7 +343,7 @@
       "hash": {
         "texture": "sha256:80062445c4122f72bd067cbc4ac511146c6a7de4a3bb4fe78237c9838e4def37"
       },
-      "art_director_notes": "Earlier plaster wall selection; retained in cache, superseded by walnut panels on 2026-10-06",
+      "art_director_notes": "Plaster photo reused for hallway upper walls on 2026-10-08; study walls remain walnut",
       "dependencies": []
     },
     {

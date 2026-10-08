@@ -95,7 +95,7 @@ func placement_extents(object: Node3D) -> Vector3:
 func bounded_position(object: Node3D, point: Vector3) -> Vector3:
 	var extents := placement_extents(object)
 	var offset := object.global_basis * local_bounds(object).get_center()
-	return (point + offset).clamp(Vector3(-3.86, 0.08, -4.36) + extents, Vector3(3.86, 3.15, 4.36) - extents) - offset
+	return preload("res://scripts/hallway.gd").bounded_center(point + offset, extents) - offset
 
 func placement_clear(object: Node3D, point: Vector3) -> bool:
 	var query := PhysicsShapeQueryParameters3D.new()

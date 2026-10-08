@@ -66,7 +66,10 @@ func _ready() -> void:
 	var trim := material(Color(0.18, 0.22, 0.2))
 	box("Floor", Vector3(8, 0.16, 9), Vector3(0, -0.08, 0), wood)
 	box("BackWall", Vector3(8, 3.2, 0.16), Vector3(0, 1.6, -4.5), panel_backing)
-	box("FrontWall", Vector3(8, 3.2, 0.16), Vector3(0, 1.6, 4.5), panel_backing)
+	# Opening opposite the desk: no hidden wall or skirting across the threshold.
+	for x in [-2.425, 2.425]:
+		box("FrontWallSide", Vector3(3.15, 3.2, 0.16), Vector3(x, 1.6, 4.5), panel_backing)
+	box("FrontWallHeader", Vector3(1.7, 0.7, 0.16), Vector3(0, 2.85, 4.5), panel_backing)
 	box("RightWall", Vector3(0.16, 3.2, 9), Vector3(4, 1.6, 0), panel_backing)
 	# A real opening in the left wall admits daylight.
 	box("LeftWallLower", Vector3(0.16, 0.85, 9), Vector3(-4, 0.425, 0), panel_backing)
@@ -77,8 +80,12 @@ func _ready() -> void:
 	paneling.name = "WoodPaneling"
 	add_child(paneling)
 	box("Ceiling", Vector3(8, 0.12, 9), Vector3(0, 3.26, 0), material(Color(0.9, 0.87, 0.8)))
-	for z in [-4.39, 4.39]:
-		box("Skirting", Vector3(7.8, 0.14, 0.06), Vector3(0, 0.07, z), trim, false)
+	box("Skirting", Vector3(7.8, 0.14, 0.06), Vector3(0, 0.07, -4.39), trim, false)
+	for x in [-2.425, 2.425]:
+		box("EntrySkirting", Vector3(3.05, 0.14, 0.06), Vector3(x, 0.07, 4.39), trim, false)
+	var hallway := preload("res://scripts/hallway.gd").new()
+	hallway.name = "Hallway"
+	add_child(hallway)
 	for x in [-3.89, 3.89]:
 		box("Skirting", Vector3(0.06, 0.14, 8.8), Vector3(x, 0.07, 0), trim, false)
 	box("WindowSill", Vector3(0.4, 0.08, 3.2), Vector3(-3.88, 0.89, -0.4), trim)

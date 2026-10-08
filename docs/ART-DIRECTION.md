@@ -30,6 +30,16 @@ assume a particular desk/monitor exists. Match the art family and material
 scale, rather than importing everything attractive. Add a connected secondary
 room only after the first study and live-terminal interaction pass.
 
+## Connected hallway (owner request, 2026-10-08)
+
+A doorless opening opposite the desk leads into a 14m gallery: three closed
+paneled doors on the left when leaving the study, two on the right, and one at
+the end. Burgundy carpet with narrow bound borders, walnut wainscot/joinery,
+warm plaster and brass oil lamps establish a quieter, dimmer space beyond the
+study. Lamp reservoirs, glass chimneys, burners and flames must read as oil
+fittings. The entrance and floor are continuous and walkable; doors stay shut.
+This bounded extension does not claim broader multi-room persistence gates.
+
 ## Composition and light
 
 - Arrival view frames the desk and its live monitor, with visible floor depth,

@@ -225,12 +225,12 @@ func run() -> void:
 	var saved: Vector3 = first_object.position
 	first_object.position = Vector3(0, 1.6, -5)
 	check(objects.pick(point(first)) != first, "Picked application through the back wall")
-	first_object.position = objects.bounded_position(first_object, Vector3(100, 100, 100))
+	first_object.position = objects.bounded_position(first_object, Vector3(100, 100, -100))
 	for corner_x in [-0.7, 0.7]:
 		for corner_y in [-0.51, 0.51]:
 			for corner_z in [-0.04, 0.04]:
 				var corner := first_object.to_global(Vector3(corner_x, corner_y, corner_z))
-				check(corner.x <= 3.861 and corner.y <= 3.151 and corner.z <= 4.361, "Panel extends outside room")
+				check(corner.x <= 3.861 and corner.y <= 3.151 and corner.z >= -4.361, "Panel extends outside room")
 	first_object.position = saved
 	check(not objects.placement_clear(first_object, second_object.position), "Placement overlaps another panel")
 	check(not objects.placement_clear(first_object, Vector3(0, -0.08, 0)), "Placement intersects floor")
@@ -240,15 +240,16 @@ func run() -> void:
 	check(objects.pick(point(first)) == 0, "Picked through an opaque panel back")
 	first_object.rotation.y -= PI
 	second_object.position = second_position
-	# Rotation at fixed centers must respect both room bounds and other panels.
+	# Rotation at fixed centers must respect solid walls and other panels.
+	# The center of the front wall is now an open doorway; test beside it.
 	var saved_transform: Transform3D = first_object.global_transform
 	var saved_other: Transform3D = second_object.global_transform
 	objects.pressed = first
 	first_object.rotation = Vector3.ZERO
-	first_object.position = Vector3(0, 1.7, 4.25)
+	first_object.position = Vector3(2, 1.7, 4.25)
 	check(objects.placement_clear(first_object, first_object.position), "Wall rotation fixture is initially blocked")
 	objects.rotate_drag(PI / 4)
-	check(first_object.rotation.is_zero_approx() and first_object.position == Vector3(0, 1.7, 4.25), "Rotation crossed room bounds or moved center")
+	check(first_object.rotation.is_zero_approx() and first_object.position == Vector3(2, 1.7, 4.25), "Rotation crossed room bounds or moved center")
 	first_object.position = Vector3(0, 1.7, 2)
 	second_object.rotation = Vector3.ZERO
 	second_object.position = Vector3(0, 1.7, 2.3)

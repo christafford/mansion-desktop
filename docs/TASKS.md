@@ -443,6 +443,16 @@ Do not launch another broad overnight range before the new boundaries pass.
   Verified 2026-10-06: all 15 Godot trials and 7 Python tests pass; GPU frames
   inspected. See [handoff 31](handoffs/31-furnishings-and-transitions.md).
 
+- [x] **P21-T60 Connect an oil-lit hallway opposite the study desk.**
+  **Depends:** P21-T59. Owner request 2026-10-08: open doorway, long hall,
+  three closed doors on the left, two on the right and one at the far end;
+  oil lamps and dark red carpet. Extend carried-object placement into the hall.
+  **Acceptance:** rendered entrance/hall/return/lamp views inspected; actual
+  controller traverses the opening both ways, closed doors/walls remain solid,
+  carried live application crosses and lands; import and study regressions pass.
+  Verified 2026-10-08: 16 Godot trials, 7 Python tests and inspected GPU views;
+  host/isolated-run evidence in [handoff 32](handoffs/32-oil-lit-hallway.md).
+
 - [ ] **P21-T00 Repair and verify the toolchain baseline.**
   **Depends:** none.
   **Reopened:** old version/download/checksum claims are not a reproducible toolchain. Local tools and a working import invocation are now identified.

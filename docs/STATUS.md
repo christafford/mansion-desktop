@@ -1,7 +1,8 @@
 # Project status
 
-Current authority: owner-requested furnishings, walls, instances and transitions
-T56–T59 verified 2026-10-06, starting from `e618487`.
+Current authority: owner-requested hallway T60 verified 2026-10-08 from
+`139214d`. Furnishings, walls, instances and transitions T56–T59 were verified
+2026-10-06, starting from `e618487`.
 Previous authority: owner-requested room details and physics T53–T55 verified
 2026-10-06, starting from `35d6b3d`. Application rotation T52 verified 2026-10-05
 from `cabde04`, following navigation/carrying T51; recovery begun 2026-10-03;
@@ -13,10 +14,10 @@ is historical; its extension/visual completion claims were contradicted by tests
 
 ## Next task
 
-The bounded owner request T56–T59 is complete: shared furniture controls,
-walnut walls, independent instances and live entry/return animations. See
-[handoff 31](handoffs/31-furnishings-and-transitions.md). The broader roadmap
-task below remains outside this request.
+The owner-requested hallway T60 is complete: open study doorway, 14m gallery,
+oil lamps, burgundy carpet and six closed doors. See
+[handoff 32](handoffs/32-oil-lit-hallway.md) for rendered evidence and verification.
+The broader roadmap task below remains outside this bounded owner request.
 
 **P21-T45: finish targeted client close and its lifecycle acceptance.**
 Recovery T36–T44 passes its bounded acceptance: furnished study, retained
@@ -100,7 +101,19 @@ Discovery uses freedesktop entries and icon themes without a KDE service.
 Verified clients are Weston terminal and Vim through Terminal=true. Other
 graphical apps may fail; Flatpak launch is explicitly unavailable for now.
 
+Turn away from the desk to enter the hallway. The doorway has no door. Three
+closed doors are on the left when entering, two on the right, and one at the
+far end. Applications and movable furnishings can be carried through the opening;
+closed doors do not open yet.
+
 ## Verified by automated checks in this recovery
+
+- T60 (2026-10-08, from `139214d`): doorway traversal both ways, six closed
+  doors and hallway walls, carried live terminal landing/activation, rotated
+  placement bounds; five fixed GPU views inspected. Import, all 16 Godot study
+  trials and 7 Python tests passed across host and isolated GPU Weston runs.
+  Host launcher attempts lost focus; isolated launcher/application trials passed
+  without changing product policy. See handoff 32 for exact logs and limits.
 
 - T56–T59 (2026-10-06): chair/plant/bookcase picking, carrying, rotation, release,
   cancellation and walking pushes; real independent terminal instances and

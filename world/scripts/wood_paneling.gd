@@ -7,7 +7,8 @@ var study: Node3D
 func _ready() -> void:
 	study = get_parent()
 	run(8, 3.2, Vector3(0, 1.6, -4.415), 0)
-	run(8, 3.2, Vector3(0, 1.6, 4.415), PI)
+	for x in [-2.425, 2.425]: run(3.15, 3.2, Vector3(x, 1.6, 4.415), PI)
+	run(1.7, 0.7, Vector3(0, 2.85, 4.415), PI)
 	run(9, 3.2, Vector3(3.915, 1.6, 0), -PI / 2)
 	run(9, 0.85, Vector3(-3.915, 0.425, 0), PI / 2)
 	run(9, 0.6, Vector3(-3.915, 2.9, 0), PI / 2)

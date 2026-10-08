@@ -27,6 +27,7 @@ run keyboard-map 'KEYBOARD_MAP_OK cases=27 failures=0' --headless --script res:/
 run pointer-map 'POINTER_MAP_OK .*failures=0' --headless --script res://tests/pointer_map.gd
 run controller 'STUDY_SMOKE .*failures=0' --script res://tests/study_smoke.gd -- --no-terminal
 run furniture 'FURNITURE_DRAG_OK .*failures=0' --script res://tests/furniture_drag.gd -- --no-terminal
+run hallway 'HALLWAY_OK doors=6 lamps=6 failures=0' --script res://tests/hallway.gd
 run details 'STUDY_DETAILS_OK .*failures=0' --script res://tests/study_details.gd
 run color 'SCREEN_COLOR_OK failures=0' --script res://tests/screen_color.gd
 run terminal 'LIVE_TERMINAL_OK .*sessions=2 failures=0' --script res://tests/live_terminal.gd -- --terminal-demo

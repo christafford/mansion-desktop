@@ -326,3 +326,17 @@ live surface approach the camera; Ctrl+Alt+Escape sends it back. Try reversing
 quickly, resizing, losing host focus and closing the client. Confirm comfortable
 motion and readable native text separately from the agent's geometry, pixel
 and input assertions. Session placements still reset when Mansion restarts.
+
+## Owner-requested hallway: T60
+
+2026-10-08 agent-rendered and injected-controller evidence from `139214d` plus
+T60 is in [handoff 32](handoffs/32-oil-lit-hallway.md). Human physical-input,
+lighting preference and motion comfort observation remains **not observed**.
+
+In the study, turn away from the desk and walk through the open framed doorway.
+Count three closed doors on the left, two on the right and one at the far end.
+Inspect the burgundy carpet, oil reservoirs/chimneys/flames and warm wall light.
+Walk the full hall and return; closed leaves and walls should stop you. Carry
+a live application through the doorway, drop it on the hallway floor, activate
+it and return to the same position. Movable furnishings use the same placement
+volumes. Doors have no opening interaction in this request.
