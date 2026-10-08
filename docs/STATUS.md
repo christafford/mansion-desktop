@@ -1,7 +1,8 @@
 # Project status
 
-Current authority: owner-requested hallway T60 verified 2026-10-08 from
-`139214d`. Furnishings, walls, instances and transitions T56–T59 were verified
+Current authority: owner-requested exploration rooms T61 verified 2026-10-08
+from `e1deea6`. Hallway T60 was verified 2026-10-08 from `139214d`.
+Furnishings, walls, instances and transitions T56–T59 were verified
 2026-10-06, starting from `e618487`.
 Previous authority: owner-requested room details and physics T53–T55 verified
 2026-10-06, starting from `35d6b3d`. Application rotation T52 verified 2026-10-05
@@ -14,9 +15,9 @@ is historical; its extension/visual completion claims were contradicted by tests
 
 ## Next task
 
-The owner-requested hallway T60 is complete: open study doorway, 14m gallery,
-oil lamps, burgundy carpet and six closed doors. See
-[handoff 32](handoffs/32-oil-lit-hallway.md) for rendered evidence and verification.
+The owner-requested exploration rooms T61 are complete: all six gallery doors
+open into distinct furnished spaces with working application placement. See
+[handoff 33](handoffs/33-exploration-rooms.md) for captures, checks and limitations.
 The broader roadmap task below remains outside this bounded owner request.
 
 **P21-T45: finish targeted client close and its lifecycle acceptance.**
@@ -101,12 +102,26 @@ Discovery uses freedesktop entries and icon themes without a KDE service.
 Verified clients are Weston terminal and Vim through Terminal=true. Other
 graphical apps may fail; Flatpak launch is explicitly unavailable for now.
 
-Turn away from the desk to enter the hallway. The doorway has no door. Three
-closed doors are on the left when entering, two on the right, and one at the
-far end. Applications and movable furnishings can be carried through the opening;
-closed doors do not open yet.
+Turn away from the desk to enter the hallway. The study doorway has no door.
+Three room doors are on the left when entering, two on the right, and one at
+the far end. They swing open as you approach and stay open for the session.
+Along the hall: library (left), atlas room (right), winter garden (left), cabinet
+gallery (right), inventor's room (left), then the observatory at the end. Each
+has distinct landmarks and worktables. Carry applications through the doorways
+and release them onto tables or floors; launch new instances where you are
+working. Instances elsewhere retain their locations for this session.
+Restart restoration remains unimplemented.
 
 ## Verified by automated checks in this recovery
+
+- T61 (2026-10-08, from `e1deea6`): six approach-opening doors and furnished
+  rooms; actual walking/carrying in/out, solid boundaries, floor/support/table
+  landing, independent live terminals and shell input in two locations pass.
+  Import/runtime, 17 Godot trials and 7 Python tests pass across bounded runs.
+  The full script's launcher hit its 45-second limit; standalone passed in 46s.
+  Agent inspected ten GPU captures; six fixed views measured median 16.66–16.68ms
+  and p95 16.84–17.09ms at a 60 FPS cap. This is not a human/latency gate.
+  See handoff 33. New furnishings are fixed; placements remain session-local.
 
 - T60 (2026-10-08, from `139214d`): doorway traversal both ways, six closed
   doors and hallway walls, carried live terminal landing/activation, rotated

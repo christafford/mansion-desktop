@@ -37,7 +37,8 @@ paneled doors on the left when leaving the study, two on the right, and one at
 the end. Burgundy carpet with narrow bound borders, walnut wainscot/joinery,
 warm plaster and brass oil lamps establish a quieter, dimmer space beyond the
 study. Lamp reservoirs, glass chimneys, burners and flames must read as oil
-fittings. The entrance and floor are continuous and walkable; doors stay shut.
+fittings. The entrance and floor are continuous and walkable. T60 kept the doors
+shut; T61 opens them into the exploration rooms described below.
 This bounded extension does not claim broader multi-room persistence gates.
 
 ## Composition and light
@@ -92,3 +93,31 @@ Reminder creatures later should fit the study: one coherent character style,
 clear silhouette, animation, proper floor contact and unobtrusive signaling.
 They must represent a real reminder and provide an accessible list/dismissal
 alternative. A static floating primitive does not pass the creature task.
+
+## Exploration rooms (owner request, 2026-10-08; T61)
+
+The six gallery doors now lead to named spaces for working and discovering,
+rather than domestic bedrooms. Preserve the study and oil-lit gallery palette
+as the connecting spine. Doors open inward on approach and stay open, with no
+new input binding competing with application controls. Gold-lettered plaques identify
+the destinations. Each space has a clear entry route and real collision-bearing
+work surfaces, with color, silhouette and lighting as location cues:
+
+- Long Library: green plaster, timber, stocked shelves and a reading runner.
+- Atlas Room: cool plaster, large original expedition map, flat-file drawers
+  and a small brass armillary.
+- Winter Garden: framed glass roof admitting actual sky/sunlight, checkerboard
+  stone, plants and a shallow fountain bowl.
+- Cabinet Gallery: wine-colored walls, framed abstractions and two original
+  sculptures on stone plinths, with a display/work table at the back.
+- Inventor's Room: blue-gray plaster, mechanical drawing, toolboard, parts bins
+  and a metal-topped workbench.
+- Observatory: a wider final chamber with a star-chart ceiling, meridian inlays,
+  central brass armillary and two worktables beneath constellation prints.
+
+Reuse existing imported furniture and textured materials. Original authored
+joinery and curved instrument/fountain meshes fill the specific catalog gaps;
+small original SVG prints have recorded provenance in `world/art/README.md`.
+Room geometry and session-local application placement are independent of live
+process IDs. This extension does not implement restart restoration or complete
+human comfort, general client compatibility, or persistent-workspace gates.

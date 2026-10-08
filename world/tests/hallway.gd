@@ -24,6 +24,8 @@ func run() -> void:
 	objects = study.application_objects
 	var player = study.get_node("Player")
 	var hall = study.get_node("Hallway")
+	# Hold doors closed for this collision regression; mansion_rooms.gd tests opening.
+	for door in get_nodes_in_group("hallway_doors"): door.get_node("Hinge").set_physics_process(false)
 	var deadline := Time.get_ticks_msec() + 15000
 	while objects.bindings.is_empty() and Time.get_ticks_msec() < deadline: await process_frame
 	root.grab_focus()
@@ -99,14 +101,14 @@ func run() -> void:
 	await activate(window)
 	check(app.active and app.focused_handle == window, "Hallway application lost focus/activation")
 	await return_to_room()
-	# Full rotated bounds remain inside the far hallway, not just its center.
+	# Full rotated bounds remain inside the expanded mansion, not just its center.
 	panel.rotation.y = 0.4
 	panel.position = objects.bounded_position(panel, Vector3(100, 100, 100))
 	for x in [-0.7, 0.7]:
 		for y in [-0.51, 0.51]:
 			for z in [-0.04, 0.04]:
 				var corner: Vector3 = panel.to_global(Vector3(x, y, z))
-				check(absf(corner.x) <= 1.271 and corner.y <= 2.951 and corner.z <= 18.361, "Panel extends outside hallway")
+				check(absf(corner.x) <= 4.361 and corner.y <= 3.081 and corner.z <= 26.361, "Panel extends outside mansion")
 	await terminal.shutdown()
 	print("HALLWAY_OK doors=6 lamps=6 failures=", failures)
 	quit(1 if failures else 0)

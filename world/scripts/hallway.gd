@@ -20,7 +20,7 @@ var elapsed := 0.0
 static func bounded_center(center: Vector3, extents: Vector3) -> Vector3:
 	var result := center
 	var nearest := INF
-	for volume in PLACEMENT:
+	for volume in PLACEMENT + preload("res://scripts/mansion_rooms.gd").placement_volumes():
 		if volume.size.x < extents.x * 2 or volume.size.y < extents.y * 2 or volume.size.z < extents.z * 2: continue
 		var candidate := center.clamp(volume.position + extents, volume.end - extents)
 		var distance := candidate.distance_squared_to(center)
@@ -43,6 +43,9 @@ func _ready() -> void:
 	for z in [7.0, 11.0, 15.0]: door(Vector3(1.28, 0, z), -PI / 2, "LeftDoor%d" % z)
 	for z in [9.0, 13.0]: door(Vector3(-1.28, 0, z), PI / 2, "RightDoor%d" % z)
 	door(Vector3(0, 0, END - 0.09), PI, "EndDoor")
+	var rooms := preload("res://scripts/mansion_rooms.gd").new()
+	rooms.name = "Rooms"
+	add_child(rooms)
 	for z in [9.0, 13.0, 17.0]: oil_lamp(Vector3(1.29, 1.42, z), -PI / 2)
 	for z in [7.0, 11.0, 15.0]: oil_lamp(Vector3(-1.29, 1.42, z), PI / 2)
 
@@ -53,14 +56,25 @@ func build_shell() -> void:
 	var plaster = study.material(Color("b6a48c"), "res://assets/textures/beige_wall_001_4k_jpg.jpg", 5)
 	part("Floor", Vector3(2.8, 0.16, 14.08), Vector3(0, -0.08, 11.46), dark, self, true)
 	part("Ceiling", Vector3(2.96, 0.12, 14.08), Vector3(0, 3.06, 11.46), study.material(Color("aa9b85")), self, true)
+	# Break the actual walls, wainscot and rails around all six entrances.
 	for x in [-1.4, 1.4]:
-		part("Wall", Vector3(0.16, 3, 14), Vector3(x, 1.5, 11.5), plaster, self, true)
-		part("Wainscot", Vector3(0.035, 0.94, 14), Vector3(signf(x) * 1.305, 0.5, 11.5), wood)
-		for y in [0.1, 1.0, 2.91]:
-			part("Moulding", Vector3(0.09, 0.075 if y != 0.1 else 0.18, 14), Vector3(signf(x) * 1.28, y, 11.5), wood)
-		for z in range(5, 19):
-			part("WainscotStile", Vector3(0.055, 0.8, 0.036), Vector3(signf(x) * 1.28, 0.53, z - 0.25), dark)
-	part("EndWall", Vector3(2.8, 3, 0.16), Vector3(0, 1.5, END), plaster, self, true)
+		var openings := [7.0, 11.0, 15.0] if x > 0 else [9.0, 13.0]
+		var start := START
+		for z in openings + [END + 0.9]:
+			var finish: float = z - 0.9
+			var length := finish - start
+			var middle := (finish + start) / 2
+			part("Wall", Vector3(0.16, 3, length), Vector3(x, 1.5, middle), plaster, self, true)
+			part("Wainscot", Vector3(0.035, 0.94, length), Vector3(signf(x) * 1.305, 0.5, middle), wood)
+			for y in [0.1, 1.0]:
+				part("Moulding", Vector3(0.09, 0.075 if y != 0.1 else 0.18, length), Vector3(signf(x) * 1.28, y, middle), wood)
+			start = z + 0.9
+		for z in openings:
+			part("DoorHeader", Vector3(0.16, 0.5, 1.8), Vector3(x, 2.75, z), plaster, self, true)
+		part("Cornice", Vector3(0.09, 0.075, 14), Vector3(signf(x) * 1.28, 2.91, 11.5), wood)
+	for x in [-1.15, 1.15]:
+		part("EndWall", Vector3(0.5, 3, 0.16), Vector3(x, 1.5, END), plaster, self, true)
+	part("EndHeader", Vector3(1.8, 0.5, 0.16), Vector3(0, 2.75, END), plaster, self, true)
 	for z in [4.65, 8.5, 12.5, 16.5, 18.38]:
 		part("CeilingCoffer", Vector3(2.65, 0.075, 0.1), Vector3(0, 2.945, z), wood)
 	var carpet := ShaderMaterial.new()
@@ -87,29 +101,35 @@ func door(pos: Vector3, yaw: float, label: String) -> void:
 	add_child(node)
 	node.position = pos
 	node.rotation.y = yaw
-	# Wall collision behind each fitted leaf deliberately keeps these doors shut.
-	part("Recess", Vector3(1.12, 2.38, 0.055), Vector3(0, 1.19, 0.006), dark, node)
-	part("Leaf", Vector3(1.02, 2.29, 0.045), Vector3(0, 1.165, 0.052), wood, node, true)
-	for x in [-0.59, 0.59]:
-		part("Architrave", Vector3(0.13, 2.48, 0.1), Vector3(x, 1.24, 0.055), wood, node)
-		part("FrameBead", Vector3(0.022, 2.37, 0.02), Vector3(x - signf(x) * 0.07, 1.22, 0.11), brass, node)
-	part("Lintel", Vector3(1.31, 0.14, 0.12), Vector3(0, 2.43, 0.055), wood, node)
-	part("Cornice", Vector3(1.4, 0.05, 0.16), Vector3(0, 2.525, 0.06), wood, node)
-	for x in [-0.255, 0.255]:
-		for spec in [[0.54, 0.67], [1.56, 1.08]]:
-			var y: float = spec[0]
-			var h: float = spec[1]
-			part("PanelRecess", Vector3(0.38, h, 0.012), Vector3(x, y, 0.079), dark, node)
-			part("RaisedPanel", Vector3(0.33, h - 0.06, 0.016), Vector3(x, y, 0.09), wood, node)
-			for side in [-1, 1]:
-				part("PanelBead", Vector3(0.017, h, 0.024), Vector3(x + side * 0.19, y, 0.087), wood, node)
-				part("PanelBead", Vector3(0.38, 0.017, 0.024), Vector3(x, y + side * h / 2, 0.087), wood, node)
-	part("LockPlate", Vector3(0.085, 0.23, 0.015), Vector3(-0.4, 1.02, 0.095), brass, node)
-	var knob := lathe("BrassKnob", [Vector2(0.012, 0), Vector2(0.032, 0.018), Vector2(0.034, 0.042), Vector2(0.012, 0.06), Vector2(0, 0.062)], brass, node)
-	knob.position = Vector3(-0.4, 1.08, 0.102)
-	knob.rotation.x = PI / 2
-	part("Keyhole", Vector3(0.009, 0.026, 0.003), Vector3(-0.4, 0.96, 0.106), dark, node)
-	for y in [0.36, 1.93]: part("Hinge", Vector3(0.023, 0.11, 0.026), Vector3(0.511, y, 0.086), brass, node)
+	# The leaf swings into its room once approached; it never closes on a carry.
+	for x in [-0.94, 0.94]:
+		part("Architrave", Vector3(0.13, 2.56, 0.1), Vector3(x, 1.28, 0.055), wood, node)
+		part("FrameBead", Vector3(0.022, 2.47, 0.02), Vector3(x - signf(x) * 0.07, 1.25, 0.11), brass, node)
+	part("Lintel", Vector3(2.01, 0.14, 0.12), Vector3(0, 2.53, 0.055), wood, node)
+	part("Cornice", Vector3(2.1, 0.05, 0.16), Vector3(0, 2.625, 0.06), wood, node)
+	var hinge := preload("res://scripts/exploration_door.gd").new()
+	hinge.name = "Hinge"
+	node.add_child(hinge)
+	hinge.position = Vector3(0.85, 0, 0)
+	var leaf := Node3D.new()
+	leaf.name = "DoorLeaf"
+	hinge.add_child(leaf)
+	leaf.position.x = -0.85
+	part("Leaf", Vector3(1.7, 2.46, 0.06), Vector3(0, 1.25, 0), wood, leaf, true)
+	for face in [-1, 1]:
+		for x in [-0.42, 0.42]:
+			for spec in [[0.56, 0.7], [1.64, 1.15]]:
+				var y: float = spec[0]
+				var h: float = spec[1]
+				part("PanelRecess", Vector3(0.63, h, 0.012), Vector3(x, y, face * 0.036), dark, leaf)
+				part("RaisedPanel", Vector3(0.57, h - 0.06, 0.016), Vector3(x, y, face * 0.043), wood, leaf)
+				for side in [-1, 1]:
+					part("PanelBead", Vector3(0.018, h, 0.025), Vector3(x + side * 0.315, y, face * 0.048), wood, leaf)
+		part("LockPlate", Vector3(0.085, 0.23, 0.015), Vector3(-0.7, 1.02, face * 0.046), brass, leaf)
+		var knob := lathe("BrassKnob", [Vector2(0.012, 0), Vector2(0.032, 0.018), Vector2(0.034, 0.042), Vector2(0.012, 0.06), Vector2(0, 0.062)], brass, leaf)
+		knob.position = Vector3(-0.7, 1.08, face * 0.05)
+		knob.rotation.x = face * PI / 2
+	for y in [0.36, 2.03]: part("HingeBarrel", Vector3(0.025, 0.13, 0.03), Vector3(0.85, y, 0.035), brass, leaf)
 
 func lathe(label: String, profile: Array, mat: Material, parent: Node3D) -> MeshInstance3D:
 	# Revolved profiles give the reservoir, chimney and hardware curved silhouettes.

@@ -340,3 +340,22 @@ Walk the full hall and return; closed leaves and walls should stop you. Carry
 a live application through the doorway, drop it on the hallway floor, activate
 it and return to the same position. Movable furnishings use the same placement
 volumes. Doors have no opening interaction in this request.
+
+## Owner-requested exploration rooms: T61
+
+T61 supersedes the closed-door behavior in the historical T60 procedure above.
+2026-10-08 agent-rendered/injected-input checks from `e1deea6` plus T61 are in
+[handoff 33](handoffs/33-exploration-rooms.md), including performance samples and
+the launcher test's 45-second timeout / successful 46-second standalone run.
+Human physical-input and comfort observation: **not observed**.
+
+Walk down the gallery and approach each door. It should swing into its room and
+stay open. Explore the library, atlas room, winter garden, cabinet gallery,
+inventor's room and observatory; read their plaques and inspect their different
+landmarks/materials. Carry a live application through each doorway with the
+existing left-drag/WASD/right-look controls, then place it on a table or floor.
+Double-click to work, type, and use Ctrl+Alt+Escape to return. Leave an instance
+in one room, walk elsewhere and launch another from Tab; return and verify the
+first is still in place and usable. Check door clearance, ordinary input,
+readability, useful arrangement space, appearance and comfort personally.
+Placements last for this session only; restart restoration remains unimplemented.

@@ -238,3 +238,11 @@ All Poly Haven assets are released under **CC0 1.0 Universal** (public domain). 
 ---
 
 *Manifest produced from live API data at https://api.polyhaven.com/assets — 2382 total assets catalogued, 997 HDRIs, 864 textures, 521 models reviewed.*
+
+## Exploration room reuse (T61, 2026-10-08)
+
+The six new rooms instance the existing verified bookshelf, encyclopedia, chair,
+plant and desk-lamp packages, and the existing walnut/plaster photos. Original
+room joinery, instruments, sculptures, floor shader and four SVG prints are
+documented in [world art](../art/README.md). No downloaded asset, checksum or
+provider attribution changed; the broader acquisition gates remain open.

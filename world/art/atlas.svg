@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="650" viewBox="0 0 1000 650">
+<rect width="1000" height="650" fill="#ded3b4"/>
+<rect x="30" y="30" width="940" height="590" fill="none" stroke="#827550" stroke-width="3"/>
+<path d="M80 50V600" stroke="#b3ac8b"/>
+<path d="M160 50V600" stroke="#b3ac8b"/>
+<path d="M240 50V600" stroke="#b3ac8b"/>
+<path d="M320 50V600" stroke="#b3ac8b"/>
+<path d="M400 50V600" stroke="#b3ac8b"/>
+<path d="M480 50V600" stroke="#b3ac8b"/>
+<path d="M560 50V600" stroke="#b3ac8b"/>
+<path d="M640 50V600" stroke="#b3ac8b"/>
+<path d="M720 50V600" stroke="#b3ac8b"/>
+<path d="M800 50V600" stroke="#b3ac8b"/>
+<path d="M880 50V600" stroke="#b3ac8b"/>
+<path d="M50 90H950" stroke="#b3ac8b"/>
+<path d="M50 155H950" stroke="#b3ac8b"/>
+<path d="M50 220H950" stroke="#b3ac8b"/>
+<path d="M50 285H950" stroke="#b3ac8b"/>
+<path d="M50 350H950" stroke="#b3ac8b"/>
+<path d="M50 415H950" stroke="#b3ac8b"/>
+<path d="M50 480H950" stroke="#b3ac8b"/>
+<path d="M50 545H950" stroke="#b3ac8b"/>
+<path d="M50 610H950" stroke="#b3ac8b"/>
+<path d="M100 190 Q180 85 260 135L300 200 270 255 330 330 240 460 190 430 170 320 100 280Z" fill="#8b9d83" stroke="#485c51" stroke-width="3"/>
+<path d="M420 160L490 100 630 150 700 115 870 220 815 300 680 270 615 360 520 305 455 240Z" fill="#8b9d83" stroke="#485c51" stroke-width="3"/>
+<path d="M500 310L610 340 650 460 560 545 510 440Z" fill="#8b9d83" stroke="#485c51" stroke-width="3"/>
+<path d="M775 450L850 400 900 455 865 505 805 490Z" fill="#8b9d83" stroke="#485c51" stroke-width="3"/>
+<path d="M480 155 Q415 270 485 310" fill="none" stroke="#6d7d63" stroke-width="2"/>
+<path d="M515 155 Q450 270 520 310" fill="none" stroke="#6d7d63" stroke-width="2"/>
+<path d="M550 155 Q485 270 555 310" fill="none" stroke="#6d7d63" stroke-width="2"/>
+<path d="M585 155 Q520 270 590 310" fill="none" stroke="#6d7d63" stroke-width="2"/>
+<path d="M240 220 Q520 50 795 240 Q750 400 560 440 Q370 540 240 220" fill="none" stroke="#9b6947" stroke-width="3" stroke-dasharray="8 6"/>
+<path d="M850 540 L850.0 595.0 L851.9 554.9Z" fill="#4a5b51"/>
+<path d="M850 540 L860.3 564.9 L857.5 553.0Z" fill="#4a5b51"/>
+<path d="M850 540 L888.9 578.9 L861.9 549.1Z" fill="#4a5b51"/>
+<path d="M850 540 L874.9 550.3 L864.5 543.9Z" fill="#4a5b51"/>
+<path d="M850 540 L905.0 540.0 L864.9 538.1Z" fill="#4a5b51"/>
+<path d="M850 540 L874.9 529.7 L863.0 532.5Z" fill="#4a5b51"/>
+<path d="M850 540 L888.9 501.1 L859.1 528.1Z" fill="#4a5b51"/>
+<path d="M850 540 L860.3 515.1 L853.9 525.5Z" fill="#4a5b51"/>
+<path d="M850 540 L850.0 485.0 L848.1 525.1Z" fill="#4a5b51"/>
+<path d="M850 540 L839.7 515.1 L842.5 527.0Z" fill="#4a5b51"/>
+<path d="M850 540 L811.1 501.1 L838.1 530.9Z" fill="#4a5b51"/>
+<path d="M850 540 L825.1 529.7 L835.5 536.1Z" fill="#4a5b51"/>
+<path d="M850 540 L795.0 540.0 L835.1 541.9Z" fill="#4a5b51"/>
+<path d="M850 540 L825.1 550.3 L837.0 547.5Z" fill="#4a5b51"/>
+<path d="M850 540 L811.1 578.9 L840.9 551.9Z" fill="#4a5b51"/>
+<path d="M850 540 L839.7 564.9 L846.1 554.5Z" fill="#4a5b51"/>
+</svg>

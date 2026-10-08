@@ -453,6 +453,18 @@ Do not launch another broad overnight range before the new boundaries pass.
   Verified 2026-10-08: 16 Godot trials, 7 Python tests and inspected GPU views;
   host/isolated-run evidence in [handoff 32](handoffs/32-oil-lit-hallway.md).
 
+- [x] **P21-T61 Furnish six explorable rooms beyond the gallery.**
+  **Depends:** P21-T60. Owner request 2026-10-08: distinct mansion destinations
+  with places for application instances. Add approach-opening doors, library,
+  atlas room, winter garden, cabinet gallery, inventor's room and observatory.
+  **Acceptance:** actual walking and carrying through all six entrances, solid
+  boundaries, application floor/table landing, launch/use/return in new rooms,
+  independent placements retained while exploring, inspected GPU room views,
+  import and affected study regressions. Session-local placements remain explicit.
+  Verified 2026-10-08: import/runtime, 17 Godot trials and 7 Python tests pass
+  across bounded GPU runs; rendered views and frame timings inspected. See
+  [handoff 33](handoffs/33-exploration-rooms.md) for evidence and timeout limits.
+
 - [ ] **P21-T00 Repair and verify the toolchain baseline.**
   **Depends:** none.
   **Reopened:** old version/download/checksum claims are not a reproducible toolchain. Local tools and a working import invocation are now identified.
