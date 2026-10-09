@@ -11,7 +11,11 @@ Owned frame transport now passes exact client-byte tests through Godot (T40).
 The study now starts that server and displays real Weston terminal output (T41).
 T42 adds real keyboard input and a flat application view; T43 adds text selection
 and pointer/scroll routing. T44 adds real client resize through xdg configure.
-See [STATUS.md](STATUS.md).
+T65/T66 add a logical output, real Chrome startup and software-rendered subsurface
+composition with child hit testing. Runtime seat v5 pointer frames enable browser
+scrolling; the legacy renderer retains v4. See the
+[graphical application contract and evidence](handoffs/37-graphical-applications.md)
+and [STATUS.md](STATUS.md).
 
 ## Build and ownership
 

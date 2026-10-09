@@ -128,6 +128,19 @@ def catalog(cache):
     return {"entries": sorted(entries, key=lambda entry: entry["name"].casefold())}
 
 
+def graphical_command(argv, profile_root):
+    # Chromium otherwise selects X11 or forwards to the host browser's process.
+    # Keep a separate persistent profile, and request CPU-rendered wl_shm frames.
+    binary = Path(argv[0]).name
+    if binary not in ("google-chrome", "google-chrome-stable", "chromium", "chromium-browser"):
+        return argv
+    profile = Path(profile_root) / binary
+    profile.mkdir(parents=True, exist_ok=True, mode=0o700)
+    return argv + ["--ozone-platform=wayland", "--disable-gpu",
+                   "--user-data-dir=" + str(profile.resolve()), "--new-window",
+                   "--no-first-run", "--no-default-browser-check"]
+
+
 def launch(identifier, socket):
     app = applications().get(identifier)
     if app is None:
@@ -155,6 +168,7 @@ def launch(identifier, socket):
     if app.get_boolean("Terminal"):
         env["MANSION_TERMINAL_ARGV"] = json.dumps(argv)
         argv = [shutil.which("weston-terminal"), "--font=monospace", "--font-size=16", "--shell=" + str(Path(__file__).resolve())]
+    argv = graphical_command(argv, os.environ.get("MANSION_BROWSER_PROFILE_DIR") or Path(__file__).resolve().parents[2] / ".tools/browser-profiles")
     if directory:
         os.chdir(directory)
     os.execvpe(argv[0], argv, env)
@@ -176,6 +190,14 @@ def main():
         if args.action == "catalog":
             write_json(args.output, catalog(args.cache))
         else:
+            # Preserve exec/PID ownership while retaining the actual child's
+            # diagnostics, including errors after Python has been replaced.
+            log = Path(args.output + ".log")
+            log.parent.mkdir(parents=True, exist_ok=True)
+            fd = os.open(log, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            os.dup2(fd, 2, inheritable=True)
+            if fd != 2:
+                os.close(fd)
             launch(args.id, args.socket)
     except Exception as error:
         write_json(args.output, {"error": str(error)})

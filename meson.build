@@ -54,7 +54,7 @@ compositor_protocol_lib = static_library('compositor-protocol',
 
 # Core compositor library (PIC, no GL/display dependencies)
 compositor_core_lib = static_library('compositor-core',
-    'src/compositor-core.cpp',
+    'src/compositor-core.cpp', 'src/surface-tree.cpp',
     link_with: compositor_protocol_lib,
     cpp_args: cpp_args + ['-fPIC'],
     dependencies: [wayland_server],
@@ -243,3 +243,9 @@ frame_snapshot_test = executable('test_frame_snapshot',
     dependencies: wayland_server, link_with: compositor_core_lib)
 test('frame-snapshot', frame_snapshot_test,
     args: [frame_client.full_path()], suite: 'p21', timeout: 45)
+
+surface_tree_test = executable('test_surface_tree',
+    'tests/test_surface_tree.cpp', 'src/compositor-runtime.cpp', xdg_shell_client_h,
+    link_with: compositor_core_lib, dependencies: [wayland_client, wayland_server, xkbcommon],
+    cpp_args: cpp_args, include_directories: include_directories('src'))
+test('surface-tree', surface_tree_test, suite: 'p21', timeout: 30)

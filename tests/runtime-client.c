@@ -14,12 +14,16 @@ static void require(int condition, const char *message) {
     if (!condition) { fprintf(stderr, "CLIENT FAIL: %s\n", message); exit(1); }
 }
 struct seat_state { int caps, names, keymaps, repeats; uint32_t version; };
+struct output_state { int geometry, mode, scale, done; };
 struct globals {
     struct wl_compositor *compositor;
     struct wl_shm *shm;
     struct xdg_wm_base *shell;
     struct wl_seat *seats[2];
     struct seat_state seat_state[2];
+    struct wl_output *outputs[4];
+    struct output_state output_state[4];
+    uint32_t output_id;
 };
 static void capabilities(void *data, struct wl_seat *seat, uint32_t caps) {
     (void)seat;
@@ -58,9 +62,38 @@ static void ping(void *data, struct xdg_wm_base *shell, uint32_t serial) {
     (void)data; xdg_wm_base_pong(shell, serial);
 }
 static const struct xdg_wm_base_listener shell_listener = { ping };
+static void output_geometry(void *data, struct wl_output *output, int32_t x, int32_t y,
+        int32_t w, int32_t h, int32_t subpixel, const char *make, const char *model, int32_t transform) {
+    (void)output;
+    require(x == 0 && y == 0 && w == 338 && h == 211 && subpixel == WL_OUTPUT_SUBPIXEL_UNKNOWN &&
+        !strcmp(make, "Mansion") && !strcmp(model, "Workspace") && transform == WL_OUTPUT_TRANSFORM_NORMAL, "output geometry");
+    ((struct output_state*)data)->geometry++;
+}
+static void output_mode(void *data, struct wl_output *output, uint32_t flags, int32_t w, int32_t h, int32_t refresh) {
+    (void)output;
+    require(flags == (WL_OUTPUT_MODE_CURRENT | WL_OUTPUT_MODE_PREFERRED) && w == 1280 && h == 800 && refresh == 60000, "output mode");
+    ((struct output_state*)data)->mode++;
+}
+static void output_scale(void *data, struct wl_output *output, int32_t scale) {
+    (void)output; require(scale == 1, "output scale"); ((struct output_state*)data)->scale++;
+}
+static void output_done(void *data, struct wl_output *output) {
+    (void)output; ((struct output_state*)data)->done++;
+}
+static const struct wl_output_listener output_listener = {
+    .geometry = output_geometry, .mode = output_mode, .done = output_done, .scale = output_scale
+};
 static void global(void *data, struct wl_registry *registry, uint32_t id,
                    const char *interface, uint32_t version) {
     struct globals *g = data;
+    if (!strcmp(interface, "wl_output")) {
+        require(version == 3, "output advertised version");
+        g->output_id = id;
+        for (int i = 0; i < 3; ++i) {
+            g->outputs[i] = wl_registry_bind(registry, id, &wl_output_interface, i + 1);
+            wl_output_add_listener(g->outputs[i], &output_listener, &g->output_state[i]);
+        }
+    }
     if (!strcmp(interface, "wl_compositor"))
         g->compositor = wl_registry_bind(registry, id, &wl_compositor_interface, 1);
     if (!strcmp(interface, "wl_shm"))
@@ -71,7 +104,7 @@ static void global(void *data, struct wl_registry *registry, uint32_t id,
         xdg_wm_base_add_listener(g->shell, &shell_listener, NULL);
     }
     if (!strcmp(interface, "wl_seat")) {
-        require(version == 4, "seat advertised version");
+        require(version == 5, "seat advertised version");
         for (int i = 0; i < 2; ++i) {
             g->seat_state[i].version = i ? 4 : 1;
             g->seats[i] = wl_registry_bind(registry, id, &wl_seat_interface, g->seat_state[i].version);
@@ -89,6 +122,8 @@ struct window {
     struct xdg_toplevel *top;
     struct wl_callback *frame;
     int role_configures, configures;
+    struct globals *globals;
+    int enters[4], leaves[4];
     uint32_t serial;
 };
 static void frame_done(void *data, struct wl_callback *callback, uint32_t time) {
@@ -114,8 +149,21 @@ static void top_configured(void *data, struct xdg_toplevel *top, int32_t width, 
 }
 static void closed(void *data, struct xdg_toplevel *top) { (void)data; (void)top; require(0, "unexpected close"); }
 static const struct xdg_toplevel_listener top_listener = { .configure = top_configured, .close = closed };
+static int output_index(struct window *w, struct wl_output *output) {
+    for (int i = 0; i < 4; ++i) if (w->globals->outputs[i] == output) return i;
+    require(0, "foreign output object"); return -1;
+}
+static void surface_enter(void *data, struct wl_surface *surface, struct wl_output *output) {
+    (void)surface; struct window *w = data; w->enters[output_index(w, output)]++;
+}
+static void surface_leave(void *data, struct wl_surface *surface, struct wl_output *output) {
+    (void)surface; struct window *w = data; w->leaves[output_index(w, output)]++;
+}
+static const struct wl_surface_listener wl_surface_listener = {.enter = surface_enter, .leave = surface_leave};
 static void create_window(struct globals *g, struct window *w, int with_role) {
+    w->globals = g;
     w->surface = wl_compositor_create_surface(g->compositor);
+    wl_surface_add_listener(w->surface, &wl_surface_listener, w);
     w->xdg = xdg_wm_base_get_xdg_surface(g->shell, w->surface);
     xdg_surface_add_listener(w->xdg, &surface_listener, w);
     if (with_role) {
@@ -168,6 +216,9 @@ int main(int argc, char **argv) {
     require(wl_display_roundtrip(display) >= 0, "seat roundtrip");
     for (int i = 0; i < 2; ++i)
         require(g.seat_state[i].caps == 1 && g.seat_state[i].names == i && g.seat_state[i].keymaps == 1 && g.seat_state[i].repeats == i, "seat event versions");
+    for (int i = 0; i < 3; ++i)
+        require(g.output_state[i].geometry == 1 && g.output_state[i].mode == 1 &&
+                g.output_state[i].scale == (i > 0) && g.output_state[i].done == (i > 0), "output versioned events");
     // Release requests used to have null implementations in the server.
     wl_pointer_release(pointers[1]); wl_keyboard_release(keyboards[1]);
     wl_pointer_destroy(pointers[0]); wl_keyboard_destroy(keyboards[0]);
@@ -196,6 +247,25 @@ int main(int argc, char **argv) {
     }
     require(wl_display_roundtrip(display) >= 0, "ack/buffer commit roundtrip");
     for (int i = 0; i < 16; ++i) require(windows[i].configures == 1, "commit must not cause configure loop");
+    require(wl_display_roundtrip(display) >= 0, "mapped output notifications");
+    for (int i = 0; i < 16; ++i)
+        for (int j = 0; j < 3; ++j) require(windows[i].enters[j] == 1 && windows[i].leaves[j] == 0, "one enter per mapped surface/output binding");
+    g.outputs[3] = wl_registry_bind(registry, g.output_id, &wl_output_interface, 3);
+    wl_output_add_listener(g.outputs[3], &output_listener, &g.output_state[3]);
+    require(wl_display_roundtrip(display) >= 0, "late output binding");
+    for (int i = 0; i < 16; ++i) require(windows[i].enters[3] == 1, "late output enters existing surfaces");
+    wl_output_release(g.outputs[3]); g.outputs[3] = NULL;
+    // Null-buffer commit must send leave; remapping requires a fresh handshake.
+    wl_surface_attach(windows[0].surface, NULL, 0, 0);
+    wl_surface_commit(windows[0].surface);
+    require(wl_display_roundtrip(display) >= 0 && wl_display_roundtrip(display) >= 0, "unmap output notifications");
+    for (int j = 0; j < 3; ++j) require(windows[0].leaves[j] == 1, "unmap sends leave");
+    wl_surface_commit(windows[0].surface);
+    require(wl_display_roundtrip(display) >= 0, "remap configure");
+    wl_surface_attach(windows[0].surface, buffer, 0, 0);
+    wl_surface_commit(windows[0].surface);
+    require(wl_display_roundtrip(display) >= 0 && wl_display_roundtrip(display) >= 0, "remap output notifications");
+    for (int j = 0; j < 3; ++j) require(windows[0].enters[j] == 2 && windows[0].leaves[j] == 1, "remap sends fresh enter");
     marker(argv[2], "ready"); barrier(argv[2], "go");
     int local = strcmp(mode, "destroy") != 0;
     int error_code = -1;
@@ -235,6 +305,7 @@ int main(int argc, char **argv) {
     for (int i = 0; i < 2; ++i) wl_seat_destroy(g.seats[i]);
     wl_proxy_destroy((struct wl_proxy*)g.shell);
     wl_compositor_destroy(g.compositor); wl_shm_destroy(g.shm);
+    for (int i = 0; i < 3; ++i) wl_output_destroy(g.outputs[i]);
     wl_registry_destroy(registry); wl_display_disconnect(display);
     marker(argv[2], "ok");
     return 0;

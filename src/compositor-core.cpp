@@ -5,6 +5,7 @@
 #include <limits>
 #include <chrono>
 #include "core-frame-state.h"
+#include "surface-tree.h"
 
 #include <wayland-server-protocol.h>
 #include <wayland-util.h>
@@ -22,6 +23,7 @@ static void frame_callback_destroyed(struct wl_resource* resource) {
 static void surface_destroy_callback(struct wl_resource* resource) {
     auto* surface = static_cast<MansionSurface*>(wl_resource_get_user_data(resource));
     if (!surface) return;
+    surface_tree_destroyed(surface);
     wl_list_remove(&surface->link);
     wl_list_remove(&surface->buffer_destroy_listener.link);
     wl_list_init(&surface->buffer_destroy_listener.link);
@@ -108,12 +110,7 @@ static bool copy_frame(MansionSurface* surface, mansion::FrameSnapshot& frame) {
         return false;
     }
     const size_t bytes = size_t(width) * height * 4;
-    size_t retained = bytes;
-    MansionSurface* other;
-    wl_list_for_each(other, &surface->compositor->surface_list, link) {
-        if (other != surface && other->core_frame && other->core_frame->frame)
-            retained += other->core_frame->frame->pixels.size();
-    }
+    const size_t retained = bytes + surface_tree_storage(surface->compositor);
     if (retained > max_compositor_bytes) {
         wl_client_post_implementation_error(wl_resource_get_client(surface->resource),
                                "compositor frame storage exceeds 256 MiB limit");
@@ -188,10 +185,14 @@ static void surface_commit(struct wl_client* client, struct wl_resource* resourc
         surface->has_current_position = true; surface->has_pending_position = false;
     }
     surface->damage_count = 0;
-    // A callback requested after this commit remains pending until another commit.
-    wl_list_insert_list(state.committed_callbacks.prev, &surface->frame_callback_list);
-    wl_list_init(&surface->frame_callback_list);
-    if (surface->xdg_surface) xdg_shell_on_surface_applied(surface->xdg_surface, surface->width, surface->height);
+    try { surface_tree_commit(surface); }
+    catch (const std::bad_alloc&) { wl_client_post_no_memory(client); return; }
+    if (surface->xdg_surface) {
+        try {
+            const auto bounds = surface_tree_bounds(surface);
+            xdg_shell_on_surface_applied(surface->xdg_surface, bounds.width, bounds.height, bounds.x, bounds.y);
+        } catch (const std::bad_alloc&) { wl_client_post_no_memory(client); return; }
+    }
     if (surface->commit_callback) surface->commit_callback(resource, surface->commit_callback_user_data);
 }
 
@@ -216,7 +217,11 @@ static void surface_set_opaque_region(struct wl_client* client, struct wl_resour
 
 static void surface_set_input_region(struct wl_client* client, struct wl_resource* resource,
                                       struct wl_resource* region) {
-    (void)client; (void)resource; (void)region;
+    auto* surface = static_cast<MansionSurface*>(wl_resource_get_user_data(resource));
+    try {
+        surface->core_frame->pending_input = region
+            ? InputRegion(*static_cast<std::vector<InputRectangle>*>(wl_resource_get_user_data(region))) : std::nullopt;
+    } catch (const std::bad_alloc&) { wl_client_post_no_memory(client); }
 }
 
 static void surface_set_buffer_transform(struct wl_client* client, struct wl_resource* resource,
@@ -268,15 +273,16 @@ static void region_destroy(struct wl_client* client, struct wl_resource* resourc
     wl_resource_destroy(resource);
 }
 
-static void region_add(struct wl_client* client, struct wl_resource* resource,
-                       int32_t x, int32_t y, int32_t width, int32_t height) {
-    (void)client; (void)resource; (void)x; (void)y; (void)width; (void)height;
+static void region_change(wl_client* client, wl_resource* resource, int32_t x, int32_t y, int32_t width, int32_t height, bool subtract) {
+    if (width <= 0 || height <= 0) return;
+    auto& region = *static_cast<std::vector<InputRectangle>*>(wl_resource_get_user_data(resource));
+    if (region.size() >= 1024) { wl_client_post_implementation_error(client, "input region exceeds 1024 operations"); return; }
+    try { region.push_back({x, y, width, height, subtract}); }
+    catch (const std::bad_alloc&) { wl_client_post_no_memory(client); }
 }
-
-static void region_subtract(struct wl_client* client, struct wl_resource* resource,
-                            int32_t x, int32_t y, int32_t width, int32_t height) {
-    (void)client; (void)resource; (void)x; (void)y; (void)width; (void)height;
-}
+static void region_add(wl_client* c, wl_resource* r, int32_t x, int32_t y, int32_t w, int32_t h) { region_change(c,r,x,y,w,h,false); }
+static void region_subtract(wl_client* c, wl_resource* r, int32_t x, int32_t y, int32_t w, int32_t h) { region_change(c,r,x,y,w,h,true); }
+static void region_destroyed(wl_resource* r) { delete static_cast<std::vector<InputRectangle>*>(wl_resource_get_user_data(r)); }
 
 static const struct wl_region_interface region_impl = {
     region_destroy,
@@ -301,6 +307,7 @@ static bool initialize_frame_state(MansionSurface* surface, wl_client* client) {
     } while (!next_handle.compare_exchange_weak(handle, handle + 1));
     surface->core_frame->handle = handle;
     wl_list_init(&surface->core_frame->committed_callbacks);
+    wl_list_init(&surface->core_frame->cached_callbacks);
     return true;
 }
 
@@ -360,7 +367,9 @@ static void compositor_create_region(struct wl_client* client, struct wl_resourc
         wl_client_post_no_memory(client);
         return;
     }
-    wl_resource_set_implementation(region, &region_impl, nullptr, nullptr);
+    auto* rectangles = new (std::nothrow) std::vector<InputRectangle>;
+    if (!rectangles) { wl_resource_destroy(region); wl_client_post_no_memory(client); return; }
+    wl_resource_set_implementation(region, &region_impl, rectangles, region_destroyed);
 }
 
 static void compositor_release(struct wl_client* client, struct wl_resource* resource) {

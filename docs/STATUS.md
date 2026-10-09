@@ -1,6 +1,7 @@
 # Project status
 
-Current authority: grand foyer T64 verified 2026-10-09 from `817aff3`;
+Current authority: basic Chrome and surface-tree T65–T66 verified 2026-10-09
+from `2cdfd15`. Grand foyer T64 verified 2026-10-09 from `817aff3`;
 merged exploration wings T63 verified 2026-10-09 from `95ea216`. Longer rooms
 and movable furnishings T62 were verified
 2026-10-08–09 from `58d2be5`. Exploration rooms T61 were verified 2026-10-08
@@ -18,10 +19,12 @@ is historical; its extension/visual completion claims were contradicted by tests
 
 ## Next task
 
-The owner's T63–T64 request is complete: paired wings are joined and the end
-room is a grand foyer with a usable spiral stair and upper gallery. See
-[handoff 36](handoffs/36-grand-foyer.md). This bounded task does not start a
-broader roadmap run; the next unrelated roadmap task remains below.
+The owner's initial graphical-application work passes bounded T65–T66: real
+Chrome starts, types, clicks, scrolls, resizes, returns to its room panel and opens
+multiple windows. See [handoff 37](handoffs/37-graphical-applications.md). This is
+not general application compatibility. The next browser compatibility work is
+`xdg_popup` menus and clipboard; both remain unimplemented, and popup requests
+can still disconnect a client. The unrelated roadmap task remains below.
 
 **P21-T45: finish targeted client close and its lifecycle acceptance.**
 Recovery T36–T44 passes its bounded acceptance: furnished study, retained
@@ -80,6 +83,11 @@ double-click or Launch starts a new instance, including selections in recents.
 Double-click an existing room panel to use that particular instance. Esc returns from search to the wheel, then to the room.
 Tab still belongs to applications in application mode. Recents persist in
 `.tools/launcher-state/recent.json`; tests use an isolated state directory.
+Chrome launched through Applications uses native Wayland/software rendering and
+a separate browser profile under `.tools/browser-profiles`; restart Mansion to
+load the new native runtime. Browser menus using `xdg_popup` and clipboard are
+not yet supported. Failed launches show a diagnostic log path under the current
+launcher session directory instead of guessing which protocol is missing.
 Every mapped window also has a separate live panel in the room. Single-click
 selects it; double-click activates it with a quick 220ms zoom toward the camera.
 Ctrl+Alt+Escape reverses the animation to its current room placement. Your
@@ -130,6 +138,16 @@ Fixed architecture and mounted decorations stay fixed. Restart restoration
 remains unimplemented.
 
 ## Verified by automated checks in this recovery
+
+- T65–T66 (2026-10-09, from `2cdfd15`): real Google Chrome 154.0.8037.57 through
+  the installed desktop entry; omnibox subsurface, local page navigation, trusted
+  typing/click, wheel scroll both ways, configure/ack/commit resize with DOM reflow,
+  room return, two independent panels and browser-initiated close of one window.
+  Native output v1/v2/v3 and surface-tree fixtures, 34 Meson tests, standard
+  binding suite, 20 graphical/headless Godot study trials, 8 Python tests and
+  62 plugin/parser tests passed. Surface-tree and runtime lifecycle checks also
+  passed ASan/UBSan with leak detection. Agent-inspected GPU captures and exact
+  scope/commands are in [handoff 37](handoffs/37-graphical-applications.md).
 
 - T64 (2026-10-09, from `817aff3`): foyer entry, actual 40-riser ascent carrying
   a live terminal, descent, inner/outer stair guards and gallery guard,
@@ -340,7 +358,9 @@ This records approval of its appearance, not a terminal/input/comfort trial.
   an app only after mapped content; a catalog entry is not a compatibility claim.
   Flatpak handoff and D-Bus activation remain unsupported. Third-party single-
   instance IPC may reuse a host instance; private display variables are not a
-  process sandbox. The verified Terminal/Vim paths create owned private clients.
+  process sandbox. The verified Terminal/Vim paths create owned private clients;
+  Chrome uses a separate Mansion profile and the browser sandbox stays enabled.
+  Concurrent Mansion frontends need separate browser profile roots.
 - Client cursor images, clipboard/primary selection and popup menus. The host
   cursor remains visible; highlighting does not implement copy/paste. A right-click
   menu request can disconnect the client because xdg_popup remains unsupported.
@@ -348,7 +368,8 @@ This records approval of its appearance, not a terminal/input/comfort trial.
   `world/addons/mansion_godot/.gdignore`, source and binary preserved.
 - Full renderer-independent compositor extraction: socket/wl_compositor/shm
   lifecycle, initial xdg-shell/seat checks and owned shm snapshots pass. Broader
-  surface-tree/protocol conformance and popup presentation remain open.
+  protocol conformance and popup presentation remain open; bounded subsurface
+  composition and input now pass T66.
 - Finished art rubric, furniture selection/cohesion, performance, physical host
   input and human comfort. No blank capture counts as visual acceptance.
 - Fresh-clone dependency provenance and asset fetching/offline negative checks.

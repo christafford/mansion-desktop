@@ -13,6 +13,7 @@
 #include "xdg-shell.h"
 #include "compositor-private.h"
 #include "seat.h"
+#include "core-frame-state.h"
 
 #include <cstring>
 #include <string>
@@ -328,7 +329,7 @@ void wm_base_get_xdg_surface(struct wl_client* client, struct wl_resource* resou
                                "get_xdg_surface on an unknown wl_surface");
         return;
     }
-    if (surface->xdg_surface) {
+    if (surface->xdg_surface || (surface->core_frame && surface->core_frame->subsurface_role)) {
         wl_resource_post_error(resource, XDG_WM_BASE_ERROR_ROLE,
                                "wl_surface already has an xdg_surface");
         return;
@@ -583,30 +584,33 @@ void destroy_xdg_shell(struct MansionXdgShell* shell) {
     delete shell;
 }
 
-void xdg_shell_on_surface_applied(MansionXdgSurface* s, int32_t width, int32_t height) {
+void xdg_shell_on_surface_applied(MansionXdgSurface* s, int32_t width, int32_t height, int32_t x, int32_t y) {
     if (!s || !s->toplevel) return;
     s->state.min_width = s->pending_min_width; s->state.min_height = s->pending_min_height;
     s->state.max_width = s->pending_max_width; s->state.max_height = s->pending_max_height;
     s->state.committed_serial = s->state.acked_serial;
     if (width <= 0 || height <= 0) return;
     if (s->geometry_pending) {
-        // No subsurfaces are supported by this frontend yet. Clamp to the root
-        // surface, using wide arithmetic for hostile geometry coordinates.
-        const int64_t left = std::max<int64_t>(0, s->geo_x);
-        const int64_t top = std::max<int64_t>(0, s->geo_y);
-        const int64_t right = std::min<int64_t>(width, int64_t(s->geo_x) + s->geo_width);
-        const int64_t bottom = std::min<int64_t>(height, int64_t(s->geo_y) + s->geo_height);
+        // Effective geometry is clamped when applied, and remains fixed until
+        // set_window_geometry is applied again (xdg-shell specification).
+        const int64_t left = std::max<int64_t>(x, s->geo_x);
+        const int64_t top = std::max<int64_t>(y, s->geo_y);
+        const int64_t right = std::min<int64_t>(int64_t(x) + width, int64_t(s->geo_x) + s->geo_width);
+        const int64_t bottom = std::min<int64_t>(int64_t(y) + height, int64_t(s->geo_y) + s->geo_height);
         if (right <= left || bottom <= top) {
             wl_resource_post_error(s->resource, XDG_SURFACE_ERROR_INVALID_SIZE, "window geometry does not intersect surface");
             return;
         }
         s->state.x = left; s->state.y = top;
         s->state.width = right - left; s->state.height = bottom - top;
+        s->state.declared_width = s->geo_width; s->state.declared_height = s->geo_height;
+        s->state.geometry_is_set = true;
         s->has_geometry = true;
         s->geometry_pending = false;
     } else if (!s->has_geometry) {
-        s->state.x = s->state.y = 0;
+        s->state.x = x; s->state.y = y;
         s->state.width = width; s->state.height = height;
+        s->state.declared_width = width; s->state.declared_height = height;
     }
 }
 

@@ -52,6 +52,7 @@ godot::Dictionary MansionCompositorSession::snapshot(int64_t handle, int64_t aft
     result["width"] = frame->width; result["height"] = frame->height;
     result["stride"] = frame->stride;
     result["logical_width"] = frame->logical_width; result["logical_height"] = frame->logical_height;
+    result["origin_x"] = frame->origin_x; result["origin_y"] = frame->origin_y;
     result["scale"] = frame->scale; result["transform"] = frame->transform;
     result["source_format"] = frame->source_format; result["source_stride"] = frame->source_stride;
     result["format"] = "RGBA8";
@@ -69,6 +70,8 @@ godot::Dictionary MansionCompositorSession::window_state(int64_t handle) const {
     godot::Dictionary result;
     auto state = runtime_.window_state(handle);
     if (!state) return result;
+    result["declared_width"] = state->declared_width; result["declared_height"] = state->declared_height;
+    result["surface_width"] = state->surface_width; result["surface_height"] = state->surface_height;
     result["x"] = state->x; result["y"] = state->y;
     result["width"] = state->width; result["height"] = state->height;
     result["min_width"] = state->min_width; result["min_height"] = state->min_height;

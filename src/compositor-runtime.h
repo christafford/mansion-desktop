@@ -6,9 +6,11 @@
 #include "frame-snapshot.h"
 
 struct wl_display;
+struct wl_global;
 struct MansionCompositor;
 struct MansionSeat;
 struct MansionXdgShell;
+struct MansionOutput;
 
 namespace mansion {
 // Single-threaded server ownership. All calls and destruction belong to the
@@ -51,6 +53,8 @@ private:
     MansionCompositor* compositor_ = nullptr;
     MansionSeat* seat_ = nullptr;
     MansionXdgShell* shell_ = nullptr;
+    MansionOutput* output_ = nullptr;
+    wl_global* subcompositor_ = nullptr;
     std::string directory_;
     std::string socket_path_;
     std::string error_;

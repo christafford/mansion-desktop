@@ -2,16 +2,75 @@
 #include "compositor-core.h"
 #include "compositor-private.h"
 #include "core-frame-state.h"
+#include "surface-tree.h"
 #include "seat.h"
 #include "xdg-shell.h"
 
+#include <algorithm>
 #include <cerrno>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <unistd.h>
 #include <vector>
+#include <unordered_set>
+#include <new>
+#include <wayland-server-protocol.h>
 #include <wayland-server-core.h>
+
+// One logical display for the nested workspace, independent of the host's
+// monitor registry. Bound output objects belong to their clients.
+struct MansionOutput {
+    wl_global* global = nullptr;
+    MansionCompositor* compositor = nullptr;
+    wl_list resources;
+};
+namespace {
+struct OutputBinding {
+    wl_resource* resource;
+    MansionOutput* output;
+    std::unordered_set<int64_t> entered;
+};
+void update_output(OutputBinding* binding) try {
+    std::unordered_set<int64_t> live;
+    MansionSurface* surface;
+    wl_list_for_each(surface, &binding->output->compositor->surface_list, link) {
+        if (wl_resource_get_client(surface->resource) != wl_resource_get_client(binding->resource)) continue;
+        const auto handle = surface->core_frame->handle;
+        live.insert(handle);
+        const bool mapped = surface_tree_mapped(surface);
+        if (mapped && binding->entered.insert(handle).second)
+            wl_surface_send_enter(surface->resource, binding->resource);
+        else if (!mapped && binding->entered.erase(handle))
+            wl_surface_send_leave(surface->resource, binding->resource);
+    }
+    // Destroyed surfaces no longer have a protocol object to send leave to.
+    std::erase_if(binding->entered, [&](int64_t handle) { return !live.contains(handle); });
+}
+catch (const std::bad_alloc&) {
+    wl_client_post_no_memory(wl_resource_get_client(binding->resource));
+}
+void release_output(wl_client*, wl_resource* resource) { wl_resource_destroy(resource); }
+const struct wl_output_interface output_impl = {release_output};
+void output_destroyed(wl_resource* resource) {
+    wl_list_remove(wl_resource_get_link(resource));
+    delete static_cast<OutputBinding*>(wl_resource_get_user_data(resource));
+}
+void bind_output(wl_client* client, void* data, uint32_t version, uint32_t id) {
+    auto* output = static_cast<MansionOutput*>(data);
+    auto* resource = wl_resource_create(client, &wl_output_interface, std::min(version, 3u), id);
+    if (!resource) { wl_client_post_no_memory(client); return; }
+    auto* binding = new (std::nothrow) OutputBinding{resource, output, {}};
+    if (!binding) { wl_resource_destroy(resource); wl_client_post_no_memory(client); return; }
+    wl_resource_set_implementation(resource, &output_impl, binding, output_destroyed);
+    wl_list_insert(&output->resources, wl_resource_get_link(resource));
+    wl_output_send_geometry(resource, 0, 0, 338, 211, WL_OUTPUT_SUBPIXEL_UNKNOWN,
+                            "Mansion", "Workspace", WL_OUTPUT_TRANSFORM_NORMAL);
+    wl_output_send_mode(resource, WL_OUTPUT_MODE_CURRENT | WL_OUTPUT_MODE_PREFERRED, 1280, 800, 60000);
+    if (version >= 2) { wl_output_send_scale(resource, 1); wl_output_send_done(resource); }
+    update_output(binding);
+}
+}
 
 namespace mansion {
 CompositorRuntime::~CompositorRuntime() {
@@ -56,7 +115,7 @@ bool CompositorRuntime::start(const std::string& runtime_directory) {
         stop();
         return false;
     }
-    seat_ = seat_create(display_);
+    seat_ = seat_create(display_, 5);
     shell_ = create_xdg_shell(compositor_, display_);
     if (!seat_ || !shell_) {
         fail("create seat/xdg-shell globals");
@@ -64,6 +123,14 @@ bool CompositorRuntime::start(const std::string& runtime_directory) {
         return false;
     }
     compositor_set_seat(compositor_, seat_);
+    subcompositor_ = surface_tree_create_global(display_);
+    if (!subcompositor_) { error_ = "create subcompositor global"; stop(); return false; }
+    output_ = new (std::nothrow) MansionOutput{};
+    if (!output_) { error_ = "allocate workspace output"; stop(); return false; }
+    output_->compositor = compositor_;
+    wl_list_init(&output_->resources);
+    output_->global = wl_global_create(display_, &wl_output_interface, 3, output_, bind_output);
+    if (!output_->global) { error_ = "create workspace output global"; stop(); return false; }
     // An absolute name avoids changing the host XDG_RUNTIME_DIR/WAYLAND_DISPLAY.
     if (wl_display_add_socket(display_, socket_path_.c_str()) < 0) {
         fail("bind private Wayland socket");
@@ -81,6 +148,9 @@ bool CompositorRuntime::pump() {
     // Server API, zero polling timeout. Never dispatch a client wl_display here.
     if (wl_event_loop_dispatch(wl_display_get_event_loop(display_), 0) < 0)
         return fail("dispatch Wayland server loop");
+    wl_resource* output_resource;
+    wl_resource_for_each(output_resource, &output_->resources)
+        update_output(static_cast<OutputBinding*>(wl_resource_get_user_data(output_resource)));
     compositor_core_complete_frames(compositor_);
     if (compositor_->focused_surface_resource && keyboard_focus_handle() == 0)
         seat_set_keyboard_focus(seat_, nullptr, compositor_);
@@ -93,6 +163,13 @@ bool CompositorRuntime::stop() {
     if (display_) {
         // Resource callbacks still need the compositor during client teardown.
         wl_display_destroy_clients(display_);
+        if (output_) {
+            if (output_->global) wl_global_destroy(output_->global);
+            delete output_;
+            output_ = nullptr;
+        }
+        if (subcompositor_) wl_global_destroy(subcompositor_);
+        subcompositor_ = nullptr;
         destroy_xdg_shell(shell_);
         shell_ = nullptr;
         seat_destroy(seat_);
@@ -133,7 +210,7 @@ OwnedFrame CompositorRuntime::snapshot(int64_t handle) const {
     if (!compositor_ || handle <= 0) return {};
     MansionSurface* surface;
     wl_list_for_each(surface, &compositor_->surface_list, link)
-        if (surface->core_frame->handle == handle) return surface->core_frame->frame;
+        if (surface->core_frame->handle == handle) return surface_tree_snapshot(surface);
     return {};
 }
 
@@ -143,7 +220,22 @@ std::optional<XdgWindowState> CompositorRuntime::window_state(int64_t handle) co
     wl_list_for_each(surface, &compositor_->surface_list, link) {
         const auto& frame = surface->core_frame->frame;
         if (surface->core_frame->handle == handle && frame && frame->mapped &&
-            xdg_surface_has_toplevel(surface->xdg_surface)) return xdg_surface_window_state(surface->xdg_surface);
+            xdg_surface_has_toplevel(surface->xdg_surface)) {
+            auto result = xdg_surface_window_state(surface->xdg_surface);
+            result.surface_width = frame->logical_width; result.surface_height = frame->logical_height;
+            if (auto composed = surface_tree_snapshot(surface)) {
+                if (result.geometry_is_set) {
+                    result.x -= composed->origin_x; result.y -= composed->origin_y;
+                } else {
+                    // Default geometry follows even independently committed
+                    // child content; explicit geometry stays fixed by xdg-shell.
+                    result.x = result.y = 0;
+                    result.width = result.declared_width = composed->logical_width;
+                    result.height = result.declared_height = composed->logical_height;
+                }
+            }
+            return result;
+        }
     }
     return {};
 }
@@ -208,33 +300,38 @@ int64_t CompositorRuntime::pointer_focus_handle() const {
     if (!compositor_) return 0;
     MansionSurface* surface;
     wl_list_for_each(surface, &compositor_->surface_list, link) {
-        const auto& frame = surface->core_frame->frame;
-        if (surface->resource == seat_pointer_surface(seat_) && frame && frame->mapped &&
-            xdg_surface_has_toplevel(surface->xdg_surface)) return surface->core_frame->handle;
+        if (surface->resource != seat_pointer_surface(seat_) || !surface_tree_mapped(surface)) continue;
+        auto* root = surface_tree_root(surface);
+        if (root && xdg_surface_has_toplevel(root->xdg_surface)) return root->core_frame->handle;
     }
     return 0;
 }
 
-bool CompositorRuntime::pointer_motion(int64_t handle, double x, double y) {
+bool CompositorRuntime::pointer_motion(int64_t handle, double x, double y) try {
     if (!compositor_) { error_ = "pointer input requires a running server"; return false; }
     if (handle == 0) {
         if (seat_pointer_motion(seat_, nullptr, x, y)) return true;
         error_ = "pointer leave requires valid coordinates and no active grab; use reset to cancel";
         return false;
     }
-    MansionSurface* surface;
-    wl_list_for_each(surface, &compositor_->surface_list, link) {
-        const auto& frame = surface->core_frame->frame;
-        if (surface->core_frame->handle != handle || !frame || !frame->mapped ||
-            !xdg_surface_has_toplevel(surface->xdg_surface)) continue;
-        // Only an existing grab may travel outside the surface bounds.
+    MansionSurface* root;
+    wl_list_for_each(root, &compositor_->surface_list, link) {
+        if (root->core_frame->handle != handle || !surface_tree_mapped(root) || !xdg_surface_has_toplevel(root->xdg_surface)) continue;
+        auto frame = surface_tree_snapshot(root);
+        if (!frame) break;
         if (!pointer_grabbed() && (x < 0 || y < 0 || x >= frame->logical_width || y >= frame->logical_height)) break;
-        if (seat_pointer_motion(seat_, surface->resource, x, y)) return true;
+        x += frame->origin_x; y += frame->origin_y;
+        MansionSurface* target = nullptr;
+        if (pointer_grabbed()) {
+            target = static_cast<MansionSurface*>(wl_resource_get_user_data(seat_pointer_surface(seat_)));
+            if (!surface_tree_coordinates(root, target, x, y)) break;
+        } else target = surface_tree_at(root, x, y);
+        if (seat_pointer_motion(seat_, target ? target->resource : nullptr, x, y)) return true;
         break;
     }
     error_ = "pointer motion requires a live mapped target, valid coordinates and matching grab";
     return false;
-}
+} catch (const std::bad_alloc&) { error_ = "allocate surface-tree hit test"; return false; }
 
 bool CompositorRuntime::pointer_button(uint32_t button, bool pressed) {
     if (pointer_focus_handle() && seat_pointer_button(seat_, button, pressed)) return true;

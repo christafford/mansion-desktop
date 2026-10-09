@@ -25,6 +25,13 @@ for freedesktop metadata, installed icons and argument-vector execution. The
 frontend still owns the compositor session and its launched child processes.
 Only desktop-entry IDs persist in recents; PID/window associations are temporary.
 This does not add a KDE service dependency or general application compatibility.
+T65/T66 add a runtime-local logical output and a CPU surface-tree boundary in
+`surface-tree.cpp`. Raw, synchronized cached and visible state stay compositor-
+owned; Godot receives immutable composed toplevel snapshots with canvas origins.
+Subsurface stacking and input regions route pointer events to the child while
+world identities and keyboard focus remain associated with the root. The launch
+helper supplies an isolated native-Wayland/software-rendering recipe for Chrome.
+See [the graphical application handoff](handoffs/37-graphical-applications.md).
 Godot maps physical US keys; the seat owns XKB and held-key state, filters events
 to the focused client, and clears focus on destruction.
 The original addon is isolated

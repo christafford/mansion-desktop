@@ -374,8 +374,11 @@ func _process(_delta: float) -> void:
 				pending.clear()
 				_activate(handle)
 				return
-	if not terminal.launched_children.has(pending.pid) or Time.get_ticks_msec() > pending.deadline:
-		notice.text = "No window appeared. This application may need protocols Mansion does not support yet."
+	# A browser may hand a new window to its already-owned process, then exit.
+	# Keep waiting for the mapped window until the deadline.
+	if Time.get_ticks_msec() > pending.deadline:
+		var reason := "The launch process exited, but no new window appeared." if not terminal.launched_children.has(pending.pid) else "The application has not opened a window after 12 seconds."
+		notice.text = reason + " Diagnostics: " + pending.error + ".log"
 		pending.clear()
 
 func _exit_tree() -> void:

@@ -72,6 +72,28 @@ IDs and dependency edges. Do not hide subtasks in nested checkboxes or use ID
 suffixes. Split only when a task has separate acceptance boundaries; add unused
 numeric IDs and include them in the authorized scope before relying on them.
 
+- [x] **P21-T65 Enable real graphical application startup.**
+  **Depends:** P21-T44, P21-T48, P21-T66. Diagnose the owner's Chrome launch failure;
+  implement required compositor/launch support without advertising fake protocols.
+  Preserve the real Wayland core, nested development and ordinary terminal use.
+  **Acceptance:** native protocol/lifetime regressions, real Chrome rendered
+  content and input/resize/return in Godot, actionable launch errors, C++ build
+  and tests, Godot validation and affected application checks. Record remaining
+  toolkit, popup, acceleration and sandbox limits explicitly.
+  Evidence: [graphical application handoff](handoffs/37-graphical-applications.md),
+  2026-10-09, real Chrome typing/click/scroll/resize/two-window trial.
+
+- [x] **P21-T66 Compose and route input to Wayland subsurfaces.**
+  **Depends:** P21-T40, P21-T43. The owner's Chrome request requires address-bar
+  suggestion bubbles, implemented by Chromium as subsurfaces. Add owned cached
+  commits, parent synchronization, stacking, input regions, safe teardown and
+  composite snapshots; retain native pixels and application identity.
+  **Acceptance:** protocol tests for sync/desync, stacking, transforms, hit testing,
+  destruction and invalid relationships; rendered real Chrome suggestion content
+  and typing; native build/tests and affected Godot interaction checks.
+  Evidence: [surface-tree and browser checks](handoffs/37-graphical-applications.md),
+  2026-10-09, including AddressSanitizer/UBSan and rendered child content.
+
 ### Bounded recovery authorized on 2026-10-03
 
 Run these small recovery tasks before resuming the original milestone sequence.

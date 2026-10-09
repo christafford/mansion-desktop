@@ -1,6 +1,6 @@
 # Automated tests
 
-All tests run without a display. They start `mansion-desktop --headless` on a
+The Meson tests run without a display. They start `mansion-desktop --headless` on a
 private socket inside a private `XDG_RUNTIME_DIR`, drive it with
 `mansion-test-client` (and, in later tasks, `--input-script` files and
 `--screenshot` dumps), and assert on line-based output.
@@ -68,3 +68,16 @@ unfinished. Recovery temporarily makes it pass by adding open tasks; P4-T07 must
 replace that brittle assumption with fixtures so finishing recovery cannot break
 the suite. Current plugin parsing recognizes numeric IDs at column zero and
 ignores human tasks; a DONE marker does not validate dependency evidence.
+
+## Godot and graphical application checks
+
+`tools/check-godot-binding.sh` runs native runtime/frame/input/resize and surface-
+tree fixtures plus headless binding checks. `tools/check-godot-study.sh` requires
+a graphical display and exercises the real terminal and room interactions.
+`tools/check-chrome-application.sh` additionally requires installed Google Chrome
+(`google-chrome.desktop`). It renders the real browser against a local test page,
+types and clicks through Godot, scrolls, resizes, returns to the room, opens a
+second window and closes it through Chrome. Missing Chrome/display is a failure.
+The local page is test content, not a substitute application. Captures are under
+`.tools/chrome-application-test`; the profile there is separate from regular
+Mansion and host browser profiles. See [evidence and limitations](../docs/handoffs/37-graphical-applications.md).

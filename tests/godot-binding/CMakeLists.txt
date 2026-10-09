@@ -23,7 +23,7 @@ foreach(TYPE server-header client-header private-code)
         COMMAND "${WAYLAND_SCANNER}" "${TYPE}" "${XDG_XML}" "${OUTPUT}"
         DEPENDS "${XDG_XML}" VERBATIM)
 endforeach()
-add_library(mansion_runtime STATIC ../../src/compositor-core.cpp ../../src/compositor-runtime.cpp
+add_library(mansion_runtime STATIC ../../src/compositor-core.cpp ../../src/surface-tree.cpp ../../src/compositor-runtime.cpp
     ../../src/seat.cpp ../../src/xdg-shell.cpp xdg-shell-server-protocol.h xdg-shell-protocol.c)
 target_include_directories(mansion_runtime PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
 target_compile_features(mansion_runtime PUBLIC cxx_std_20)
@@ -71,3 +71,7 @@ target_link_libraries(resize-client PRIVATE PkgConfig::WAYLAND_CLIENT)
 add_executable(runtime-resize ../test_runtime_resize.cpp)
 target_include_directories(runtime-resize PRIVATE ../../src)
 target_link_libraries(runtime-resize PRIVATE mansion_runtime)
+
+add_executable(surface-tree ../test_surface_tree.cpp xdg-shell-client-protocol.h xdg-shell-protocol.c)
+target_include_directories(surface-tree PRIVATE ../../src "${CMAKE_CURRENT_BINARY_DIR}")
+target_link_libraries(surface-tree PRIVATE mansion_runtime PkgConfig::WAYLAND_CLIENT)

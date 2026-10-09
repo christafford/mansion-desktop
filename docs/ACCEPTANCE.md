@@ -3,6 +3,31 @@
 Status: procedures unless explicitly recorded as evidence. Synthetic tests and
 screenshots are supporting evidence, not usability acceptance. Human tasks in TASKS.md remain unchecked until a person records them.
 
+## 2026-10-09 agent-run Chrome and subsurfaces (P21-T65/T66)
+
+From `2cdfd15` plus T65/T66, the installed Google Chrome 154.0.8037.57 was
+launched from the actual application catalog on a private Mansion Wayland socket.
+Agent-injected Godot keys/pointer events typed an address and a note, clicked the
+page button, scrolled both ways, resized the actual page and returned to the room.
+A localhost fixture recorded browser-trusted input events and DOM dimensions.
+A second catalog launch made a separate live application panel; Chrome's own
+Ctrl+Shift+W closed that window while the first remained. This is real Chrome
+rendering/interaction, not a synthetic browser or screenshot replay.
+
+Agent-inspected Godot GPU captures: [address-bar child](evidence/t65/address-bar.png),
+[typed and clicked page](evidence/t65/browser-input.png),
+[resized page](evidence/t65/browser-resized.png), and
+[browser in the room](evidence/t65/browser-in-room.png). Chrome's child content is
+visible with its parent; application text is upright and readable in these views.
+The renderer was Godot Compatibility/OpenGL, Mesa 26.2.4, AMD Custom GPU 0405,
+private GPU Weston 1280×800, then 1000×700. Native protocol fixtures prove their
+own synchronization, stacking, input-region, transform/alpha and lifecycle
+assertions separately. See [full evidence and commands](handoffs/37-graphical-applications.md).
+
+`xdg_popup` menus, clipboard, IME, GPU client buffers and general toolkit support
+remain unfinished. A popup request can still disconnect the browser. No human
+physical-input, latency, general browsing or comfort gate is marked passed.
+
 ## 2026-10-02 audit boundary
 
 The owner confirmed legacy room navigation and the upside-down export fix in

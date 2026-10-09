@@ -91,8 +91,9 @@ func resize_client() -> void:
 	var state: Dictionary = terminal.session.window_state(focused_handle)
 	if state.is_empty(): return
 	# xdg configure sizes include decorations but exclude shadows. Preserve the
-	# committed surface margins around window geometry when reserving space.
-	var margins: Vector2 = (terminal.logical_size - Vector2(state.width, state.height)).max(Vector2.ZERO)
+	# declared decoration margins. A client may first commit an old-size buffer
+	# with new geometry; its effective clamped geometry then stays smaller.
+	var margins: Vector2 = (Vector2(state.surface_width, state.surface_height) - Vector2(state.declared_width, state.declared_height)).max(Vector2.ZERO)
 	# Leave 16px extra on each side for client size increments (terminal cells).
 	# Rounding a configure upward should not force fractional text scaling.
 	var wanted: Vector2 = (resize_viewport - Vector2(64, 120) - margins).floor().clamp(Vector2(1, 1), Vector2(2048, 2048))
@@ -137,7 +138,7 @@ func _input(event: InputEvent) -> void:
 	elif active and event is InputEventPanGesture:
 		get_viewport().set_input_as_handled()
 		if not transition.running and move_pointer(event.position) and image_rect().has_point(event.position):
-			if not terminal.session.pointer_axis(event.delta.x * 10, event.delta.y * 10): exit_application()
+			if terminal.session.pointer_focus_handle() != 0 and not terminal.session.pointer_axis(event.delta.x * 10, event.delta.y * 10): exit_application()
 	elif active and (event is InputEventJoypadButton or event is InputEventJoypadMotion):
 		get_viewport().set_input_as_handled()
 
@@ -163,12 +164,14 @@ func route_pointer(event: InputEventMouse) -> void:
 		var code := PointerMap.evdev(event.button_index)
 		# Outside motion/releases complete a drag, but margins never start clicks.
 		if code and (inside or not event.pressed):
+			# A transparent input-region hole has no client target.
+			if terminal.session.pointer_focus_handle() == 0: return
 			if not terminal.session.pointer_button(code, event.pressed):
 				exit_application()
 				return
 		elif event.pressed and inside:
 			var axis := PointerMap.wheel(event.button_index, event.factor)
-			if axis != Vector2.ZERO and not terminal.session.pointer_axis(axis.x, axis.y):
+			if axis != Vector2.ZERO and terminal.session.pointer_focus_handle() != 0 and not terminal.session.pointer_axis(axis.x, axis.y):
 				exit_application()
 				return
 		if not inside and not terminal.session.pointer_grabbed():

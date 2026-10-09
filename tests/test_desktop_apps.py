@@ -74,7 +74,7 @@ class DesktopApps(unittest.TestCase):
             apps = base / 'applications'
             apps.mkdir()
             receiver = base / 'receiver.py'
-            receiver.write_text('import json,os,sys\nfrom pathlib import Path\nPath(sys.argv[1]).write_text(json.dumps({"args":sys.argv[2:],"env":dict(os.environ),"cwd":os.getcwd()}))\n')
+            receiver.write_text('import json,os,sys\nprint("actual client diagnostic",file=sys.stderr)\nfrom pathlib import Path\nPath(sys.argv[1]).write_text(json.dumps({"args":sys.argv[2:],"env":dict(os.environ),"cwd":os.getcwd()}))\n')
             marker = base / 'result.json'
             (apps / 'fixture.desktop').write_text('[Desktop Entry]\nType=Application\nName=Fixture\nExec=/usr/bin/python3 "' + str(receiver) + '" "' + str(marker) + '" "two words" %c %U\nPath=' + str(base) + '\n')
             env = dict(os.environ, XDG_DATA_HOME=str(base), XDG_DATA_DIRS=str(base / 'empty'), DISPLAY=':test', WAYLAND_SOCKET='88', DBUS_SESSION_BUS_ADDRESS='host-bus', MANSION_TERMINAL_ARGV='["/usr/bin/false"]')
@@ -86,6 +86,7 @@ class DesktopApps(unittest.TestCase):
                 result = json.loads(marker.read_text())
                 self.assertEqual(result['args'], ['two words', 'Fixture'])
                 self.assertEqual(result['cwd'], str(base))
+                self.assertEqual(Path(str(error) + '.log').read_text().strip(), 'actual client diagnostic')
                 self.assertEqual(result['env']['WAYLAND_DISPLAY'], str(base / 'display'))
                 self.assertEqual(result['env']['DBUS_SESSION_BUS_ADDRESS'], 'disabled:')
                 self.assertNotIn('DISPLAY', result['env'])
@@ -93,6 +94,18 @@ class DesktopApps(unittest.TestCase):
                 (apps / 'fixture.desktop').unlink()
                 self.assertEqual(subprocess.run(args, env=env).returncode, 1)
                 self.assertIn('removed', json.loads(error.read_text())['error'])
+
+    def test_chromium_recipe_preserves_sandbox_and_separates_host_profile(self):
+        with tempfile.TemporaryDirectory() as temp:
+            argv = module.graphical_command(['/usr/bin/google-chrome-stable', 'https://example.test'], temp)
+            self.assertIn('--ozone-platform=wayland', argv)
+            self.assertIn('--disable-gpu', argv)
+            self.assertIn('--new-window', argv)
+            self.assertNotIn('--no-sandbox', argv)
+            self.assertIn('https://example.test', argv)
+            self.assertIn('--user-data-dir=' + temp + '/google-chrome-stable', argv)
+            self.assertEqual(module.graphical_command(['/usr/bin/editor'], temp), ['/usr/bin/editor'])
+            self.assertEqual(module.graphical_command(['/usr/bin/google-chrome-stable', 'https://example.test'], temp), argv)
 
     def test_terminal_wrapper_uses_clean_prompt_and_exact_argv(self):
         import socket
