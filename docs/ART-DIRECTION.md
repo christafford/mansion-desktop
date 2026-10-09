@@ -121,3 +121,14 @@ small original SVG prints have recorded provenance in `world/art/README.md`.
 Room geometry and session-local application placement are independent of live
 process IDs. This extension does not implement restart restoration or complete
 human comfort, general client compatibility, or persistent-workspace gates.
+
+T62 extends rooms 01–04 from 6.4m to 12.8m deep, retaining their 3.8m width;
+room 05 and the observatory retain their sizes. Repeat architectural trim and
+lighting through the extension and spread landmarks toward the far work areas.
+The library now uses eight tall, individually movable black bookcases with warm
+plank interiors, layered crown mouldings, narrow iron rods and brass vessels.
+A burgundy runner leads to the reading table's green leather inset and banker
+lamp. See the [reference/provenance record](../world/art/README.md).
+Common furniture throughout the six new rooms moves with the shared carry/push
+controls. Books, lamps and sculptures stay with their supporting assemblies;
+mounted art, toolboards, shelving, lights and the garden fountain stay fixed.

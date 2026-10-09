@@ -359,3 +359,22 @@ in one room, walk elsewhere and launch another from Tab; return and verify the
 first is still in place and usable. Check door clearance, ordinary input,
 readability, useful arrangement space, appearance and comfort personally.
 Placements last for this session only; restart restoration remains unimplemented.
+
+## Longer rooms and movable furnishings: T62
+
+Agent-run checks and rendered evidence are recorded in
+[handoff 34](handoffs/34-long-rooms-movable-library.md). Human physical-input,
+appearance preference and comfort observation: **not observed**.
+
+Explore the extended library, atlas room, garden and gallery, carrying a live
+application past the old halfway point to a far work area. Inspect the black
+antique bookcase frames, warm plank interiors, iron rods and reading table.
+Pull an individual bookcase into the aisle; its books and ornaments should
+follow. Move a plant, chair, map cabinet, instrument, sculpture stand and parts
+bin with left-drag, wheel depth and both-buttons/wheel rotation, including while
+walking. Escape should restore the starting placement. Walk into these pieces
+and verify they yield and settle upright. Move a table after putting an
+application on it: the unsupported application should fall and remain usable.
+Room 05 and the observatory retain their original dimensions but share the new
+furniture behavior. Fixed architecture and mounted decorations stay fixed;
+all moved placements remain session-local.

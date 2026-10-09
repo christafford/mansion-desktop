@@ -13,6 +13,7 @@ run() {
     local label=$1 marker=$2
     local timeout_seconds=45
     if [[ "$label" == mansion-rooms ]]; then timeout_seconds=120; fi
+    if [[ "$label" == room-furniture ]]; then timeout_seconds=180; fi
     shift 2
     if ! timeout -k 2s "${timeout_seconds}s" "$GODOT" --path "$ROOT/world" --audio-driver Dummy --max-fps 60 "$@" > "$LOG_DIR/$label.log" 2>&1; then
         cat "$LOG_DIR/$label.log"
@@ -31,6 +32,7 @@ run controller 'STUDY_SMOKE .*failures=0' --script res://tests/study_smoke.gd --
 run furniture 'FURNITURE_DRAG_OK .*failures=0' --script res://tests/furniture_drag.gd -- --no-terminal
 run hallway 'HALLWAY_OK doors=6 lamps=6 failures=0' --script res://tests/hallway.gd
 run mansion-rooms 'MANSION_ROOMS_OK rooms=6 failures=0' --script res://tests/mansion_rooms.gd
+run room-furniture 'ROOM_FURNITURE_OK types=8 extended=4 failures=0' --script res://tests/room_furniture.gd
 run details 'STUDY_DETAILS_OK .*failures=0' --script res://tests/study_details.gd
 run color 'SCREEN_COLOR_OK failures=0' --script res://tests/screen_color.gd
 run terminal 'LIVE_TERMINAL_OK .*sessions=2 failures=0' --script res://tests/live_terminal.gd -- --terminal-demo

@@ -104,11 +104,16 @@ func run() -> void:
 	# Full rotated bounds remain inside the expanded mansion, not just its center.
 	panel.rotation.y = 0.4
 	panel.position = objects.bounded_position(panel, Vector3(100, 100, 100))
+	var volumes = preload("res://scripts/hallway.gd").PLACEMENT + preload("res://scripts/mansion_rooms.gd").placement_volumes()
 	for x in [-0.7, 0.7]:
 		for y in [-0.51, 0.51]:
 			for z in [-0.04, 0.04]:
 				var corner: Vector3 = panel.to_global(Vector3(x, y, z))
-				check(absf(corner.x) <= 4.361 and corner.y <= 3.081 and corner.z <= 26.361, "Panel extends outside mansion")
+				check(absf(corner.x) <= 14.061 and corner.y <= 3.081 and corner.z <= 26.361, "Panel extends outside mansion")
+				var inside := false
+				for volume in volumes:
+					if volume.grow(0.001).has_point(corner): inside = true
+				check(inside, "Panel corner is outside every actual room/hall volume")
 	await terminal.shutdown()
 	print("HALLWAY_OK doors=6 lamps=6 failures=", failures)
 	quit(1 if failures else 0)

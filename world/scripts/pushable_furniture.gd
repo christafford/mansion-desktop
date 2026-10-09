@@ -2,6 +2,9 @@
 extends RigidBody3D
 
 var kind := "dining_chair_02"
+# Authored assemblies add fitted convex shapes after construction.
+var assembly_mass := 12.0
+var model_scale := 1.0
 var placement_box := AABB()
 var saved_linear := Vector3.ZERO
 var saved_angular := Vector3.ZERO
@@ -28,7 +31,7 @@ func end_hold(cancel: bool) -> void:
 
 func _ready() -> void:
 	collision_mask = 3 # Room and player; panels probe/support themselves.
-	mass = 25.0 if kind == "wooden_bookshelf_worn" else 7.0
+	mass = assembly_mass if kind == "assembly" else (25.0 if kind == "wooden_bookshelf_worn" else 7.0)
 	linear_damp = 3.0
 	angular_damp = 5.0
 	axis_lock_angular_x = true
@@ -48,12 +51,12 @@ func _ready() -> void:
 	elif kind == "potted_plant_02":
 		var pot := CollisionShape3D.new()
 		var cylinder := CylinderShape3D.new()
-		cylinder.radius = 0.232
-		cylinder.height = 0.336
+		cylinder.radius = 0.232 * model_scale
+		cylinder.height = 0.336 * model_scale
 		pot.shape = cylinder
 		add_child(pot)
-		pot.position.y = 0.168
-	else:
+		pot.position.y = 0.168 * model_scale
+	elif kind == "dining_chair_02":
 		# Fitted to the source mesh in meters: seat at .40–.45, back to .975.
 		shape(Vector3(0.42, 0.09, 0.44), Vector3(0, 0.405, 0.015))
 		shape(Vector3(0.42, 0.54, 0.105), Vector3(0, 0.705, -0.212), -0.23)
@@ -64,10 +67,10 @@ func _ready() -> void:
 func shape(size: Vector3, center: Vector3, pitch := 0.0) -> void:
 	var collision := CollisionShape3D.new()
 	var box := BoxShape3D.new()
-	box.size = size
+	box.size = size * model_scale
 	collision.shape = box
 	add_child(collision)
-	collision.position = center
+	collision.position = center * model_scale
 	collision.rotation.x = pitch
 
 func push(walking_velocity: Vector3, normal: Vector3, delta: float) -> void:

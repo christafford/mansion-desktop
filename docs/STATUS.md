@@ -1,6 +1,7 @@
 # Project status
 
-Current authority: owner-requested exploration rooms T61 verified 2026-10-08
+Current authority: longer rooms and movable antique furnishings T62 verified
+2026-10-08–09 from `58d2be5`. Exploration rooms T61 were verified 2026-10-08
 from `e1deea6`. Hallway T60 was verified 2026-10-08 from `139214d`.
 Furnishings, walls, instances and transitions T56–T59 were verified
 2026-10-06, starting from `e618487`.
@@ -15,9 +16,11 @@ is historical; its extension/visual completion claims were contradicted by tests
 
 ## Next task
 
-The owner-requested exploration rooms T61 are complete: all six gallery doors
-open into distinct furnished spaces with working application placement. See
-[handoff 33](handoffs/33-exploration-rooms.md) for captures, checks and limitations.
+The owner-requested T62 changes are complete: rooms 01–04 are twice as deep,
+the library has antique black/wood bookcases, and common furnishings in all six
+new rooms use shared carry/push controls. See
+[handoff 34](handoffs/34-long-rooms-movable-library.md) for captures, checks and
+limitations, including an intermittent transition-close test failure.
 The broader roadmap task below remains outside this bounded owner request.
 
 **P21-T45: finish targeted client close and its lifecycle acceptance.**
@@ -95,7 +98,7 @@ click or opening an untouched application does not drop it. Settled panels
 retain their positions when returning with Ctrl+Alt+Escape, and background
 applications keep updating. The chair, potted plant and bookcase use the same left-drag, wheel and
 carrying controls. Walking into them pushes them across the floor; they stay
-upright and come to rest. The desk and its accessories remain fixed. Placement lasts for this session; closing
+upright and come to rest. The study desk and its accessories remain fixed. Placement lasts for this session; closing
 a client removes its panel. Restart restoration is not implemented.
 
 Discovery uses freedesktop entries and icon themes without a KDE service.
@@ -110,9 +113,27 @@ gallery (right), inventor's room (left), then the observatory at the end. Each
 has distinct landmarks and worktables. Carry applications through the doorways
 and release them onto tables or floors; launch new instances where you are
 working. Instances elsewhere retain their locations for this session.
-Restart restoration remains unimplemented.
+Rooms 01–04 are now twice as deep (12.8m); room 05 and the observatory retain
+their sizes. The library has black antique bookcases with warm wood interiors
+and a reading table with a green banker lamp. Common furnishings throughout
+these six rooms use the same drag/carry/rotate/push controls: bookcases, chairs,
+plants, worktables, cabinets, instruments, display stands and parts bins.
+Books, ornaments, table lamps and sculptures move with their furniture.
+Moving a supporting table away lets an application fall and remain usable.
+Fixed architecture and mounted decorations stay fixed. Restart restoration
+remains unimplemented.
 
 ## Verified by automated checks in this recovery
+
+- T62 (2026-10-08–09, from `58d2be5`): four doubled room depths, antique library,
+  eight furniture categories with drag/rotate/cancel/drop/walking-push behavior,
+  scaled pot collision, carried contents, extended-room live application routes,
+  moving-table support removal and subsequent shell typing pass. Import/runtime,
+  18 Godot trials and 7 Python tests pass across bounded runs. The transition
+  trial's client-close assertion failed once and passed unchanged on standalone
+  recheck; this is recorded, not claimed resolved. Eight GPU captures inspected.
+  Mesh batching preserves details/shadows and restores roughly 60 FPS median in
+  the sampled room views. See handoff 34 for percentiles and limits.
 
 - T61 (2026-10-08, from `e1deea6`): six approach-opening doors and furnished
   rooms; actual walking/carrying in/out, solid boundaries, floor/support/table
@@ -121,7 +142,8 @@ Restart restoration remains unimplemented.
   The full script's launcher hit its 45-second limit; standalone passed in 46s.
   Agent inspected ten GPU captures; six fixed views measured median 16.66–16.68ms
   and p95 16.84–17.09ms at a 60 FPS cap. This is not a human/latency gate.
-  See handoff 33. New furnishings are fixed; placements remain session-local.
+  See handoff 33. Furnishings were fixed at T61; T62 supersedes that behavior.
+  Placements remain session-local.
 
 - T60 (2026-10-08, from `139214d`): doorway traversal both ways, six closed
   doors and hallway walls, carried live terminal landing/activation, rotated

@@ -3,10 +3,10 @@
 extends Node3D
 
 const ROOMS := [
-	{"id": "library", "title": "01  THE LONG LIBRARY", "subtitle": "Read • collect • connect", "origin": Vector3(1.4, 0, 7), "yaw": PI / 2, "width": 3.8, "depth": 6.4, "color": "40574b"},
-	{"id": "atlas", "title": "02  THE ATLAS ROOM", "subtitle": "Explore • plan • discover", "origin": Vector3(-1.4, 0, 9), "yaw": -PI / 2, "width": 3.8, "depth": 6.4, "color": "657a76"},
-	{"id": "garden", "title": "03  THE WINTER GARDEN", "subtitle": "A place for growing ideas", "origin": Vector3(1.4, 0, 11), "yaw": PI / 2, "width": 3.8, "depth": 6.4, "color": "afbda0"},
-	{"id": "gallery", "title": "04  THE CABINET GALLERY", "subtitle": "Look • compare • imagine", "origin": Vector3(-1.4, 0, 13), "yaw": -PI / 2, "width": 3.8, "depth": 6.4, "color": "74444c"},
+	{"id": "library", "title": "01  THE LONG LIBRARY", "subtitle": "Read • collect • connect", "origin": Vector3(1.4, 0, 7), "yaw": PI / 2, "width": 3.8, "depth": 12.8, "color": "40574b"},
+	{"id": "atlas", "title": "02  THE ATLAS ROOM", "subtitle": "Explore • plan • discover", "origin": Vector3(-1.4, 0, 9), "yaw": -PI / 2, "width": 3.8, "depth": 12.8, "color": "657a76"},
+	{"id": "garden", "title": "03  THE WINTER GARDEN", "subtitle": "A place for growing ideas", "origin": Vector3(1.4, 0, 11), "yaw": PI / 2, "width": 3.8, "depth": 12.8, "color": "afbda0"},
+	{"id": "gallery", "title": "04  THE CABINET GALLERY", "subtitle": "Look • compare • imagine", "origin": Vector3(-1.4, 0, 13), "yaw": -PI / 2, "width": 3.8, "depth": 12.8, "color": "74444c"},
 	{"id": "workshop", "title": "05  THE INVENTOR'S ROOM", "subtitle": "Build • test • rethink", "origin": Vector3(1.4, 0, 15), "yaw": PI / 2, "width": 3.8, "depth": 6.4, "color": "4e6171"},
 	{"id": "observatory", "title": "06  THE OBSERVATORY", "subtitle": "Make room for the big picture", "origin": Vector3(0, 0, 18.5), "yaw": 0.0, "width": 9.0, "depth": 8.0, "color": "283c59"}
 ]
@@ -42,6 +42,7 @@ func _ready() -> void:
 		var room := Node3D.new()
 		room.name = spec.id
 		room.set_meta("room_id", "mansion." + spec.id)
+		room.set_meta("depth", spec.depth)
 		room.add_to_group("mansion_rooms")
 		add_child(room)
 		room.position = spec.origin
@@ -56,7 +57,25 @@ func _ready() -> void:
 			"workshop": workshop(room)
 			"observatory": observatory(room)
 
+	# Children such as books/lamps are part of their furniture assembly. Measure
+	# after authoring completes so drag bounds cover the whole visible object.
+	for body in get_tree().get_nodes_in_group("room_furniture"):
+		body.measure_visuals()
+
+func movable(parent: Node3D, label: String, pos: Vector3, weight := 12.0) -> RigidBody3D:
+	var body := preload("res://scripts/pushable_furniture.gd").new()
+	body.name = label
+	body.kind = "assembly"
+	body.assembly_mass = weight
+	body.add_to_group("room_furniture")
+	parent.add_child(body)
+	body.position = pos
+	return body
+
 func part(parent: Node3D, label: String, size: Vector3, pos: Vector3, mat: Material, solid := false) -> MeshInstance3D:
+	if solid and parent is RigidBody3D:
+		parent.shape(size, pos)
+		return study.box(label, size, pos, mat, false, parent)
 	return study.box(label, size, pos, mat, solid, parent)
 
 func mesh_part(parent: Node3D, label: String, mesh: Mesh, pos: Vector3, mat: Material) -> MeshInstance3D:
@@ -100,11 +119,26 @@ func text(parent: Node3D, value: String, pos: Vector3, size := 32, scale_value :
 
 func prop(parent: Node3D, asset: String, pos: Vector3, yaw := 0.0, scale_value := 1.0) -> Node3D:
 	var node: Node3D = load("res://assets/" + asset + ".gltf").instantiate()
+	if asset in ["dining_chair_02", "potted_plant_02", "wooden_bookshelf_worn"]:
+		var body := preload("res://scripts/pushable_furniture.gd").new()
+		body.name = asset
+		body.kind = asset
+		body.model_scale = scale_value
+		body.add_to_group("room_furniture")
+		parent.add_child(body)
+		body.position = pos
+		body.rotation.y = yaw
+		body.add_child(node)
+		node.scale *= scale_value
+		return body
 	parent.add_child(node)
 	node.position = pos
 	node.rotation.y = yaw
 	node.scale *= scale_value
-	for mesh in node.find_children("*", "MeshInstance3D", true, false): mesh.create_trimesh_collision()
+	# Books and table accessories are carried as part of the assembled object.
+	# Never nest a StaticBody inside a moving rigid body.
+	if not parent is RigidBody3D:
+		for mesh in node.find_children("*", "MeshInstance3D", true, false): mesh.create_trimesh_collision()
 	return node
 
 func shell(room: Node3D, spec: Dictionary) -> void:
@@ -137,11 +171,12 @@ func shell(room: Node3D, spec: Dictionary) -> void:
 		var glass = study.material(Color(0.58, 0.75, 0.74, 0.18))
 		glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		part(room, "GlassRoof", Vector3(w, 0.06, d), Vector3(0, 3.3, d / 2), glass, true).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		for z in range(7): part(room, "RoofRafter", Vector3(w, 0.09, 0.055), Vector3(0, 3.26, z), iron)
+		for z in range(floori(d) + 1): part(room, "RoofRafter", Vector3(w, 0.09, 0.055), Vector3(0, 3.26, z), iron)
 		for x in [-1.2, 0.0, 1.2]: part(room, "RoofRib", Vector3(0.06, 0.12, d), Vector3(x, 3.23, d / 2), iron)
 	else:
 		part(room, "Ceiling", Vector3(w, 0.12, d), Vector3(0, 3.36, d / 2), study.material(Color("202e44") if spec.id == "observatory" else Color("b9b7a5")), true)
-		for z in [1.1, 3.3, 5.5]:
+		for step in range(ceili(d / 2.2)):
+			var z := 1.1 + step * 2.2
 			part(room, "Coffer", Vector3(w, 0.11, 0.09), Vector3(0, 3.23, z), wood)
 	# Named plaques face into the hall; no extra key or modal UI to enter.
 	var sign_node := Node3D.new()
@@ -156,10 +191,12 @@ func shell(room: Node3D, spec: Dictionary) -> void:
 		var light_color := Color("ffe0ad")
 		if spec.id in ["atlas", "workshop"]: light_color = Color("d1e3ed")
 		elif spec.id == "observatory": light_color = Color("b9d4ff")
-		for z in [1.9, 4.8]: pendant(room, Vector3(0, 2.87, z), light_color)
+		for step in range(ceili(d / 3.2)):
+			pendant(room, Vector3(0, 2.87, (step + 0.5) * d / ceili(d / 3.2)), light_color)
 	if spec.id in ["library", "gallery"]:
 		for side in [-1, 1]:
-			for z in [1.0, 2.5, 4.0, 5.5]:
+			for step in range(floori(d / 1.5)):
+				var z := 1.0 + step * 1.5
 				var x: float = side * (w / 2 - 0.105)
 				for offset in [-0.58, 0.58]:
 					part(room, "PanelStile", Vector3(0.024, 0.68, 0.022), Vector3(x, 0.57, z + offset), wood)
@@ -186,18 +223,15 @@ func pendant(room: Node3D, pos: Vector3, color: Color) -> void:
 	light.shadow_enabled = true
 
 func table(room: Node3D, pos: Vector3, size: Vector2, mat: Material = wood) -> Node3D:
-	var node := Node3D.new()
-	node.name = "Worktable"
+	var node := movable(room, "Worktable", pos, 18.0)
 	node.add_to_group("room_work_surfaces")
-	room.add_child(node)
-	node.position = pos
 	part(node, "Top", Vector3(size.x, 0.09, size.y), Vector3(0, 0.84, 0), mat, true)
 	part(node, "Apron", Vector3(size.x - 0.08, 0.18, size.y - 0.08), Vector3(0, 0.72, 0), wood)
 	for x in [-1, 1]:
 		for z in [-1, 1]:
 			var leg = hall.lathe("TurnedLeg", [Vector2(0.035, 0), Vector2(0.05, 0.06), Vector2(0.029, 0.15), Vector2(0.04, 0.56), Vector2(0.062, 0.64), Vector2(0.045, 0.8)], mat, node)
 			leg.position = Vector3(x * (size.x / 2 - 0.11), 0, z * (size.y / 2 - 0.11))
-			leg.create_trimesh_collision()
+			node.shape(Vector3(0.1, 0.8, 0.1), leg.position + Vector3(0, 0.4, 0))
 	return node
 
 func artwork(room: Node3D, pos: Vector3, yaw: float, texture: String, size: Vector2) -> void:
@@ -212,35 +246,28 @@ func artwork(room: Node3D, pos: Vector3, yaw: float, texture: String, size: Vect
 	mesh_part(node, "Artwork", quad, Vector3(0, 0, 0.05), study.material(Color.WHITE, texture))
 
 func library(room: Node3D) -> void:
-	for z in [2.6, 4.8]:
-		prop(room, "wooden_bookshelf_worn", Vector3(-1.53, 0, z), PI / 2, 0.85)
-		for y in [0.38, 0.91, 1.44]: prop(room, "book_encyclopedia_set_01", Vector3(-1.28, y, z), PI / 2, 0.85)
-	var desk := table(room, Vector3(0.5, 0, 5.4), Vector2(1.95, 1.1))
-	prop(desk, "desk_lamp_arm_01", Vector3(0.72, 0.89, 0.15), PI)
-	prop(room, "dining_chair_02", Vector3(0.4, 0, 4.3), 0)
-	artwork(room, Vector3(1.79, 1.9, 3.3), -PI / 2, "res://art/fern.svg", Vector2(0.8, 1.2))
-	var rug = study.material(Color("623844"))
-	part(room, "ReadingRunner", Vector3(1.55, 0.012, 3.1), Vector3(0.25, 0.01, 2.8), rug)
-	for x in [-0.47, 0.97]: part(room, "RugBorder", Vector3(0.016, 0.003, 3), Vector3(x, 0.018, 2.8), brass)
+	preload("res://scripts/antique_library.gd").new().build(self, room)
 
 func atlas(room: Node3D) -> void:
-	artwork(room, Vector3(0, 1.98, 6.28), PI, "res://art/atlas.svg", Vector2(2.7, 1.45))
-	var desk := table(room, Vector3(0, 0, 5.1), Vector2(2.65, 1.25))
+	artwork(room, Vector3(0, 1.98, 12.68), PI, "res://art/atlas.svg", Vector2(2.7, 1.45))
+	var desk := table(room, Vector3(0, 0, 11.5), Vector2(2.65, 1.25))
 	# Open central table for application placement; a small chart sits flush.
 	var chart := part(desk, "Chart", Vector3(0.9, 0.004, 0.6), Vector3(-0.7, 0.891, 0), study.material(Color("c8ba8e")))
 	chart.rotation.y = 0.15
-	part(room, "FlatFileCase", Vector3(0.51, 1.19, 1.67), Vector3(1.5, 0.595, 2.7), hall.dark, true)
+	var cabinet := movable(room, "MapCabinet", Vector3(1.5, 0, 5.4), 20.0)
+	part(cabinet, "FlatFileCase", Vector3(0.51, 1.19, 1.67), Vector3(0, 0.595, 0), hall.dark, true)
 	for i in range(8):
-		part(room, "MapDrawer", Vector3(0.055, 0.12, 1.6), Vector3(1.22, 0.1 + i * 0.135, 2.7), wood, i == 0)
-		part(room, "DrawerPull", Vector3(0.035, 0.025, 0.17), Vector3(1.17, 0.12 + i * 0.135, 2.7), brass)
-	armillary(room, Vector3(-1.0, 0, 2.8), 0.46)
+		part(cabinet, "MapDrawer", Vector3(0.055, 0.12, 1.6), Vector3(-0.28, 0.1 + i * 0.135, 0), wood)
+		part(cabinet, "DrawerPull", Vector3(0.035, 0.025, 0.17), Vector3(-0.33, 0.12 + i * 0.135, 0), brass)
+	armillary(room, Vector3(-1.3, 0, 3.7), 0.46)
+	artwork(room, Vector3(-1.79, 1.9, 8.3), PI / 2, "res://art/atlas.svg", Vector2(1.8, 1.2))
 
 func garden(room: Node3D) -> void:
-	for spec in [[-1.2, 1.3, 1.0], [1.2, 2.5, 1.2], [-1.22, 4.4, 1.35], [1.12, 5.3, 1.0]]:
+	for spec in [[-1.2, 1.3, 1.0], [1.2, 4.2, 1.2], [-1.22, 7.4, 1.35], [1.12, 11.3, 1.0], [1.2, 7.5, 1.15], [-1.2, 10.7, 1.0]]:
 		prop(room, "potted_plant_02", Vector3(spec[0], 0, spec[1]), spec[1], spec[2])
-	table(room, Vector3(0.15, 0, 5.5), Vector2(1.8, 0.95), ivory)
-	artwork(room, Vector3(1.79, 1.9, 4), -PI / 2, "res://art/ginkgo.svg", Vector2(0.7, 1.0))
-	for z in [1.0, 3.0, 5.0]:
+	table(room, Vector3(0.15, 0, 11.5), Vector2(1.8, 0.95), ivory)
+	artwork(room, Vector3(1.79, 1.9, 9), -PI / 2, "res://art/ginkgo.svg", Vector2(0.7, 1.0))
+	for z in [1.0, 3.0, 5.0, 7.0, 9.0, 11.0]:
 		for x in [-1.79, 1.79]:
 			part(room, "Pilaster", Vector3(0.08, 2.9, 0.1), Vector3(x, 1.45, z), ivory)
 	# A shallow fountain bowl, raised rim and subtle concentric water rings.
@@ -254,24 +281,26 @@ func garden(room: Node3D) -> void:
 	for radius in [0.1, 0.21, 0.33]: ring(room, Vector3(-0.75, 0.805, 2.85), radius, 0.002, brass)
 
 func gallery(room: Node3D) -> void:
-	for z in [2.4, 4.8]:
-		var x := -1.05 if z < 3 else 1.05
-		part(room, "PlinthFoot", Vector3(0.77, 0.09, 0.77), Vector3(x, 0.045, z), ivory, true)
-		part(room, "Plinth", Vector3(0.62, 0.9, 0.62), Vector3(x, 0.54, z), ivory, true)
-		part(room, "PlinthCap", Vector3(0.72, 0.07, 0.72), Vector3(x, 1.025, z), ivory, true)
+	for z in [3.4, 8.8]:
+		var x := -1.2 if z < 5 else 1.2
+		var plinth := movable(room, "DisplayStand", Vector3(x, 0, z), 16.0)
+		part(plinth, "PlinthFoot", Vector3(0.77, 0.09, 0.77), Vector3(0, 0.045, 0), ivory, true)
+		part(plinth, "Plinth", Vector3(0.62, 0.9, 0.62), Vector3(0, 0.54, 0), ivory, true)
+		part(plinth, "PlinthCap", Vector3(0.72, 0.07, 0.72), Vector3(0, 1.025, 0), ivory, true)
 		var sculpture := Node3D.new()
-		room.add_child(sculpture)
-		sculpture.position = Vector3(x, 1.53, z)
-		if z < 3:
+		plinth.add_child(sculpture)
+		sculpture.position = Vector3(0, 1.53, 0)
+		plinth.shape(Vector3(0.76, 0.88, 0.76), Vector3(0, 1.52, 0))
+		if z < 5:
 			for i in range(3): ring(sculpture, Vector3.ZERO, 0.39, 0.035, brass, Vector3(PI / 2, i * PI / 3, 0))
 		else:
 			var mat = study.material(Color("b77c58"))
 			for i in range(9):
 				var disc := cylinder(sculpture, "SpiralStudy", Vector3(sin(i * 0.5) * 0.12, -0.4 + i * 0.095, cos(i * 0.5) * 0.12), 0.25 - i * 0.012, 0.08, mat)
 				disc.rotation.z = i * 0.04
-	artwork(room, Vector3(1.79, 1.95, 2.2), -PI / 2, "res://art/geometry.svg", Vector2(1.0, 1.35))
-	artwork(room, Vector3(-1.79, 1.95, 4.6), PI / 2, "res://art/geometry.svg", Vector2(1.0, 1.35))
-	table(room, Vector3(0, 0, 5.6), Vector2(2.45, 0.85), ivory)
+	artwork(room, Vector3(1.79, 1.95, 4.0), -PI / 2, "res://art/geometry.svg", Vector2(1.0, 1.35))
+	artwork(room, Vector3(-1.79, 1.95, 8.6), PI / 2, "res://art/geometry.svg", Vector2(1.0, 1.35))
+	table(room, Vector3(0, 0, 11.9), Vector2(2.45, 0.85), ivory)
 
 func workshop(room: Node3D) -> void:
 	var desk := table(room, Vector3(0, 0, 5.45), Vector2(2.95, 1.2), iron)
@@ -284,28 +313,32 @@ func workshop(room: Node3D) -> void:
 	for y in [0.3, 0.7, 1.1]:
 		part(room, "PartsShelf", Vector3(0.48, 0.06, 1.8), Vector3(1.5, y, 2.7), wood, true)
 		for z in [2.1, 2.5, 2.9, 3.3]:
-			part(room, "BinBase", Vector3(0.35, 0.025, 0.3), Vector3(1.5, y + 0.045, z), iron)
+			var bin := movable(room, "PartsBin", Vector3(1.5, y + 0.031, z), 2.0)
+			part(bin, "BinBase", Vector3(0.35, 0.025, 0.3), Vector3(0, 0.013, 0), iron, true)
 			for edge in [-1, 1]:
-				part(room, "BinSide", Vector3(0.35, 0.18, 0.018), Vector3(1.5, y + 0.13, z + edge * 0.145), iron)
-				part(room, "BinEnd", Vector3(0.018, 0.18, 0.3), Vector3(1.5 + edge * 0.17, y + 0.13, z), iron)
-			part(room, "BinLabel", Vector3(0.005, 0.04, 0.12), Vector3(1.31, y + 0.16, z), ivory)
+				part(bin, "BinSide", Vector3(0.35, 0.18, 0.018), Vector3(0, 0.1, edge * 0.145), iron, true)
+				part(bin, "BinEnd", Vector3(0.018, 0.18, 0.3), Vector3(edge * 0.17, 0.1, 0), iron, true)
+			part(bin, "BinLabel", Vector3(0.005, 0.04, 0.12), Vector3(-0.19, 0.13, 0), ivory)
+
 	prop(room, "dining_chair_02", Vector3(0.7, 0, 4.15), 0)
 
 func armillary(room: Node3D, pos: Vector3, radius: float) -> void:
-	var stand = hall.lathe("InstrumentPedestal", [Vector2(0, 0), Vector2(0.32, 0), Vector2(0.34, 0.07), Vector2(0.12, 0.13), Vector2(0.09, 0.73), Vector2(0.2, 0.82), Vector2(0, 0.85)], wood, room)
-	stand.position = pos
-	stand.create_trimesh_collision()
-	var center := pos + Vector3(0, 0.83 + radius, 0)
-	ring(room, center, radius, 0.016, brass, Vector3(PI / 2, 0, 0))
-	ring(room, center, radius * 0.94, 0.016, brass, Vector3(0, 0, 0.4))
-	ring(room, center, radius * 0.88, 0.012, brass, Vector3(PI / 2, 0.9, 0.5))
+	var instrument := movable(room, "Armillary", pos, 10.0)
+	instrument.shape(Vector3(0.64, 0.84, 0.64), Vector3(0, 0.42, 0))
+	instrument.shape(Vector3(radius * 2, radius * 2, radius * 2), Vector3(0, 0.83 + radius, 0))
+	var stand = hall.lathe("InstrumentPedestal", [Vector2(0, 0), Vector2(0.32, 0), Vector2(0.34, 0.07), Vector2(0.12, 0.13), Vector2(0.09, 0.73), Vector2(0.2, 0.82), Vector2(0, 0.85)], wood, instrument)
+	stand.position = Vector3.ZERO
+	var center := Vector3(0, 0.83 + radius, 0)
+	ring(instrument, center, radius, 0.016, brass, Vector3(PI / 2, 0, 0))
+	ring(instrument, center, radius * 0.94, 0.016, brass, Vector3(0, 0, 0.4))
+	ring(instrument, center, radius * 0.88, 0.012, brass, Vector3(PI / 2, 0.9, 0.5))
 	var globe := SphereMesh.new()
 	globe.radius = radius * 0.28
 	globe.height = radius * 0.56
-	mesh_part(room, "Globe", globe, center, study.material(Color("467b85")))
+	mesh_part(instrument, "Globe", globe, center, study.material(Color("467b85")))
 	for i in range(24):
 		var angle := TAU * i / 24
-		var tick := part(room, "MeridianMark", Vector3(0.013, 0.034, 0.02), center + Vector3(sin(angle), cos(angle), 0) * radius, ivory)
+		var tick := part(instrument, "MeridianMark", Vector3(0.013, 0.034, 0.02), center + Vector3(sin(angle), cos(angle), 0) * radius, ivory)
 		tick.rotation.z = -angle
 
 func observatory(room: Node3D) -> void:

@@ -29,3 +29,15 @@ packages and walnut/plaster photos are instanced from the verified local cache;
 no source downloads, new tools or dependencies were added. SVG sources/import
 settings and procedural sources are small tracked assets; generated caches and
 original large model packages remain Git-ignored.
+
+T62's library bookcases and banker lamp are original authored geometry in
+`antique_library.gd`, reusing those existing CC0 walnut and book assets.
+Design reference: the owner's [Emma Mason Bordeaux black bookcase set](https://emmamason.com/emma-mason-essentials-bordeaux-4pc-bookcase-set-in-black.html),
+whose cached retailer description specifies distressed black framing, honey-tone
+wood interiors, vertical plank backs and metal pipe supports. Direct access
+returned HTTP 403 on 2026-10-08; the description was available in search results.
+A [Martin Toulouse bookcase photograph](https://www.myfurnituremarket.com/martin-furniture-bookcase/imte4094-662/iteminformation.aspx)
+was inspected as a visually similar reference, not asserted to be the same item.
+Neither retailer photograph is embedded, redistributed or used as a texture.
+The eight movable bays use original dimensions, mouldings and arrangements;
+this is an interpretation of the antique style, not a product replica.

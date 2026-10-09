@@ -465,6 +465,18 @@ Do not launch another broad overnight range before the new boundaries pass.
   across bounded GPU runs; rendered views and frame timings inspected. See
   [handoff 33](handoffs/33-exploration-rooms.md) for evidence and timeout limits.
 
+- [x] **P21-T62 Lengthen rooms 1–4 and furnish a movable antique library.**
+  **Depends:** P21-T61. Owner request: double the first four rooms' depth,
+  redesign the library using the supplied black/honey-wood bookcase reference,
+  and make common furnishings in the added rooms use the existing carry/push
+  controls. Keep room structures fixed and existing study behavior intact.
+  **Acceptance:** inspected GPU views, traversal/carrying into extended halves,
+  pick/drag/rotate/cancel/drop/push across furniture types and rotated room
+  parents, scaled plant collision, assembled contents follow their furniture,
+  live applications land on and lose moved supports; import and regressions.
+  **Verified:** 2026-10-08–09, agent-run/injected and GPU-inspected, from
+  `58d2be5`; [handoff 34](handoffs/34-long-rooms-movable-library.md).
+
 - [ ] **P21-T00 Repair and verify the toolchain baseline.**
   **Depends:** none.
   **Reopened:** old version/download/checksum claims are not a reproducible toolchain. Local tools and a working import invocation are now identified.
