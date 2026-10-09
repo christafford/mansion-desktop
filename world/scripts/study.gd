@@ -176,6 +176,7 @@ func _ready() -> void:
 	lamp.light_energy = 0.3
 	lamp.omni_range = 1.7
 	add_child(lamp)
+	configure_shadow_distances()
 	var ui := CanvasLayer.new()
 	var help := Label.new()
 	help.text = "WASD move   •   Hold right mouse to look   •   Shift faster   •   Ctrl / M slow\nEnter use application   •   Ctrl+Alt+Esc return   •   Tab applications   •   Home reset view"
@@ -201,6 +202,17 @@ func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--capture="):
 			capture_views(arg.trim_prefix("--capture="))
+
+func configure_shadow_distances() -> void:
+	# A distant small room's lamps should not redraw their shadow maps while
+	# exploring the foyer. Keep nearby shadows, and fade rather than pop them.
+	for light in find_children("*", "Light3D", true, false):
+		if not light.shadow_enabled or light is DirectionalLight3D: continue
+		var radius: float = light.omni_range if light is OmniLight3D else light.spot_range
+		light.distance_fade_enabled = true
+		light.distance_fade_shadow = maxf(15.0, radius * 2.0)
+		light.distance_fade_begin = maxf(20.0, radius * 3.0)
+		light.distance_fade_length = 5.0
 
 func capture_views(directory: String) -> void:
 	DirAccess.make_dir_recursive_absolute(directory)

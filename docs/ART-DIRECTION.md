@@ -139,3 +139,14 @@ wing. Remove the interior partitions and all their trim; retain the paired floor
 finishes, wall palettes and garden glass roof as distinct zones within each
 space. Keep the central crossings open by moving bookcases, cabinets and wall
 art to surviving perimeter walls. The inventor's room remains separate.
+
+T64 replaces the observatory with a 20 × 24m grand foyer whose elliptical stone
+vault reaches 13m. The narrow, low hallway door provides a deliberate reveal:
+pale ashlar, colossal columns, a central 40-riser walnut/stone spiral, turned
+brass rails, a candle-ring chandelier, rose window and dark teal banners.
+A continuous gallery at 5.6m offers another usable application level; the stair
+and bridge are walkable with the ordinary controls. Lower arched recesses and
+upper opal glazing are decorative, with no additional room entrances yet.
+The architecture, stone shader and ornaments are original procedural geometry;
+tables reuse walnut and plants reuse the existing imported asset. Keep the
+foyer's fixed architecture separate from its movable console tables and plants.

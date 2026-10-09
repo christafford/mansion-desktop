@@ -8,7 +8,7 @@ const ROOMS := [
 	{"id": "garden", "open_side": 1, "title": "LIBRARY & WINTER GARDEN", "subtitle": "A place for growing ideas", "origin": Vector3(1.4, 0, 11), "yaw": PI / 2, "width": 3.8, "depth": 12.8, "color": "afbda0"},
 	{"id": "gallery", "open_side": -1, "entrance": false, "title": "04  THE CABINET GALLERY", "subtitle": "Look • compare • imagine", "origin": Vector3(-1.4, 0, 13), "yaw": -PI / 2, "width": 3.8, "depth": 12.8, "color": "74444c"},
 	{"id": "workshop", "title": "05  THE INVENTOR'S ROOM", "subtitle": "Build • test • rethink", "origin": Vector3(1.4, 0, 15), "yaw": PI / 2, "width": 3.8, "depth": 6.4, "color": "4e6171"},
-	{"id": "observatory", "title": "06  THE OBSERVATORY", "subtitle": "Make room for the big picture", "origin": Vector3(0, 0, 18.5), "yaw": 0.0, "width": 9.0, "depth": 8.0, "color": "283c59"}
+	{"id": "foyer", "title": "THE GRAND FOYER", "subtitle": "The mansion awaits", "origin": Vector3(0, 0, 18.5), "yaw": 0.0, "width": 20.0, "depth": 24.0, "height": 13.0, "color": "b5ae98"}
 ]
 static var volumes: Array[AABB] = []
 var study: Node3D
@@ -27,7 +27,7 @@ static func placement_volumes() -> Array[AABB]:
 		# the clear opening, not the decorative architrave.
 		if spec.get("entrance", true):
 			volumes.append(transform * AABB(Vector3(-0.87, 0.08, -1.3), Vector3(1.74, 2.38, 2.8)))
-		volumes.append(transform * AABB(Vector3(-spec.width / 2 + 0.14, 0.08, 0.14), Vector3(spec.width - 0.28, 3.0, spec.depth - 0.28)))
+		volumes.append(transform * AABB(Vector3(-spec.width / 2 + 0.14, 0.08, 0.14), Vector3(spec.width - 0.28, spec.get("height", 3.3) - 0.3, spec.depth - 0.28)))
 	# A single volume spans each opened wing; bounds must not clamp carried
 	# objects against the former partition while crossing between its two zones.
 	for pair in [[0, 2], [1, 3]]:
@@ -58,6 +58,9 @@ func _ready() -> void:
 		room.position = spec.origin
 		room.rotation.y = spec.yaw
 		rooms.append(room)
+		if spec.id == "foyer":
+			preload("res://scripts/grand_foyer.gd").new().build(self, room)
+			continue
 		shell(room, spec)
 		match spec.id:
 			"library": library(room)
@@ -65,7 +68,6 @@ func _ready() -> void:
 			"garden": garden(room)
 			"gallery": gallery(room)
 			"workshop": workshop(room)
-			"observatory": observatory(room)
 
 	# Children such as books/lamps are part of their furniture assembly. Measure
 	# after authoring completes so drag bounds cover the whole visible object.
@@ -156,7 +158,7 @@ func shell(room: Node3D, spec: Dictionary) -> void:
 	var d: float = spec.depth
 	var wall = study.material(Color(spec.color), "res://assets/textures/beige_wall_001_4k_jpg.jpg", 3)
 	var floor_mat = study.material(Color("ad9271"), "res://assets/textures/walnut_veneer_4k_jpg.jpg", 4)
-	if spec.id in ["garden", "gallery", "observatory"]:
+	if spec.id in ["garden", "gallery"]:
 		floor_mat = ShaderMaterial.new()
 		floor_mat.shader = preload("res://scripts/mansion_stone.gdshader")
 		floor_mat.set_shader_parameter("checker", spec.id == "garden")
@@ -188,7 +190,7 @@ func shell(room: Node3D, spec: Dictionary) -> void:
 		for z in range(floori(d) + 1): part(room, "RoofRafter", Vector3(w, 0.09, 0.055), Vector3(0, 3.26, z), iron)
 		for x in [-1.2, 0.0, 1.2]: part(room, "RoofRib", Vector3(0.06, 0.12, d), Vector3(x, 3.23, d / 2), iron)
 	else:
-		part(room, "Ceiling", Vector3(w, 0.12, d), Vector3(0, 3.36, d / 2), study.material(Color("202e44") if spec.id == "observatory" else Color("b9b7a5")), true)
+		part(room, "Ceiling", Vector3(w, 0.12, d), Vector3(0, 3.36, d / 2), study.material(Color("b9b7a5")), true)
 		for step in range(ceili(d / 2.2)):
 			var z := 1.1 + step * 2.2
 			part(room, "Coffer", Vector3(w, 0.11, 0.09), Vector3(0, 3.23, z), wood)
@@ -211,7 +213,6 @@ func shell(room: Node3D, spec: Dictionary) -> void:
 	if spec.id != "garden":
 		var light_color := Color("ffe0ad")
 		if spec.id in ["atlas", "workshop"]: light_color = Color("d1e3ed")
-		elif spec.id == "observatory": light_color = Color("b9d4ff")
 		for step in range(ceili(d / 3.2)):
 			pendant(room, Vector3(0, 2.87, (step + 0.5) * d / ceili(d / 3.2)), light_color)
 	if spec.id in ["library", "gallery"]:
@@ -363,21 +364,3 @@ func armillary(room: Node3D, pos: Vector3, radius: float) -> void:
 		var angle := TAU * i / 24
 		var tick := part(instrument, "MeridianMark", Vector3(0.013, 0.034, 0.02), center + Vector3(sin(angle), cos(angle), 0) * radius, ivory)
 		tick.rotation.z = -angle
-
-func observatory(room: Node3D) -> void:
-	armillary(room, Vector3(0, 0, 4.9), 0.95)
-	# Inlaid meridian circles lead around the central instrument, not through it.
-	for radius in [1.7, 1.76, 2.5]: ring(room, Vector3(0, 0.015, 4.9), radius, 0.012, brass)
-	for side in [-1, 1]:
-		table(room, Vector3(side * 2.9, 0, 5.7), Vector2(2.0, 1.2))
-		artwork(room, Vector3(side * 2.8, 2.03, 7.86), PI, "res://art/stars.svg", Vector2(2.05, 1.55))
-		prop(room, "dining_chair_02", Vector3(side * 2.9, 0, 4.5), 0)
-		pendant(room, Vector3(side * 2.8, 2.87, 5.7), Color("ffdeaa"))
-	# A star-chart ceiling is authored geometry, not a simulated exterior sky.
-	var star_mat = study.material(Color("ccddf3"))
-	star_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 6106
-	for i in range(90):
-		cylinder(room, "CeilingStar", Vector3(rng.randf_range(-4.1, 4.1), 3.285, rng.randf_range(0.4, 7.6)), rng.randf_range(0.007, 0.018), 0.006, star_mat)
-	for radius in [1.0, 1.8, 2.6]: ring(room, Vector3(0, 3.27, 4.5), radius, 0.008, brass)

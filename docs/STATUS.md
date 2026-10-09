@@ -1,7 +1,8 @@
 # Project status
 
-Current authority: merged exploration wings T63 verified 2026-10-09 from
-`95ea216`. Longer rooms and movable furnishings T62 were verified
+Current authority: grand foyer T64 verified 2026-10-09 from `817aff3`;
+merged exploration wings T63 verified 2026-10-09 from `95ea216`. Longer rooms
+and movable furnishings T62 were verified
 2026-10-08–09 from `58d2be5`. Exploration rooms T61 were verified 2026-10-08
 from `e1deea6`. Hallway T60 was verified 2026-10-08 from `139214d`.
 Furnishings, walls, instances and transitions T56–T59 were verified
@@ -17,14 +18,10 @@ is historical; its extension/visual completion claims were contradicted by tests
 
 ## Next task
 
-Continue the current owner request with **P21-T64: grand foyer and spiral stair**.
-T63 is verified: paired side rooms are joined, two entrances are sealed, remaining
-routes and movable furniture/live application behavior pass. See
-[handoff 35](handoffs/35-merged-exploration-wings.md).
-Replace the observatory with a large, tall foyer and walkable central spiral stair
-leading to an upper gallery. Collect rendered entry/stair/gallery evidence and
-verify actual ascent/descent, guarding and live application use on both levels.
-Continue through T64; the unrelated broader roadmap task below is out of scope.
+The owner's T63–T64 request is complete: paired wings are joined and the end
+room is a grand foyer with a usable spiral stair and upper gallery. See
+[handoff 36](handoffs/36-grand-foyer.md). This bounded task does not start a
+broader roadmap run; the next unrelated roadmap task remains below.
 
 **P21-T45: finish targeted client close and its lifecycle acceptance.**
 Recovery T36–T44 passes its bounded acceptance: furnished study, retained
@@ -110,18 +107,22 @@ graphical apps may fail; Flatpak launch is explicitly unavailable for now.
 
 Turn away from the desk to enter the hallway. The study doorway has no door.
 Two room doors remain on the left, one on the right, and one at the far end.
-The former first left and second right entrances are sealed. They swing open as you approach and stay open for the session.
+The former first left and second right entrances are sealed. Remaining doors
+swing open as you approach and stay open for the session.
 The surviving middle-left doorway leads into the combined library/winter garden;
 the first right doorway leads into the combined atlas/cabinet gallery. Both wings
 are 7.8m wide. The inventor's room stays separate at the last left doorway, with
-the observatory currently at the end (foyer replacement T64 is next). Each
-has distinct landmarks and worktables. Carry applications through the doorways
+the grand foyer at the end. The foyer measures 20 × 24m beneath a 13m stone
+vault, with a central 40-riser spiral stair leading to a gallery at 5.6m. Walk
+the stair with ordinary controls, including while carrying an application.
+Both levels have usable placement space; tables and plants remain movable.
+Carry applications through the doorways
 and release them onto tables or floors; launch new instances where you are
 working. Instances elsewhere retain their locations for this session.
-Rooms 01–04 are now twice as deep (12.8m); room 05 and the observatory retain
-their sizes. The library has black antique bookcases with warm wood interiors
+Rooms 01–04 are twice as deep (12.8m); room 05 retains its size. The library has
+black antique bookcases with warm wood interiors
 and a reading table with a green banker lamp. Common furnishings throughout
-these six rooms use the same drag/carry/rotate/push controls: bookcases, chairs,
+the mansion use the same drag/carry/rotate/push controls: bookcases, chairs,
 plants, worktables, cabinets, instruments, display stands and parts bins.
 Books, ornaments, table lamps and sculptures move with their furniture.
 Moving a supporting table away lets an application fall and remain usable.
@@ -129,6 +130,14 @@ Fixed architecture and mounted decorations stay fixed. Restart restoration
 remains unimplemented.
 
 ## Verified by automated checks in this recovery
+
+- T64 (2026-10-09, from `817aff3`): foyer entry, actual 40-riser ascent carrying
+  a live terminal, descent, inner/outer stair guards and gallery guard,
+  upper-floor landing/typing/return, real tread support and ground-floor table
+  use pass. Import/runtime, 20 Godot trials and 7 Python tests pass; five affected
+  trials pass again after final lighting tuning. Four GPU views inspected and
+  profiled. Occlusion, shared balusters and distance-faded local lights reduce
+  hidden rendering work; detailed evidence and limits are in handoff 36.
 
 - T63 (2026-10-09, from `95ea216`): four remaining door routes, two sealed
   entrances, twelve actual walking/live-panel crossings of removed partitions,

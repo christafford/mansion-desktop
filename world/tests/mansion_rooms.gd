@@ -47,8 +47,8 @@ func run() -> void:
 		check(not door.get_node("Hinge").opened, "Distant door opened without approach")
 	player.set_physics_process(false)
 	for room in spaces.rooms:
-		player.camera.global_position = room.to_global(Vector3(0.65 if room.name != "observatory" else 2.5, 1.7, 0.7))
-		player.camera.look_at(room.to_global(Vector3(0, 1.35, 4.8)))
+		player.camera.global_position = room.to_global(Vector3(0.65 if room.name != "foyer" else 2.5, 1.7, 0.7))
+		player.camera.look_at(room.to_global(Vector3(0, 5.2, 12) if room.name == "foyer" else Vector3(0, 1.35, 4.8)))
 		await capture(str(room.name) + ".png")
 		if "--rooms-profile" in OS.get_cmdline_user_args(): await profile_view(str(room.name))
 	player.camera.global_position = Vector3(0, 1.65, 5.7)
@@ -106,26 +106,26 @@ func run() -> void:
 		var side: float = -spec.get("open_side", -1)
 		await walk(player, room.to_global(Vector3(0, 0.05, 1.0)), spec.yaw - side * PI / 2, 145, true)
 		check(side * room.to_local(player.position).x < spec.width / 2 - 0.2, "Escaped outer wall " + spec.id)
-	# Move the real panel onto the observatory worktable and exercise focus/return.
-	var observatory: Node3D = spaces.rooms[5]
+	# Move the real panel onto the foyer worktable and exercise focus/return.
+	var foyer: Node3D = spaces.rooms[5]
 	panel.gravity_active = true
-	panel.position = observatory.to_global(Vector3(-2.9, 2.3, 5.7))
+	panel.position = foyer.to_global(Vector3(-8.5, 2.3, 5.7))
 	panel.rotation.y = PI
 	for frame in range(90): await physics_frame
-	check(absf(panel.position.y - (0.885 + panel.bounds.y / 2)) < 0.04, "Panel did not land on observatory table: " + str(panel.position))
-	player.position = observatory.to_global(Vector3(-2.9, 0.05, 3.4))
+	check(absf(panel.position.y - (0.885 + panel.bounds.y / 2)) < 0.04, "Panel did not land on foyer table: " + str(panel.position))
+	player.position = foyer.to_global(Vector3(-8.5, 0.05, 3.4))
 	player.rotation.y = PI
 	player.camera.rotation = Vector3.ZERO
 	await settle()
 	await activate(window)
-	await type_text("printf 'OBSERVATORY WORKSPACE\\n'; printf 'OBSERVATORY' > '" + marker.replace("'", "'\"'\"'") + "'\n")
+	await type_text("printf 'FOYER WORKSPACE\\n'; printf 'FOYER' > '" + marker.replace("'", "'\"'\"'") + "'\n")
 	await settle()
-	check(FileAccess.file_exists(marker) and FileAccess.get_file_as_string(marker) == "OBSERVATORY", "Real shell did not receive observatory typing")
+	check(FileAccess.file_exists(marker) and FileAccess.get_file_as_string(marker) == "FOYER", "Real shell did not receive foyer typing")
 	await return_to_room()
 	var placed: Vector3 = panel.position
-	await capture("observatory-application.png")
+	await capture("foyer-application.png")
 	# Launch another real instance in the library. It must appear here while the
-	# observatory's application keeps its identity and physical location.
+	# foyer's application keeps its identity and physical location.
 	var library: Node3D = spaces.rooms[0]
 	player.position = library.to_global(Vector3(0, 0.05, 1.3))
 	player.rotation.y = specs[0].yaw + PI
@@ -140,7 +140,7 @@ func run() -> void:
 	if app.active:
 		await type_text("printf 'LIBRARY WORKSPACE\\n'; printf 'LIBRARY' >> '" + marker.replace("'", "'\"'\"'") + "'\n")
 		await settle()
-		check(FileAccess.file_exists(marker) and FileAccess.get_file_as_string(marker) == "OBSERVATORYLIBRARY", "Independent library shell did not receive typing")
+		check(FileAccess.file_exists(marker) and FileAccess.get_file_as_string(marker) == "FOYERLIBRARY", "Independent library shell did not receive typing")
 		await return_to_room()
 		var second = objects.bindings.get(terminal.handle)
 		check(second != null and library.to_local(second.position).z > 0 and absf(library.to_local(second.position).x) < 1.8, "New application spawned outside library")

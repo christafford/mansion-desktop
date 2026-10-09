@@ -109,7 +109,7 @@ func run() -> void:
 		for y in [-0.51, 0.51]:
 			for z in [-0.04, 0.04]:
 				var corner: Vector3 = panel.to_global(Vector3(x, y, z))
-				check(absf(corner.x) <= 14.061 and corner.y <= 3.081 and corner.z <= 26.361, "Panel extends outside mansion")
+				check(absf(corner.x) <= 14.061 and corner.y <= 12.781 and corner.z <= 42.361, "Panel extends outside mansion")
 				var inside := false
 				for volume in volumes:
 					if volume.grow(0.001).has_point(corner): inside = true

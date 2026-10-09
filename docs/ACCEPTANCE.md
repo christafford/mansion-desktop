@@ -389,3 +389,20 @@ through the first right doorway. Walk and carry an application across each
 former dividing wall near the front, middle and back, in both directions.
 Check continuous floors, no invisible partition or detached wall decoration,
 and movable furniture. The inventor's room remains independent.
+
+## Grand foyer and spiral stair: T64
+
+The former observatory is replaced by the foyer. See
+[handoff 36](handoffs/36-grand-foyer.md) for agent-rendered/injected evidence.
+Human physical-input and comfort observation: **not observed**.
+
+Approach the end door and enter the tall stone foyer. Inspect the vaulted roof,
+central spiral, chandelier, rose window and gallery from both levels. Start the
+stair at its low front end, then follow it around to the upper landing and bridge.
+Walk against both stair rails and the gallery rail; they should stop you. Return
+down the same stair. Carry a live application while ascending, drop it on the
+upper gallery, double-click to type, and return with Ctrl+Alt+Escape. Leave that
+instance there while working at a ground-floor table. Check ordinary movement,
+clearance, text readability, appearance and comfort personally. Tables and plants
+remain movable. There are no further rooms beyond the foyer yet, and placements
+still last only for the current session.

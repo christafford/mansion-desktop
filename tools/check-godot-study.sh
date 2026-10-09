@@ -14,6 +14,7 @@ run() {
     local timeout_seconds=45
     if [[ "$label" == mansion-rooms ]]; then timeout_seconds=120; fi
     if [[ "$label" == merged-rooms ]]; then timeout_seconds=90; fi
+    if [[ "$label" == grand-foyer ]]; then timeout_seconds=180; fi
     if [[ "$label" == room-furniture ]]; then timeout_seconds=180; fi
     shift 2
     if ! timeout -k 2s "${timeout_seconds}s" "$GODOT" --path "$ROOT/world" --audio-driver Dummy --max-fps 60 "$@" > "$LOG_DIR/$label.log" 2>&1; then
@@ -35,6 +36,7 @@ run hallway 'HALLWAY_OK doors=4 lamps=6 failures=0' --script res://tests/hallway
 run mansion-rooms 'MANSION_ROOMS_OK rooms=6 entrances=4 failures=0' --script res://tests/mansion_rooms.gd
 run merged-rooms 'MERGED_ROOMS_OK crossings=12 sealed=2 failures=0' --script res://tests/merged_rooms.gd
 run room-furniture 'ROOM_FURNITURE_OK types=8 extended=4 failures=0' --script res://tests/room_furniture.gd
+run grand-foyer 'GRAND_FOYER_OK levels=2 risers=40 failures=0' --script res://tests/grand_foyer.gd
 run details 'STUDY_DETAILS_OK .*failures=0' --script res://tests/study_details.gd
 run color 'SCREEN_COLOR_OK failures=0' --script res://tests/screen_color.gd
 run terminal 'LIVE_TERMINAL_OK .*sessions=2 failures=0' --script res://tests/live_terminal.gd -- --terminal-demo

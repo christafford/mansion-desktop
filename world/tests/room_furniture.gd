@@ -122,7 +122,7 @@ func run() -> void:
 	var identity: String = panel.entity_id
 	for i in range(6):
 		var room: Node3D = spaces.rooms[i]
-		check(is_equal_approx(room.get_meta("depth"), 12.8 if i < 4 else (6.4 if i == 4 else 8.0)), "Incorrect room depth")
+		check(is_equal_approx(room.get_meta("depth"), 12.8 if i < 4 else (6.4 if i == 4 else 24.0)), "Incorrect room depth")
 		if i >= 4: continue
 		player.position = room.to_global(Vector3(0, 0.05, 6.5))
 		player.rotation = Vector3(0, spaces.ROOMS[i].yaw + PI, 0)

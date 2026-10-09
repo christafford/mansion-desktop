@@ -41,3 +41,9 @@ was inspected as a visually similar reference, not asserted to be the same item.
 Neither retailer photograph is embedded, redistributed or used as a texture.
 The eight movable bays use original dimensions, mouldings and arrangements;
 this is an interpretation of the antique style, not a product replica.
+
+The T64 grand foyer replaces the observatory. Its vault, columns, curved stair,
+balustrades, compass inlay, rose window, chandelier and banners are original
+procedural geometry in `world/scripts/grand_foyer.gd`; its ashlar/marble variation
+is the original `foyer_stone.gdshader`. Walnut and potted plants reuse the existing
+recorded assets. No new external asset or image-generation source was used.
