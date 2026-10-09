@@ -1,6 +1,7 @@
 # Project status
 
-Current authority: longer rooms and movable antique furnishings T62 verified
+Current authority: merged exploration wings T63 verified 2026-10-09 from
+`95ea216`. Longer rooms and movable furnishings T62 were verified
 2026-10-08–09 from `58d2be5`. Exploration rooms T61 were verified 2026-10-08
 from `e1deea6`. Hallway T60 was verified 2026-10-08 from `139214d`.
 Furnishings, walls, instances and transitions T56–T59 were verified
@@ -16,12 +17,14 @@ is historical; its extension/visual completion claims were contradicted by tests
 
 ## Next task
 
-The owner-requested T62 changes are complete: rooms 01–04 are twice as deep,
-the library has antique black/wood bookcases, and common furnishings in all six
-new rooms use shared carry/push controls. See
-[handoff 34](handoffs/34-long-rooms-movable-library.md) for captures, checks and
-limitations, including an intermittent transition-close test failure.
-The broader roadmap task below remains outside this bounded owner request.
+Continue the current owner request with **P21-T64: grand foyer and spiral stair**.
+T63 is verified: paired side rooms are joined, two entrances are sealed, remaining
+routes and movable furniture/live application behavior pass. See
+[handoff 35](handoffs/35-merged-exploration-wings.md).
+Replace the observatory with a large, tall foyer and walkable central spiral stair
+leading to an upper gallery. Collect rendered entry/stair/gallery evidence and
+verify actual ascent/descent, guarding and live application use on both levels.
+Continue through T64; the unrelated broader roadmap task below is out of scope.
 
 **P21-T45: finish targeted client close and its lifecycle acceptance.**
 Recovery T36–T44 passes its bounded acceptance: furnished study, retained
@@ -106,10 +109,12 @@ Verified clients are Weston terminal and Vim through Terminal=true. Other
 graphical apps may fail; Flatpak launch is explicitly unavailable for now.
 
 Turn away from the desk to enter the hallway. The study doorway has no door.
-Three room doors are on the left when entering, two on the right, and one at
-the far end. They swing open as you approach and stay open for the session.
-Along the hall: library (left), atlas room (right), winter garden (left), cabinet
-gallery (right), inventor's room (left), then the observatory at the end. Each
+Two room doors remain on the left, one on the right, and one at the far end.
+The former first left and second right entrances are sealed. They swing open as you approach and stay open for the session.
+The surviving middle-left doorway leads into the combined library/winter garden;
+the first right doorway leads into the combined atlas/cabinet gallery. Both wings
+are 7.8m wide. The inventor's room stays separate at the last left doorway, with
+the observatory currently at the end (foyer replacement T64 is next). Each
 has distinct landmarks and worktables. Carry applications through the doorways
 and release them onto tables or floors; launch new instances where you are
 working. Instances elsewhere retain their locations for this session.
@@ -124,6 +129,12 @@ Fixed architecture and mounted decorations stay fixed. Restart restoration
 remains unimplemented.
 
 ## Verified by automated checks in this recovery
+
+- T63 (2026-10-09, from `95ea216`): four remaining door routes, two sealed
+  entrances, twelve actual walking/live-panel crossings of removed partitions,
+  continuous floors, typing, eight furniture categories and four gravity support
+  regressions pass. Godot import/runtime passes; two GPU wing views inspected.
+  Stable zone IDs remain separate from physical room boundaries. See handoff 35.
 
 - T62 (2026-10-08–09, from `58d2be5`): four doubled room depths, antique library,
   eight furniture categories with drag/rotate/cancel/drop/walking-push behavior,

@@ -15,11 +15,11 @@ func build(builder: Node3D, room: Node3D) -> void:
 	oak = space.study.material(Color("b79563"), "res://assets/textures/walnut_veneer_4k_jpg.jpg")
 	oak.roughness = 0.6
 	worn = space.study.material(Color("60523a"))
-	# Two four-piece runs make a library walk, with room between and beside them
-	# to carry a whole bookcase out. Leave 6cm between crowns so the shared
+	# Two four-piece runs follow the outer wall, leaving the garden side open.
+	# Leave 6cm between crowns so the shared
 	# drag clearance permits pulling an individual bay out of the row.
 	for i in range(4):
-		bookcase(room, Vector3(-1.55, 0, 2.4 + i * 1.12), PI / 2, i)
+		bookcase(room, Vector3(1.55, 0, 2.4 + i * 1.12), -PI / 2, i)
 		bookcase(room, Vector3(1.55, 0, 6.7 + i * 1.12), -PI / 2, i + 4)
 	var desk = space.table(room, Vector3(0.3, 0, 11.7), Vector2(2.4, 1.15), ebony)
 	var leather = space.study.material(Color("294437"))
@@ -29,9 +29,9 @@ func build(builder: Node3D, room: Node3D) -> void:
 	for z in [-0.38, 0.38]: space.part(desk, "InsetBorder", Vector3(1.56, 0.003, 0.008), Vector3(0, 0.898, z), space.brass)
 	banker_lamp(desk, Vector3(0.87, 0.889, 0.17))
 	space.prop(room, "dining_chair_02", Vector3(0.3, 0, 10.6), 0)
-	space.prop(room, "dining_chair_02", Vector3(1.1, 0, 3.6), -0.55)
-	space.artwork(room, Vector3(1.79, 1.9, 4.6), -PI / 2, "res://art/fern.svg", Vector2(0.8, 1.2))
-	space.artwork(room, Vector3(-1.79, 1.9, 9.2), PI / 2, "res://art/atlas.svg", Vector2(1.6, 1.0))
+	space.prop(room, "dining_chair_02", Vector3(0.65, 0, 3.6), -0.55)
+	space.artwork(room, Vector3(1.79, 1.9, 1.2), -PI / 2, "res://art/fern.svg", Vector2(0.8, 1.2))
+	space.artwork(room, Vector3(-0.8, 1.9, 12.68), PI, "res://art/atlas.svg", Vector2(1.6, 1.0))
 	# A worn burgundy runner connects the entrance to the reading desk.
 	var carpet := ShaderMaterial.new()
 	carpet.shader = preload("res://scripts/hall_carpet.gdshader")

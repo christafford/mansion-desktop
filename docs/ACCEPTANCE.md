@@ -378,3 +378,14 @@ application on it: the unsupported application should fall and remain usable.
 Room 05 and the observatory retain their original dimensions but share the new
 furniture behavior. Fixed architecture and mounted decorations stay fixed;
 all moved placements remain session-local.
+
+## Merged exploration wings: T63
+
+See [handoff 35](handoffs/35-merged-exploration-wings.md) for agent-run/rendered
+evidence. Human physical-input observation: **not observed**. Facing away from
+the study, verify the former first left and second right entrances are sealed.
+Enter the library/garden through the second left doorway and the atlas/gallery
+through the first right doorway. Walk and carry an application across each
+former dividing wall near the front, middle and back, in both directions.
+Check continuous floors, no invisible partition or detached wall decoration,
+and movable furniture. The inventor's room remains independent.

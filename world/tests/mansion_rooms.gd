@@ -69,6 +69,7 @@ func run() -> void:
 	var identity: String = panel.entity_id
 	var door_names := ["LeftDoor7", "RightDoor9", "LeftDoor11", "RightDoor13", "LeftDoor15", "EndDoor"]
 	for i in range(specs.size()):
+		if not specs[i].get("entrance", true): continue
 		var room: Node3D = spaces.rooms[i]
 		var spec: Dictionary = specs[i]
 		player.release_pointer()
@@ -97,13 +98,14 @@ func run() -> void:
 		await walk(player, room.to_global(Vector3(0, 0.05, 2.0)), spec.yaw, 95)
 		check(room.to_local(player.position).z < -1.5, "Cannot leave " + spec.id)
 		check(hinge.progress == 1.0, "Door closed on return")
-		if i == 0:
+		if i == 2:
 			player.camera.look_at(room.to_global(Vector3(0, 1.5, 3)))
 			await capture("open-library-door.png")
 			player.camera.rotation = Vector3.ZERO
-		# Solid side boundary, away from the worktable.
-		await walk(player, room.to_global(Vector3(0, 0.05, 1.0)), spec.yaw - PI / 2, 145, true)
-		check(room.to_local(player.position).x < spec.width / 2 - 0.2, "Escaped side wall " + spec.id)
+		# Check the surviving outer wall; merged_rooms.gd crosses the open side.
+		var side: float = -spec.get("open_side", -1)
+		await walk(player, room.to_global(Vector3(0, 0.05, 1.0)), spec.yaw - side * PI / 2, 145, true)
+		check(side * room.to_local(player.position).x < spec.width / 2 - 0.2, "Escaped outer wall " + spec.id)
 	# Move the real panel onto the observatory worktable and exercise focus/return.
 	var observatory: Node3D = spaces.rooms[5]
 	panel.gravity_active = true
@@ -145,5 +147,5 @@ func run() -> void:
 		check(panel.position.distance_to(placed) < 0.02 and panel.entity_id == identity, "Other room's application moved or changed identity")
 		await capture("library-application.png")
 	await terminal.shutdown()
-	print("MANSION_ROOMS_OK rooms=6 failures=", failures)
+	print("MANSION_ROOMS_OK rooms=6 entrances=4 failures=", failures)
 	quit(1 if failures else 0)

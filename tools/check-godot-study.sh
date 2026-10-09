@@ -13,6 +13,7 @@ run() {
     local label=$1 marker=$2
     local timeout_seconds=45
     if [[ "$label" == mansion-rooms ]]; then timeout_seconds=120; fi
+    if [[ "$label" == merged-rooms ]]; then timeout_seconds=90; fi
     if [[ "$label" == room-furniture ]]; then timeout_seconds=180; fi
     shift 2
     if ! timeout -k 2s "${timeout_seconds}s" "$GODOT" --path "$ROOT/world" --audio-driver Dummy --max-fps 60 "$@" > "$LOG_DIR/$label.log" 2>&1; then
@@ -30,8 +31,9 @@ run keyboard-map 'KEYBOARD_MAP_OK cases=27 failures=0' --headless --script res:/
 run pointer-map 'POINTER_MAP_OK .*failures=0' --headless --script res://tests/pointer_map.gd
 run controller 'STUDY_SMOKE .*failures=0' --script res://tests/study_smoke.gd -- --no-terminal
 run furniture 'FURNITURE_DRAG_OK .*failures=0' --script res://tests/furniture_drag.gd -- --no-terminal
-run hallway 'HALLWAY_OK doors=6 lamps=6 failures=0' --script res://tests/hallway.gd
-run mansion-rooms 'MANSION_ROOMS_OK rooms=6 failures=0' --script res://tests/mansion_rooms.gd
+run hallway 'HALLWAY_OK doors=4 lamps=6 failures=0' --script res://tests/hallway.gd
+run mansion-rooms 'MANSION_ROOMS_OK rooms=6 entrances=4 failures=0' --script res://tests/mansion_rooms.gd
+run merged-rooms 'MERGED_ROOMS_OK crossings=12 sealed=2 failures=0' --script res://tests/merged_rooms.gd
 run room-furniture 'ROOM_FURNITURE_OK types=8 extended=4 failures=0' --script res://tests/room_furniture.gd
 run details 'STUDY_DETAILS_OK .*failures=0' --script res://tests/study_details.gd
 run color 'SCREEN_COLOR_OK failures=0' --script res://tests/screen_color.gd

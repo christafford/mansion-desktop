@@ -477,6 +477,25 @@ Do not launch another broad overnight range before the new boundaries pass.
   **Verified:** 2026-10-08–09, agent-run/injected and GPU-inspected, from
   `58d2be5`; [handoff 34](handoffs/34-long-rooms-movable-library.md).
 
+
+- [x] **P21-T63 Merge the paired left and right exploration rooms.**
+  **Depends:** P21-T62. Seal the first left and second right entrances, remove
+  each pair's dividing walls/trim, bridge floor/ceiling gaps and join placement
+  volumes. Retain the second left and first right entrances and movable contents.
+  **Acceptance:** rendered wide interiors, actual walking and live-application
+  carrying across both removed partitions, sealed-entrance collision, remaining
+  door routes, furniture/support regressions and Godot validation.
+  **Verified:** 2026-10-09, agent-run/injected and GPU-inspected from `95ea216`;
+  [handoff 35](handoffs/35-merged-exploration-wings.md).
+
+- [ ] **P21-T64 Build the grand foyer and central spiral staircase.**
+  **Depends:** P21-T63. Replace the observatory with a large, tall mansion foyer;
+  authored stone architecture, dramatic lighting, central spiral stair and upper
+  gallery. Keep this a self-contained destination without additional rooms.
+  **Acceptance:** inspected entrance/stair/gallery renders and measured frame
+  times; actual stair ascent/descent, guards, floor/wall collision, carried live
+  application placement/use on both levels; import and affected regressions.
+
 - [ ] **P21-T00 Repair and verify the toolchain baseline.**
   **Depends:** none.
   **Reopened:** old version/download/checksum claims are not a reproducible toolchain. Local tools and a working import invocation are now identified.

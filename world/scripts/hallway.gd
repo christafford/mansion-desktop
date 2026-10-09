@@ -40,8 +40,8 @@ func _ready() -> void:
 	build_shell()
 	entry_frame()
 	# Facing away from the study (+Z), left is +X and right is -X.
-	for z in [7.0, 11.0, 15.0]: door(Vector3(1.28, 0, z), -PI / 2, "LeftDoor%d" % z)
-	for z in [9.0, 13.0]: door(Vector3(-1.28, 0, z), PI / 2, "RightDoor%d" % z)
+	for z in [11.0, 15.0]: door(Vector3(1.28, 0, z), -PI / 2, "LeftDoor%d" % z)
+	for z in [9.0]: door(Vector3(-1.28, 0, z), PI / 2, "RightDoor%d" % z)
 	door(Vector3(0, 0, END - 0.09), PI, "EndDoor")
 	var rooms := preload("res://scripts/mansion_rooms.gd").new()
 	rooms.name = "Rooms"
@@ -56,9 +56,9 @@ func build_shell() -> void:
 	var plaster = study.material(Color("b6a48c"), "res://assets/textures/beige_wall_001_4k_jpg.jpg", 5)
 	part("Floor", Vector3(2.8, 0.16, 14.08), Vector3(0, -0.08, 11.46), dark, self, true)
 	part("Ceiling", Vector3(2.96, 0.12, 14.08), Vector3(0, 3.06, 11.46), study.material(Color("aa9b85")), self, true)
-	# Break the actual walls, wainscot and rails around all six entrances.
+	# Break the actual walls, wainscot and rails around the remaining entrances.
 	for x in [-1.4, 1.4]:
-		var openings := [7.0, 11.0, 15.0] if x > 0 else [9.0, 13.0]
+		var openings := [11.0, 15.0] if x > 0 else [9.0]
 		var start := START
 		for z in openings + [END + 0.9]:
 			var finish: float = z - 0.9

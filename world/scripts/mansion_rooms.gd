@@ -3,10 +3,10 @@
 extends Node3D
 
 const ROOMS := [
-	{"id": "library", "title": "01  THE LONG LIBRARY", "subtitle": "Read • collect • connect", "origin": Vector3(1.4, 0, 7), "yaw": PI / 2, "width": 3.8, "depth": 12.8, "color": "40574b"},
-	{"id": "atlas", "title": "02  THE ATLAS ROOM", "subtitle": "Explore • plan • discover", "origin": Vector3(-1.4, 0, 9), "yaw": -PI / 2, "width": 3.8, "depth": 12.8, "color": "657a76"},
-	{"id": "garden", "title": "03  THE WINTER GARDEN", "subtitle": "A place for growing ideas", "origin": Vector3(1.4, 0, 11), "yaw": PI / 2, "width": 3.8, "depth": 12.8, "color": "afbda0"},
-	{"id": "gallery", "title": "04  THE CABINET GALLERY", "subtitle": "Look • compare • imagine", "origin": Vector3(-1.4, 0, 13), "yaw": -PI / 2, "width": 3.8, "depth": 12.8, "color": "74444c"},
+	{"id": "library", "open_side": -1, "entrance": false, "title": "01  THE LONG LIBRARY", "subtitle": "Read • collect • connect", "origin": Vector3(1.4, 0, 7), "yaw": PI / 2, "width": 3.8, "depth": 12.8, "color": "40574b"},
+	{"id": "atlas", "open_side": 1, "title": "ATLAS & CABINET GALLERY", "subtitle": "Explore • plan • discover", "origin": Vector3(-1.4, 0, 9), "yaw": -PI / 2, "width": 3.8, "depth": 12.8, "color": "657a76"},
+	{"id": "garden", "open_side": 1, "title": "LIBRARY & WINTER GARDEN", "subtitle": "A place for growing ideas", "origin": Vector3(1.4, 0, 11), "yaw": PI / 2, "width": 3.8, "depth": 12.8, "color": "afbda0"},
+	{"id": "gallery", "open_side": -1, "entrance": false, "title": "04  THE CABINET GALLERY", "subtitle": "Look • compare • imagine", "origin": Vector3(-1.4, 0, 13), "yaw": -PI / 2, "width": 3.8, "depth": 12.8, "color": "74444c"},
 	{"id": "workshop", "title": "05  THE INVENTOR'S ROOM", "subtitle": "Build • test • rethink", "origin": Vector3(1.4, 0, 15), "yaw": PI / 2, "width": 3.8, "depth": 6.4, "color": "4e6171"},
 	{"id": "observatory", "title": "06  THE OBSERVATORY", "subtitle": "Make room for the big picture", "origin": Vector3(0, 0, 18.5), "yaw": 0.0, "width": 9.0, "depth": 8.0, "color": "283c59"}
 ]
@@ -25,8 +25,18 @@ static func placement_volumes() -> Array[AABB]:
 		var transform := Transform3D(Basis(Vector3.UP, spec.yaw), spec.origin)
 		# The threshold volume overlaps both the hall and room. Its width follows
 		# the clear opening, not the decorative architrave.
-		volumes.append(transform * AABB(Vector3(-0.87, 0.08, -1.3), Vector3(1.74, 2.38, 2.8)))
+		if spec.get("entrance", true):
+			volumes.append(transform * AABB(Vector3(-0.87, 0.08, -1.3), Vector3(1.74, 2.38, 2.8)))
 		volumes.append(transform * AABB(Vector3(-spec.width / 2 + 0.14, 0.08, 0.14), Vector3(spec.width - 0.28, 3.0, spec.depth - 0.28)))
+	# A single volume spans each opened wing; bounds must not clamp carried
+	# objects against the former partition while crossing between its two zones.
+	for pair in [[0, 2], [1, 3]]:
+		var first: Dictionary = ROOMS[pair[0]]
+		var second: Dictionary = ROOMS[pair[1]]
+		var local := AABB(Vector3(-1.76, 0.08, 0.14), Vector3(3.52, 3.0, 12.52))
+		var a: AABB = Transform3D(Basis(Vector3.UP, first.yaw), first.origin) * local
+		var b: AABB = Transform3D(Basis(Vector3.UP, second.yaw), second.origin) * local
+		volumes.append(a.merge(b))
 	return volumes
 
 func _ready() -> void:
@@ -153,20 +163,24 @@ func shell(room: Node3D, spec: Dictionary) -> void:
 		floor_mat.set_shader_parameter("base_color", Color("aea88c") if spec.id == "garden" else Color("393d45"))
 	part(room, "Floor", Vector3(w, 0.16, d + 0.2), Vector3(0, -0.08, d / 2), floor_mat, true)
 	for x in [-w / 2, w / 2]:
+		if signf(x) == spec.get("open_side", 0): continue
 		part(room, "SideWall", Vector3(0.16, 3.3, d), Vector3(x, 1.65, d / 2), wall, true)
 		part(room, "Skirting", Vector3(0.09, 0.19, d), Vector3(x - signf(x) * 0.1, 0.095, d / 2), wood)
 		part(room, "PictureRail", Vector3(0.06, 0.045, d), Vector3(x - signf(x) * 0.1, 2.72, d / 2), brass)
 		part(room, "Cornice", Vector3(0.16, 0.14, d), Vector3(x - signf(x) * 0.05, 3.14, d / 2), ivory)
 	part(room, "BackWall", Vector3(w, 3.3, 0.16), Vector3(0, 1.65, d), wall, true)
 	part(room, "BackSkirting", Vector3(w, 0.19, 0.09), Vector3(0, 0.095, d - 0.1), wood)
-	# The hallway owns the actual entrance wall and collision.
-	for x in [-1, 1]:
-		var width := (w - 1.8) / 2
-		part(room, "EntryReturn", Vector3(width, 3.3, 0.12), Vector3(x * (0.9 + width / 2), 1.65, 0), wall, true)
-		part(room, "InnerDoorFrame", Vector3(0.1, 2.53, 0.08), Vector3(x * 0.95, 1.265, 0.13), wood)
-	part(room, "InnerLintel", Vector3(2, 0.13, 0.08), Vector3(0, 2.55, 0.13), wood)
-	part(room, "Header", Vector3(1.8, 0.8, 0.12), Vector3(0, 2.9, 0), wall, true)
-	part(room, "Threshold", Vector3(1.8, 0.012, 0.24), Vector3(0, 0.006, 0), brass)
+	if spec.get("entrance", true):
+		# The hallway owns the actual entrance wall and collision.
+		for x in [-1, 1]:
+			var width := (w - 1.8) / 2
+			part(room, "EntryReturn", Vector3(width, 3.3, 0.12), Vector3(x * (0.9 + width / 2), 1.65, 0), wall, true)
+			part(room, "InnerDoorFrame", Vector3(0.1, 2.53, 0.08), Vector3(x * 0.95, 1.265, 0.13), wood)
+		part(room, "InnerLintel", Vector3(2, 0.13, 0.08), Vector3(0, 2.55, 0.13), wood)
+		part(room, "Header", Vector3(1.8, 0.8, 0.12), Vector3(0, 2.9, 0), wall, true)
+		part(room, "Threshold", Vector3(1.8, 0.012, 0.24), Vector3(0, 0.006, 0), brass)
+	else:
+		part(room, "SealedEntrance", Vector3(w, 3.3, 0.04), Vector3(0, 1.65, 0.1), wall, true)
 	if spec.id == "garden":
 		var glass = study.material(Color(0.58, 0.75, 0.74, 0.18))
 		glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -178,15 +192,22 @@ func shell(room: Node3D, spec: Dictionary) -> void:
 		for step in range(ceili(d / 2.2)):
 			var z := 1.1 + step * 2.2
 			part(room, "Coffer", Vector3(w, 0.11, 0.09), Vector3(0, 3.23, z), wood)
-	# Named plaques face into the hall; no extra key or modal UI to enter.
-	var sign_node := Node3D.new()
-	room.add_child(sign_node)
-	sign_node.position = Vector3(0, 2.84, -0.19)
-	sign_node.rotation.y = PI
-	part(sign_node, "Nameplate", Vector3(1.7, 0.28, 0.025), Vector3.ZERO, iron)
-	text(sign_node, spec.title, Vector3(0, 0, 0.02), 30, 0.0028)
-	# An inscription over the inner doorway also helps orient the return.
-	text(room, spec.subtitle, Vector3(0, 2.88, 0.14), 30, 0.0022)
+	if spec.has("open_side"):
+		var side: float = spec.open_side
+		part(room, "JoinedFloor", Vector3(0.1, 0.16, d + 0.2), Vector3(side * 1.95, -0.08, d / 2), floor_mat, true)
+		part(room, "JoinedCeiling", Vector3(0.1, 0.12, d), Vector3(side * 1.95, 3.36, d / 2), study.material(Color("b9b7a5")), true)
+		part(room, "JoinedBackWall", Vector3(0.1, 3.3, 0.16), Vector3(side * 1.95, 1.65, d), wall, true)
+		part(room, "JoinedFrontWall", Vector3(0.1, 3.3, 0.04), Vector3(side * 1.95, 1.65, 0.1), wall, true)
+	if spec.get("entrance", true):
+		# Named plaques face into the hall; no extra key or modal UI to enter.
+		var sign_node := Node3D.new()
+		room.add_child(sign_node)
+		sign_node.position = Vector3(0, 2.84, -0.19)
+		sign_node.rotation.y = PI
+		part(sign_node, "Nameplate", Vector3(1.7, 0.28, 0.025), Vector3.ZERO, iron)
+		text(sign_node, spec.title, Vector3(0, 0, 0.02), 30, 0.0028)
+		# An inscription over the inner doorway also helps orient the return.
+		text(room, spec.subtitle, Vector3(0, 2.88, 0.14), 30, 0.0022)
 	if spec.id != "garden":
 		var light_color := Color("ffe0ad")
 		if spec.id in ["atlas", "workshop"]: light_color = Color("d1e3ed")
@@ -195,6 +216,7 @@ func shell(room: Node3D, spec: Dictionary) -> void:
 			pendant(room, Vector3(0, 2.87, (step + 0.5) * d / ceili(d / 3.2)), light_color)
 	if spec.id in ["library", "gallery"]:
 		for side in [-1, 1]:
+			if side == spec.get("open_side", 0): continue
 			for step in range(floori(d / 1.5)):
 				var z := 1.0 + step * 1.5
 				var x: float = side * (w / 2 - 0.105)
@@ -254,7 +276,8 @@ func atlas(room: Node3D) -> void:
 	# Open central table for application placement; a small chart sits flush.
 	var chart := part(desk, "Chart", Vector3(0.9, 0.004, 0.6), Vector3(-0.7, 0.891, 0), study.material(Color("c8ba8e")))
 	chart.rotation.y = 0.15
-	var cabinet := movable(room, "MapCabinet", Vector3(1.5, 0, 5.4), 20.0)
+	var cabinet := movable(room, "MapCabinet", Vector3(-1.5, 0, 5.4), 20.0)
+	cabinet.rotation.y = PI
 	part(cabinet, "FlatFileCase", Vector3(0.51, 1.19, 1.67), Vector3(0, 0.595, 0), hall.dark, true)
 	for i in range(8):
 		part(cabinet, "MapDrawer", Vector3(0.055, 0.12, 1.6), Vector3(-0.28, 0.1 + i * 0.135, 0), wood)
@@ -266,9 +289,9 @@ func garden(room: Node3D) -> void:
 	for spec in [[-1.2, 1.3, 1.0], [1.2, 4.2, 1.2], [-1.22, 7.4, 1.35], [1.12, 11.3, 1.0], [1.2, 7.5, 1.15], [-1.2, 10.7, 1.0]]:
 		prop(room, "potted_plant_02", Vector3(spec[0], 0, spec[1]), spec[1], spec[2])
 	table(room, Vector3(0.15, 0, 11.5), Vector2(1.8, 0.95), ivory)
-	artwork(room, Vector3(1.79, 1.9, 9), -PI / 2, "res://art/ginkgo.svg", Vector2(0.7, 1.0))
+	artwork(room, Vector3(-1.79, 1.9, 9), PI / 2, "res://art/ginkgo.svg", Vector2(0.7, 1.0))
 	for z in [1.0, 3.0, 5.0, 7.0, 9.0, 11.0]:
-		for x in [-1.79, 1.79]:
+		for x in [-1.79]:
 			part(room, "Pilaster", Vector3(0.08, 2.9, 0.1), Vector3(x, 1.45, z), ivory)
 	# A shallow fountain bowl, raised rim and subtle concentric water rings.
 	var bowl = hall.lathe("Fountain", [Vector2(0, 0), Vector2(0.28, 0), Vector2(0.3, 0.1), Vector2(0.13, 0.25), Vector2(0.16, 0.65), Vector2(0.47, 0.78), Vector2(0.5, 0.86), Vector2(0.46, 0.89), Vector2(0.41, 0.79), Vector2(0, 0.76)], ivory, room)
@@ -299,7 +322,7 @@ func gallery(room: Node3D) -> void:
 				var disc := cylinder(sculpture, "SpiralStudy", Vector3(sin(i * 0.5) * 0.12, -0.4 + i * 0.095, cos(i * 0.5) * 0.12), 0.25 - i * 0.012, 0.08, mat)
 				disc.rotation.z = i * 0.04
 	artwork(room, Vector3(1.79, 1.95, 4.0), -PI / 2, "res://art/geometry.svg", Vector2(1.0, 1.35))
-	artwork(room, Vector3(-1.79, 1.95, 8.6), PI / 2, "res://art/geometry.svg", Vector2(1.0, 1.35))
+	artwork(room, Vector3(-0.8, 1.95, 12.68), PI, "res://art/geometry.svg", Vector2(1.0, 1.35))
 	table(room, Vector3(0, 0, 11.9), Vector2(2.45, 0.85), ivory)
 
 func workshop(room: Node3D) -> void:

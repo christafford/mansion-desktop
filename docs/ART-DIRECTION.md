@@ -132,3 +132,10 @@ lamp. See the [reference/provenance record](../world/art/README.md).
 Common furniture throughout the six new rooms moves with the shared carry/push
 controls. Books, lamps and sculptures stay with their supporting assemblies;
 mounted art, toolboards, shelving, lights and the garden fountain stay fixed.
+
+T63 joins the library/garden and atlas/gallery pairs into 7.8m-wide wings.
+Close the former first-left and second-right entrances and use one entrance per
+wing. Remove the interior partitions and all their trim; retain the paired floor
+finishes, wall palettes and garden glass roof as distinct zones within each
+space. Keep the central crossings open by moving bookcases, cabinets and wall
+art to surviving perimeter walls. The inventor's room remains separate.

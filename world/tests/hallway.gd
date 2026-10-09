@@ -36,13 +36,13 @@ func run() -> void:
 		quit(1)
 		return
 	var doors := get_nodes_in_group("hallway_doors")
-	check(doors.size() == 6, "Expected six closed doors")
+	check(doors.size() == 4, "Expected four remaining doors")
 	var left := 0
 	var right := 0
 	for door in doors:
 		if door.position.x > 0.5: left += 1
 		elif door.position.x < -0.5: right += 1
-	check(left == 3 and right == 2 and hall.has_node("EndDoor"), "Door distribution differs from request")
+	check(left == 2 and right == 1 and hall.has_node("EndDoor"), "Door distribution differs from request")
 	check(hall.lights.size() == 6, "Missing oil lamps")
 	for light in hall.lights: check(light.shadow_enabled, "Oil lamp lacks shadows")
 	player.set_physics_process(false)
@@ -52,7 +52,7 @@ func run() -> void:
 		["gallery", Vector3(0, 1.65, 5.6), Vector3(0, 1.55, 18.4)],
 		["return", Vector3(0, 1.65, 17.2), Vector3(0, 1.5, 0)],
 		["oil-lamp", Vector3(0.45, 1.77, 8.3), Vector3(1.0, 1.65, 9)],
-		["door", Vector3(-0.2, 1.65, 6.2), Vector3(1.3, 1.25, 7)]
+		["door", Vector3(-0.2, 1.65, 10.2), Vector3(1.3, 1.25, 11)]
 	]
 	for spec in views:
 		player.camera.global_position = spec[1]
@@ -115,5 +115,5 @@ func run() -> void:
 					if volume.grow(0.001).has_point(corner): inside = true
 				check(inside, "Panel corner is outside every actual room/hall volume")
 	await terminal.shutdown()
-	print("HALLWAY_OK doors=6 lamps=6 failures=", failures)
+	print("HALLWAY_OK doors=4 lamps=6 failures=", failures)
 	quit(1 if failures else 0)
