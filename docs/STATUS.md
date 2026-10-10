@@ -1,12 +1,34 @@
-# Current direction — Elsewhere (2026-10-09)
+# Current direction — Elsewhere (2026-10-10)
 
 The owner has renamed the product **Elsewhere** and approved a fresh physical
 world beginning at a village square. Project 22 and
 [Decision 08](decisions/08-elsewhere-village-world.md) supersede the Project 21
 study environment and expansion schedule. All Project 21 progress below is
 historical and should remain available as engineering evidence, not as the
-current build queue. **P22-T01 is complete; no further task is authorized.**
-P22-T02 is the next planned task and requires a separate explicit owner request.
+current build queue. **P22-T01 and P22-T02 are complete; no further task is authorized.**
+P22-T03 is the next planned task and requires a separate explicit owner request.
+
+## P22-T02 verified (2026-10-10)
+
+From `7d74847`, the default is a minimal outdoor startup: flat ground, visible
+solid boundaries, safe spawn, sky and sunlight. It reuses DesktopRuntime and
+the existing controller, including the owner's jump. Home uses scene-authored
+spawn coordinates; the old study is preserved unchanged as `scenes/study.tscn`.
+Study-specific tests select that retained scene deliberately; general desktop
+checks exercise the outdoor default. See [handoff 40](handoffs/40-outdoor-startup.md).
+
+Verified by automated checks: import/default startup, explicit no-terminal
+startup, headless and graphical outdoor movement/jump/collision/live-client
+trials, all 21 existing Godot regressions, real Chrome, 8 Python tests and 62
+plugin/parser tests. An initial Chrome test readiness race was addressed by
+waiting for its page's loaded/focused input; existing assertions remain intact.
+No native source changed, and no new native regression-suite run is claimed.
+
+Agent-observed actual renders show the outdoor arrival, walkable ground and
+boundaries, native terminal output, selected text and real Chrome content/world
+return. Not verified by a person: physical-input feel or comfort. This is the
+minimal startup acceptance only; village art and P22-T06's comprehensive outdoor
+application integration remain unimplemented/unaccepted. P22-T03 is unstarted.
 
 ## P22-T01 verified (2026-10-09)
 
@@ -86,17 +108,29 @@ process termination as a window-close implementation. Cursor images, clipboard
 and popup menus remain unsupported; carry these into concrete follow-up tasks.
 Broader T00–T19 gates remain unchecked until their full evidence exists.
 
-## Run the visible Godot frontend
+## Run the current outdoor frontend
 
 ```sh
-python3 world/tools/prepare_study_assets.py
 tools/validate-godot-project.sh
 tools/run-godot.sh --audio-driver Dummy
 ```
 
+The default is the minimal outdoor startup. No study assets are needed for it.
+See [current controls and checks](../world/README.md). The following retained
+study instructions and detailed Project 21 evidence describe the old world.
+
+## Run the retained study explicitly
+
+```sh
+python3 world/tools/prepare_study_assets.py
+tools/validate-godot-project.sh
+tools/run-godot.sh --audio-driver Dummy res://scenes/study.tscn
+```
+
 Uses the existing local engine and downloaded source cache. Missing/corrupt model
 dependencies fail explicitly. Fresh-machine bootstrap remains unfinished.
-`tools/run-godot.sh --editor` opens the editor. The default runs the study.
+`tools/run-godot.sh --editor` opens the editor. The study requires the explicit
+scene argument above; the default runs outdoors.
 The launcher builds/stages the standard native extension and starts installed
 `/usr/bin/weston-terminal` with `/bin/sh`. For a changing clock/counter, use
 `tools/run-godot.sh --audio-driver Dummy -- --terminal-demo`.

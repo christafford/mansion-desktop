@@ -1,6 +1,12 @@
 # Godot and the existing Wayland compositor
 
-Target design under Decision 06; implement and verify through Project 21.
+Current startup: P22-T02 loads a minimal outdoor scene using the extracted
+desktop runtime. The selected-preview mesh remains a hidden texture adapter;
+live application panels provide the visible world presentation. The study is
+retained in `scenes/study.tscn` for explicit launch and geometry regressions.
+See [the outdoor startup handoff](handoffs/40-outdoor-startup.md).
+
+The following records the integration developed under Decision 06 / Project 21.
 The Godot study now renders real furniture and supports movement (P21-T36).
 The legacy `--room-camera` executable remains separate. The experimental
 compositor addon is preserved but ignored because it crashes during registration.

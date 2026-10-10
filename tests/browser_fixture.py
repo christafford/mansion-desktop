@@ -18,7 +18,7 @@ footer{margin-top:1100px;padding:30px;background:#253338;color:white}</style>
 <footer>End of the local scrolling test page.</footer>
 <script>
 let clicks=0, trusted=false;
-function report(){fetch('/report',{method:'POST',body:JSON.stringify({value:note.value,clicks,trusted,width:innerWidth,height:innerHeight,scroll:scrollY})});}
+function report(){fetch('/report',{method:'POST',body:JSON.stringify({value:note.value,ready:document.readyState==='complete'&&document.activeElement===note,clicks,trusted,width:innerWidth,height:innerHeight,scroll:scrollY})});}
 note.oninput=e=>{trusted=e.isTrusted;report()};
 save.onclick=e=>{clicks++;trusted=e.isTrusted;result.textContent='Saved: '+note.value;report()};
 onresize=report;onscroll=report;onload=()=>{note.focus();report()};

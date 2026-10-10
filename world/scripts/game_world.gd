@@ -1,4 +1,4 @@
-## First-person study navigation, suspended while application mode owns input.
+## First-person world navigation, suspended while application mode owns input.
 extends CharacterBody3D
 
 const WALK_SPEED := 2.4
@@ -8,6 +8,9 @@ const JUMP_VELOCITY := 4.5
 const LOOK_SENSITIVITY := 0.002
 const DEFAULT_PITCH := -0.08
 const SPAWN := Vector3(2.4, 0.05, 3.1)
+@export var spawn_position := SPAWN
+@export var spawn_yaw := 0.38
+@export var spawn_pitch := DEFAULT_PITCH
 var slow_walk := false
 var application_mode := false
 var _held: Dictionary = {}
@@ -20,9 +23,9 @@ func _ready() -> void:
 
 func return_to_spawn() -> void:
 	release_pointer()
-	position = SPAWN
-	rotation = Vector3(0, 0.38, 0)
-	camera.rotation = Vector3(DEFAULT_PITCH, 0, 0)
+	position = spawn_position
+	rotation = Vector3(0, spawn_yaw, 0)
+	camera.rotation = Vector3(spawn_pitch, 0, 0)
 
 func stop_looking() -> void:
 	# Releasing the mouse changes input ownership, never the viewing direction.

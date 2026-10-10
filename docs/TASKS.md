@@ -32,7 +32,7 @@ when its own acceptance is genuinely observed. Record blockers honestly.
   before/after GPU captures inspected. See
   [handoff 39](handoffs/39-desktop-runtime-extraction.md).
 
-- [ ] **P22-T02 Introduce minimal outdoor Godot startup scene.**
+- [x] **P22-T02 Introduce minimal outdoor Godot startup scene.**
   **Depends:** P22-T01. Replace active study geometry with a simple walkable
   outdoor scene, collision, safe spawn and sky/light; reuse the extracted runtime
   and player controller. Retain legacy geometry/scripts as reversible historical
@@ -40,6 +40,11 @@ when its own acceptance is genuinely observed. Record blockers honestly.
   **Acceptance:** new default scene boots, moves and collides, has no active
   study geometry, initializes desktop runtime without errors, and documents
   validated tests; no claim of polished art or comprehensive app integration.
+  Completed 2026-10-10 from `7d74847`; new outdoor default and configurable
+  safe spawn, with the former study retained explicitly. Headless/graphical
+  outdoor trials, all 21 existing Godot trials, real Chrome, 8 Python tests
+  and 62 parser/plugin tests pass; actual GPU renders inspected. See
+  [handoff 40](handoffs/40-outdoor-startup.md). P22-T03 is not started.
 
 - [ ] **P22-T03 Author compact village landscape and circulation.**
   **Depends:** P22-T02. Establish a navigable 70–100 m *approximate* first map,

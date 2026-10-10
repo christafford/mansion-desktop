@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Rendered study/controller and real terminal output checks; requires a display.
+# Retained study geometry plus current-default desktop regressions; needs a display.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 GODOT="${GODOT_BINARY:-$ROOT/tools/Godot_v4.7.2-stable_linux.x86_64}"

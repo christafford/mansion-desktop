@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Elsewhere — Run the Godot world frontend.
-# Launch the study. The legacy C++ executable remains a separate frontend.
+# Launch the outdoor startup. The legacy C++ executable remains separate.
 #
 # Usage:
-#   tools/run-godot.sh                  # run the study
+#   tools/run-godot.sh                  # run the outdoor startup
+#   tools/run-godot.sh res://scenes/study.tscn  # retained study (requires assets)
 #   tools/run-godot.sh --editor         # open the editor
 #   tools/run-godot.sh --headless       # run without GUI (for CI)
 #

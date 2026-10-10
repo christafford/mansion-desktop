@@ -1,20 +1,123 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=15 format=3]
 
-[ext_resource type="Script" path="res://scripts/study.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/outdoor.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/game_world.gd" id="2"]
 [ext_resource type="Script" path="res://scripts/desktop_runtime.gd" id="3"]
+
 [sub_resource type="CapsuleShape3D" id="player_shape"]
 radius = 0.22
 height = 1.65
 
-[node name="Study" type="Node3D"]
+[sub_resource type="StandardMaterial3D" id="ground_material"]
+albedo_color = Color(0.3, 0.39, 0.24, 1)
+roughness = 0.95
+
+[sub_resource type="BoxMesh" id="ground_mesh"]
+material = SubResource("ground_material")
+size = Vector3(24.6, 0.3, 24.6)
+
+[sub_resource type="BoxShape3D" id="ground_shape"]
+size = Vector3(24.6, 0.3, 24.6)
+
+[sub_resource type="StandardMaterial3D" id="boundary_material"]
+albedo_color = Color(0.42, 0.45, 0.43, 1)
+roughness = 0.9
+
+[sub_resource type="BoxMesh" id="boundary_mesh"]
+material = SubResource("boundary_material")
+size = Vector3(24.6, 1.4, 0.3)
+
+[sub_resource type="BoxShape3D" id="boundary_shape"]
+size = Vector3(24.6, 1.4, 0.3)
+
+[sub_resource type="ProceduralSkyMaterial" id="sky_material"]
+sky_top_color = Color(0.25, 0.45, 0.68, 1)
+sky_horizon_color = Color(0.72, 0.81, 0.87, 1)
+ground_bottom_color = Color(0.22, 0.28, 0.25, 1)
+ground_horizon_color = Color(0.72, 0.81, 0.87, 1)
+
+[sub_resource type="Sky" id="sky"]
+sky_material = SubResource("sky_material")
+
+[sub_resource type="Environment" id="environment"]
+background_mode = 2
+sky = SubResource("sky")
+ambient_light_source = 2
+ambient_light_color = Color(0.78, 0.83, 0.91, 1)
+ambient_light_energy = 0.4
+tonemap_mode = 2
+tonemap_exposure = 1.0
+tonemap_white = 1.0
+
+[sub_resource type="QuadMesh" id="selected_mesh"]
+size = Vector2(0.885, 0.495)
+
+[node name="Outdoor" type="Node3D"]
 script = ExtResource("1")
+
+[node name="Ground" type="StaticBody3D" parent="."]
+position = Vector3(0, -0.15, 0)
+
+[node name="Mesh" type="MeshInstance3D" parent="Ground"]
+mesh = SubResource("ground_mesh")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Ground"]
+shape = SubResource("ground_shape")
+
+[node name="BoundaryNorth" type="StaticBody3D" parent="."]
+position = Vector3(0, 0.7, -12)
+
+[node name="Mesh" type="MeshInstance3D" parent="BoundaryNorth"]
+mesh = SubResource("boundary_mesh")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="BoundaryNorth"]
+shape = SubResource("boundary_shape")
+
+[node name="BoundarySouth" type="StaticBody3D" parent="."]
+position = Vector3(0, 0.7, 12)
+
+[node name="Mesh" type="MeshInstance3D" parent="BoundarySouth"]
+mesh = SubResource("boundary_mesh")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="BoundarySouth"]
+shape = SubResource("boundary_shape")
+
+[node name="BoundaryEast" type="StaticBody3D" parent="."]
+position = Vector3(12, 0.7, 0)
+rotation = Vector3(0, 1.5707963, 0)
+
+[node name="Mesh" type="MeshInstance3D" parent="BoundaryEast"]
+mesh = SubResource("boundary_mesh")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="BoundaryEast"]
+shape = SubResource("boundary_shape")
+
+[node name="BoundaryWest" type="StaticBody3D" parent="."]
+position = Vector3(-12, 0.7, 0)
+rotation = Vector3(0, 1.5707963, 0)
+
+[node name="Mesh" type="MeshInstance3D" parent="BoundaryWest"]
+mesh = SubResource("boundary_mesh")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="BoundaryWest"]
+shape = SubResource("boundary_shape")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("environment")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-40, -35, 0)
+light_color = Color(1, 0.93, 0.82, 1)
+light_energy = 1.0
+shadow_enabled = true
 
 [node name="Player" type="CharacterBody3D" parent="."]
 script = ExtResource("2")
 floor_snap_length = 0.2
 collision_layer = 2
 collision_mask = 13
+spawn_position = Vector3(0, 0.05, 5)
+spawn_yaw = 0.0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Player"]
 position = Vector3(0, 0.825, 0)
@@ -25,6 +128,19 @@ position = Vector3(0, 1.6, 0)
 current = true
 fov = 70.0
 near = 0.05
+
+[node name="SelectedPreview" type="Node3D" parent="."]
+visible = false
+
+[node name="Screen" type="MeshInstance3D" parent="SelectedPreview"]
+visible = false
+mesh = SubResource("selected_mesh")
+
+[node name="ApplicationStatus" type="Label3D" parent="."]
+position = Vector3(0, 1.5, 2.6)
+text = "Starting terminal…"
+font_size = 32
+pixel_size = 0.002
 
 [node name="DesktopRuntime" type="Node" parent="."]
 script = ExtResource("3")

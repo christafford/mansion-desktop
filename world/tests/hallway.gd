@@ -16,7 +16,7 @@ func walk(player: Node, position: Vector3, yaw: float, frames: int, fast := fals
 func run() -> void:
 	output_dir = ProjectSettings.globalize_path("res://../.tools/hallway-test")
 	DirAccess.make_dir_recursive_absolute(output_dir)
-	study = load("res://scenes/main.tscn").instantiate()
+	study = load("res://scenes/study.tscn").instantiate()
 	root.add_child(study)
 	current_scene = study
 	terminal = study.terminal_screen

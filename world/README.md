@@ -1,83 +1,91 @@
-# Godot study frontend
+# Godot world frontend
 
-The study renders six imported Poly Haven furniture models, a textured room,
-lighting and a collision-based first-person controller. The monitor displays
-live output from a real Weston terminal through the retained C++ Wayland core.
-Enter opens a flat application view with real keyboard delivery; Ctrl+Alt+Escape
-returns to the room. Pointer delivery, resize and UI close/relaunch remain open.
+The default scene is the **P22-T02 minimal outdoor startup**: flat walkable
+24m ground, visible solid boundaries, a safe spawn, sky and sunlight. It reuses
+the player controller and desktop runtime. The existing real Weston terminal
+opens as a live world panel. This is a startup foundation, not the authored
+village, polished art or the P22-T06 outdoor application-integration gate.
 
-From the repository root, using the existing local tool/cache:
+From the repository root, using the existing pinned tools:
 
 ```sh
-python3 world/tools/prepare_study_assets.py
 tools/validate-godot-project.sh
 tools/run-godot.sh --audio-driver Dummy
 ```
 
-The preparation step verifies model/dependency SHA-256 values and copies complete
-source glTF packages into the import directory. Missing or corrupt dependencies
-fail explicitly. It does not download missing assets. Fresh-machine tool and
-asset bootstrap remains unfinished; see [status](../docs/STATUS.md).
+No study assets are needed by the default scene. The launcher builds and stages
+`addons/elsewhere_runtime/` using the repository's godot-cpp checkout and C++
+build dependencies. Godot uses Compatibility/OpenGL. `/usr/bin/weston-terminal`
+starts `/bin/sh` on the private compositor socket, with isolated configuration,
+prompt and repository-local shell history. A missing terminal is an explicit
+error, with no simulated fallback. Fresh-machine bootstrap remains unfinished.
 
-`tools/run-godot.sh --editor` opens the editor. The default command runs the
-study. `build/elsewhere --room-camera` is the separate legacy renderer.
-Godot uses the Compatibility/OpenGL renderer, not Vulkan.
-
-The launcher builds and stages the recovered standard GDExtension before opening
-Godot. It needs the local godot-cpp checkout and existing C++ build dependencies.
-`/usr/bin/weston-terminal` (tested: Weston 15.0.1) starts `/bin/sh` on the private
-socket, using isolated configuration, prompt and repository-local shell history.
-Weston starts the shell in your home directory. Missing terminals produce an explicit
-error; there is no simulated fallback. For visibly changing output, run:
+`tools/run-godot.sh --editor` opens the editor. `build/elsewhere --room-camera`
+remains a separate legacy renderer. For changing real terminal output:
 
 ```sh
 tools/run-godot.sh --audio-driver Dummy -- --terminal-demo
 ```
 
-This runs an ordinary clock/counter program inside the real terminal. Closing
-the Godot window stops its server and owned terminal; host display settings stay
-unchanged. `-- --no-terminal` disables launch for isolated scene checks.
+Closing the Godot window stops its server and owned applications. Host desktop
+settings stay unchanged. `-- --no-terminal` disables the initial terminal for
+isolated scene checks; the application-status label reports this in the world.
 
 | Control | Action |
 | --- | --- |
-| W/A/S/D | Walk, relative to camera yaw |
-| Hold right mouse | Look; release restores the pointer |
-| Escape | Release pointer and clear held movement |
-| Home | Return to the safe arrival position |
-| M | Toggle slow walking |
-| Shift | Walk slowly while held |
-| Enter (world mode) | Activate the terminal at native pixel size when it fits |
-| Ctrl+Alt+Escape (application mode) | Release application keys and return to the room |
+| W/A/S/D | Walk relative to heading; A/D strafe |
+| Hold right mouse | Look; release frees the pointer |
+| Shift | Walk faster |
+| Ctrl / M | Hold / toggle slow walking |
+| Space | Jump while grounded |
+| Escape | Release pointer, cancel a grab and stop movement |
+| Home | Return to this scene's safe arrival pose |
+| Enter / double-click a panel | Activate the selected application |
+| Ctrl+Alt+Escape | Return from application mode to the world |
+| Tab / Applications button | Open the application launcher in world mode |
+| Left-drag a panel | Move/carry it; WASD and mouse-look remain available |
+| Wheel while dragging | Adjust distance |
+| Both buttons + wheel | Rotate the held panel |
 
-There is no camera bob. Losing window focus clears held input and releases the
-pointer. Close using the host window close control.
+Application mode uses physical US keyboard positions. Ordinary application
+keys, including Space, Escape, Tab, Home and WASD, belong to the client. Pointer
+selection/scroll and actual client resize retain their existing paths. Host
+focus loss returns to world mode and releases held input. Type `exit` to close
+the shell and use Applications to relaunch. Clipboard, popup menus, IME and GPU
+client-buffer support retain their documented limitations. Placements are
+session-local; restart restoration is not implemented.
 
-Application mode uses physical US keyboard positions. Ordinary Escape, Tab,
-Home, WASD and M reach the terminal; Shift/Ctrl/Alt, editing keys and client key
-repeat work. Host focus loss returns to world mode and releases held modifiers.
-Type `exit` to close the shell. Relaunch currently requires restarting the study.
-IME/composed text and selectable keyboard layouts are not implemented. The flat
-view shrinks proportionally if the window cannot fit the terminal at native size.
+## Retained study and tests
 
-## Verification
+The old physical world is preserved as `scenes/study.tscn`, with its scripts and
+assets unchanged. It is loaded only explicitly, including by study-specific
+regressions. To run it using the existing asset cache:
 
 ```sh
-# Import and runtime errors must both fail this command.
-tools/validate-godot-project.sh
-# Requires a display: controller, colors, live output and real shell typing.
-tools/check-godot-study.sh
-# Three actual GPU-rendered views. Use an absolute output directory.
-tools/run-godot.sh --audio-driver Dummy -- --capture=/tmp/elsewhere-study
+python3 world/tools/prepare_study_assets.py
+tools/run-godot.sh --audio-driver Dummy res://scenes/study.tscn
+# The study's historical capture command remains available explicitly.
+tools/run-godot.sh --audio-driver Dummy res://scenes/study.tscn -- --capture=/tmp/elsewhere-study
 ```
 
-The smoke test injects input into the controller; it is not a human usability
-trial. Headless display drivers cannot verify pointer capture. Visual acceptance
-requires opening the captured images, not merely creating them.
+Asset preparation verifies manifest SHA-256 values and stages complete glTF
+packages; it does not fetch missing assets. Do not discard those sources/cache.
 
-The old native bridge is preserved under `addons/elsewhere_godot/`, excluded from
-Godot discovery by `.gdignore` because initialization crashes. The recovered
-standard binding is staged under `addons/elsewhere_runtime/`; its separate
-protocol/byte-level regression command is `tools/check-godot-binding.sh`.
-Generated test captures go under `.tools/terminal-output-test/` and
-`.tools/terminal-input-test/`, preserving committed historical evidence.
-See [keyboard evidence and limitations](../docs/handoffs/21-godot-terminal-keyboard.md).
+```sh
+# Headless and graphical default startup, movement/jump/collision, live terminal.
+tools/check-godot-outdoor.sh
+# Retained study geometry plus general desktop checks on the current default.
+tools/check-godot-study.sh
+# Existing bounded real-Chrome compatibility regression on the current default.
+tools/check-chrome-application.sh
+```
+
+The outdoor check writes actual GPU captures to `.tools/outdoor-startup-test/`.
+Open them for visual review. Headless checks cannot supply visual acceptance;
+injected input and screenshots do not establish human comfort or comprehensive
+application compatibility. See [status](../docs/STATUS.md) and the
+[P22-T02 handoff](../docs/handoffs/40-outdoor-startup.md) for exact evidence.
+
+The old experimental bridge remains under `addons/elsewhere_godot/`, excluded
+from discovery by `.gdignore`. The standard binding's protocol/owned-frame
+regression command remains `tools/check-godot-binding.sh`.

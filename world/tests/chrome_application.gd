@@ -70,6 +70,8 @@ func run() -> void:
 	await capture("address-bar.png")
 	await tap(KEY_ENTER)
 	await wait_page("value", "")
+	# A resize report can precede onload and autofocus, especially in a light scene.
+	await wait_page("ready", true)
 	await type_text("Elsewhere browser 42!")
 	await wait_page("value", "Elsewhere browser 42!")
 	check(page_state().get("trusted", false), "Text did not come from browser input events")

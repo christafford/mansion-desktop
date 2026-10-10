@@ -53,7 +53,7 @@ func run() -> void:
 	DirAccess.make_dir_recursive_absolute(output_dir)
 	var marker := output_dir.path_join("target.txt")
 	if FileAccess.file_exists(marker): DirAccess.remove_absolute(marker)
-	study = load("res://scenes/main.tscn").instantiate()
+	study = load("res://scenes/study.tscn").instantiate()
 	root.add_child(study)
 	current_scene = study
 	terminal = study.terminal_screen

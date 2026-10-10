@@ -13,7 +13,7 @@ func run() -> void:
 		quit(1)
 		return
 	var original_env := OS.get_environment("WAYLAND_DISPLAY")
-	var study: Node3D = load("res://scenes/main.tscn").instantiate()
+	var study: Node3D = load("res://scenes/study.tscn").instantiate()
 	root.add_child(study)
 	current_scene = study
 	var terminal = study.terminal_screen
@@ -73,7 +73,7 @@ func run() -> void:
 	# Start another real terminal and exercise orderly scene shutdown, without kill.
 	study.queue_free()
 	await process_frame
-	study = load("res://scenes/main.tscn").instantiate()
+	study = load("res://scenes/study.tscn").instantiate()
 	root.add_child(study)
 	current_scene = study
 	terminal = study.terminal_screen

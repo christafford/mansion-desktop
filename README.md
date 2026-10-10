@@ -7,6 +7,11 @@ beautiful outdoor village square while retaining the working Godot/C++ desktop
 stack. Follow [Project 22](docs/TASKS.md) and
 [Decision 08](docs/decisions/08-elsewhere-village-world.md).
 
+P22-T02 now starts a minimal outdoor ground/sky scene using the existing desktop
+runtime. Run `tools/run-godot.sh --audio-driver Dummy`; the old study remains
+available explicitly as `res://scenes/study.tscn`. This is the startup foundation,
+not the finished village. See [current launch and checks](world/README.md).
+
 **Naming baseline:** P21-T67 completed the code/package rename. Use
 `build/elsewhere`, `world/addons/elsewhere_runtime/` and `ELSEWHERE_` environment
 overrides. Preserve these tested names during P22; see

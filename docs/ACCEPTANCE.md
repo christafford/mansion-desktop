@@ -3,6 +3,34 @@
 Status: procedures unless explicitly recorded as evidence. Synthetic tests and
 screenshots are supporting evidence, not usability acceptance. Human tasks in TASKS.md remain unchecked until a person records them.
 
+## 2026-10-10 agent-run minimal outdoor startup (P22-T02)
+
+From `7d74847` plus P22-T02, the default starts on flat outdoor ground with
+visible collision boundaries, sky and sunlight. The new headless/graphical
+trial verifies safe spawn, walking/release, jump/landing, all four boundaries,
+corner containment, Home, real terminal mapping, panel drag/rotation/cancel,
+typing, world return with the same identity/placement and clean shutdown.
+All 21 existing Godot trials pass: retained study geometry checks use its explicit
+scene; general input, pointer, resize, launcher and transition checks use outdoors.
+The separate real Chrome trial passes its trusted input, scroll, resize,
+world-return and separate-window lifecycle assertions. An initial first-character
+failure led to an additional fixture load/focus readiness check; no application
+input behavior or existing expected results were changed.
+
+Agent-inspected actual GPU renders: [arrival](evidence/p22-t02/arrival.png),
+[ground/boundary](evidence/p22-t02/ground-and-boundary.png),
+[terminal](evidence/p22-t02/application.png),
+[Chrome input](evidence/p22-t02/browser-input.png) and
+[Chrome world return](evidence/p22-t02/browser-in-room.png). Application content
+is upright and readable in the reviewed application views. Platform: Godot 4.7.2
+Compatibility/OpenGL, Mesa 26.2.4, AMD Custom GPU 0405, private Weston 15.0.1;
+1280×800, with Chrome's return view resized to 1000×700. Clients: Weston terminal
+15.0.1, Vim 9.2 and Google Chrome 154.0.8037.57. See
+[handoff 40](handoffs/40-outdoor-startup.md) for exact commands and limitations.
+This accepts the plain startup fixture only, not polished village art or the
+P22-T06 integration gate. No human physical-input/comfort, restart persistence,
+popup/clipboard or general application-compatibility gate is claimed.
+
 ## 2026-10-09 agent-run desktop extraction regression (P22-T01)
 
 From `fd36f01` plus P22-T01, the complete 21-trial Godot suite and separate

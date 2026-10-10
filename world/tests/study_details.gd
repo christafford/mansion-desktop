@@ -2,7 +2,7 @@
 extends "res://tests/study_smoke.gd"
 
 func run() -> void:
-	var study = load("res://scenes/main.tscn").instantiate()
+	var study = load("res://scenes/study.tscn").instantiate()
 	root.add_child(study)
 	current_scene = study
 	var player = study.get_node("Player")

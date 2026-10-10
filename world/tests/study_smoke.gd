@@ -22,7 +22,7 @@ func run() -> void:
 		push_error("study_smoke requires a graphical display to verify pointer capture")
 		quit(1)
 		return
-	var scene: PackedScene = load("res://scenes/main.tscn")
+	var scene: PackedScene = load("res://scenes/study.tscn")
 	var study := scene.instantiate()
 	root.add_child(study)
 	current_scene = study

@@ -8,20 +8,30 @@ transition. It owns window-close shutdown; its terminal child still owns the
 native session, pump and launched application processes. No compositor or input
 policy rewrite is involved.
 
-`main.tscn` retains its study root and player and adds a DesktopRuntime child.
-After constructing its geometry, `study.gd` supplies the ready player, monitor
-mesh/status label and a world-space placement-bounds callable. Desktop services
-do not resolve room paths or import hallway geometry. The study's old service
-properties are read-only forwarding accessors for existing tests. Application
-entity IDs and runtime bindings remain unchanged and separate.
+P22-T02 makes `main.tscn` a minimal outdoor ground/sky scene using the same
+DesktopRuntime and controller. `outdoor.gd` supplies its ready player, selected
+preview/status nodes and a world-space placement-bounds callable. The selected
+preview mesh is hidden by its parent: it retains the terminal's existing texture
+and local visibility contract, while independent live panels provide the visible
+world presentation. The startup/error status label remains visible when needed.
+No study or hallway geometry is loaded by the default scene.
+
+The prior main scene is retained unchanged as `study.tscn`; `study.gd` still
+supplies its physical monitor and hallway bounds when explicitly loaded.
+Desktop services do not resolve physical room paths. Both locations expose
+read-only service accessors for the existing tests. Application entity IDs and
+runtime bindings remain unchanged and separate.
 
 This is an initialization/lifetime boundary, not scene streaming or restart
 persistence. The location still owns its geometry, collision, lighting, monitor
-presentation nodes and capture viewpoints; the controller retains the study's
-spawn defaults. The supplied presentation/player must remain alive for the
+presentation nodes and capture viewpoints. The controller exports spawn
+position/yaw/pitch, keeping its study defaults for the retained scene and using
+the outdoor scene's authored values for startup and Home. The owner's jump
+behavior remains unchanged. The supplied presentation/player must remain alive for the
 desktop lifetime. The terminal retains its existing fixed monitor aperture and
 Filmic-compensated shader contract. A future location must provide compatible
-presentation and bounds deliberately. The active scene remains the study.
+presentation and bounds deliberately. The current outdoor boundary is a small
+startup fixture; landscape, circulation and village architecture are later tasks.
 
 ---
 
