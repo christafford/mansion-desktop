@@ -24,7 +24,7 @@ node --test .opencode/tests/*.test.js
 | ASan tests | `meson test -C build-asan --print-errorlogs` | **25/25 pass, 0 fail, no sanitizer errors** |
 | Plugin tests | `node --test .opencode/tests/*.test.js` | **49/49 pass** |
 
-Environment: Arch Linux container `mansion-dev`, gcc 16.2.1, meson 1.12.1,
+Environment: Arch Linux container `elsewhere-dev`, gcc 16.2.1, meson 1.12.1,
 ninja 1.13.2, mesa 26.2, wayland 1.26, wayland-protocols 1.49, node 26.
 
 ---
@@ -81,8 +81,8 @@ acceptance criteria.
 
 | Aspect | Status |
 | --- | --- |
-| `toplevel_list` / `toplevel_count` in `MansionCompositor` | Implemented (compositor.cpp:298-299, compositor-private.h:62-63) |
-| `toplevel_link` in `MansionXdgSurface` | Implemented (xdg-shell.cpp:37) |
+| `toplevel_list` / `toplevel_count` in `ElsewhereCompositor` | Implemented (compositor.cpp:298-299, compositor-private.h:62-63) |
+| `toplevel_link` in `ElsewhereXdgSurface` | Implemented (xdg-shell.cpp:37) |
 | `toplevel_register()` / `toplevel_unregister()` | Implemented, with idempotency check for surface_resource |
 | Registration on xdg_toplevel creation | Implemented (xdg-shell.cpp:202) |
 | Unregistration on xdg_surface destroy | Implemented (xdg-shell.cpp:164) |
@@ -150,9 +150,9 @@ acceptance. P4-T13 owns the renewed investigation.
 
 ### K4. No real-client evidence
 
-All 25 automated tests use the synthetic `mansion-test-client`. No real
+All 25 automated tests use the synthetic `elsewhere-test-client`. No real
 Wayland application (terminal, editor, etc.) has been observed running inside
-Mansion. P1-T10, P4-T04, P4-T17 are human tasks — autonomous sessions do not
+Elsewhere. P1-T10, P4-T04, P4-T17 are human tasks — autonomous sessions do not
 perform them.
 
 ### K5. `--commit-color` flag on test client
@@ -173,7 +173,7 @@ path.
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| Test client fixtures | OK | `mansion-test-client` connects, maps, disconnects cleanly |
+| Test client fixtures | OK | `elsewhere-test-client` connects, maps, disconnects cleanly |
 | Shell test harness (`lib.sh`) | OK | 25 shell tests all pass in both `build` and `build-asan` |
 | Plugin test suite | OK | 49 JS tests pass — scope parsing, AUTOCONTINUE_DONE, limits, persistence |
 | Task parser | Partial | Parses P1–P4 numeric IDs; P5 numeric tasks visible; P4 recovery tasks visible |

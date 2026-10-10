@@ -57,7 +57,7 @@ T48's launcher. Injected input is not physical input or human acceptance.
 Run the object trial directly without changing normal launcher history:
 
 ```sh
-MANSION_LAUNCHER_STATE_DIR="$PWD/.tools/t49-object-state" \
+ELSEWHERE_LAUNCHER_STATE_DIR="$PWD/.tools/t49-object-state" \
 tools/Godot_v4.7.2-stable_linux.x86_64 --path world --audio-driver Dummy \
   --max-fps 60 --script res://tests/application_objects.gd
 ```
@@ -75,11 +75,11 @@ captures are square. No display settings or host services were changed. The
 isolated resize command was:
 
 ```sh
-MANSION_LAUNCHER_STATE_DIR="$PWD/.tools/t49-virtual-state" \
+ELSEWHERE_LAUNCHER_STATE_DIR="$PWD/.tools/t49-virtual-state" \
 timeout -k 3s 60s weston --backend=headless --renderer=gl \
-  --width=1600 --height=1000 --socket=mansion-t49-resize --no-config \
+  --width=1600 --height=1000 --socket=elsewhere-t49-resize --no-config \
   --idle-time=0 --log="$PWD/.tools/t49-weston.log" -- \
-  /usr/bin/env WAYLAND_DISPLAY=mansion-t49-resize \
+  /usr/bin/env WAYLAND_DISPLAY=elsewhere-t49-resize \
   tools/Godot_v4.7.2-stable_linux.x86_64 --display-driver wayland \
   --path world --audio-driver Dummy --max-fps 60 \
   --script res://tests/terminal_resize.gd

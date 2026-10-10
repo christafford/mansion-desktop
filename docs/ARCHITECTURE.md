@@ -36,7 +36,7 @@ Godot maps physical US keys; the seat owns XKB and held-key state, filters event
 to the focused client, and clears focus on destruction.
 The original addon is isolated
 because registration crashes. A separate standard-binding regression establishes
-the binding boundary, reused by the study's `mansion_runtime` addon. See STATUS.md
+the binding boundary, reused by the study's `elsewhere_runtime` addon. See STATUS.md
 for current evidence.
 
 ## Supplied prototype

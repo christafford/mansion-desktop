@@ -16,7 +16,7 @@
 static void pointer_frame(wl_resource* resource) {
     if (wl_resource_get_version(resource) >= WL_POINTER_FRAME_SINCE_VERSION) wl_pointer_send_frame(resource);
 }
-static void keyboard_enter(MansionSeat* seat, wl_resource* keyboard, uint32_t serial);
+static void keyboard_enter(ElsewhereSeat* seat, wl_resource* keyboard, uint32_t serial);
 static void keyboard_focus_destroyed(wl_listener* listener, void* data);
 static void pointer_focus_destroyed(wl_listener* listener, void* data);
 
@@ -66,7 +66,7 @@ static const struct wl_keyboard_interface keyboard_impl = {
 
 static void seat_get_pointer(struct wl_client* client, struct wl_resource* seat_resource,
                                uint32_t id) {
-    auto* seat = static_cast<MansionSeat*>(wl_resource_get_user_data(seat_resource));
+    auto* seat = static_cast<ElsewhereSeat*>(wl_resource_get_user_data(seat_resource));
 
     auto* kpc = new (std::nothrow) SeatPointerClient{};
     if (!kpc) { wl_client_post_no_memory(client); return; }
@@ -101,7 +101,7 @@ static void seat_get_pointer(struct wl_client* client, struct wl_resource* seat_
 
 static void seat_get_keyboard(struct wl_client* client, struct wl_resource* seat_resource,
                                uint32_t id) {
-    auto* seat = static_cast<MansionSeat*>(wl_resource_get_user_data(seat_resource));
+    auto* seat = static_cast<ElsewhereSeat*>(wl_resource_get_user_data(seat_resource));
 
     auto* kbc = new (std::nothrow) SeatKeyboardClient{};
     if (!kbc) { wl_client_post_no_memory(client); return; }
@@ -128,7 +128,7 @@ static void seat_get_keyboard(struct wl_client* client, struct wl_resource* seat
     char* text = xkb_keymap_get_as_string(seat->keymap, XKB_KEYMAP_FORMAT_TEXT_V1);
     if (!text) { wl_client_post_no_memory(client); return; }
     const size_t size = strlen(text) + 1;
-    int fd = memfd_create("mansion-keymap", MFD_CLOEXEC);
+    int fd = memfd_create("elsewhere-keymap", MFD_CLOEXEC);
     if (fd < 0) {
         free(text);
         wl_client_post_implementation_error(client, "could not create keymap fd: %s", strerror(errno));
@@ -180,7 +180,7 @@ static void seat_resource_destroyed(wl_resource* resource) {
     wl_list_remove(wl_resource_get_link(resource));
 }
 static void seat_bind(struct wl_client* client, void* data, uint32_t version, uint32_t id) {
-    auto* seat = static_cast<MansionSeat*>(data);
+    auto* seat = static_cast<ElsewhereSeat*>(data);
 
     auto* resource = wl_resource_create(client, &wl_seat_interface, std::min(version, 5u), id);
     if (!resource) {
@@ -199,8 +199,8 @@ static void seat_bind(struct wl_client* client, void* data, uint32_t version, ui
     wl_seat_send_capabilities(resource, WL_SEAT_CAPABILITY_POINTER | WL_SEAT_CAPABILITY_KEYBOARD);
 }
 
-struct MansionSeat* seat_create(struct wl_display* display, uint32_t version) {
-    auto* seat = new (std::nothrow) MansionSeat();
+struct ElsewhereSeat* seat_create(struct wl_display* display, uint32_t version) {
+    auto* seat = new (std::nothrow) ElsewhereSeat();
     if (!seat) return nullptr;
     seat->display = display;
     wl_list_init(&seat->keyboard_focus_destroy.link);
@@ -235,7 +235,7 @@ struct MansionSeat* seat_create(struct wl_display* display, uint32_t version) {
     return seat;
 }
 
-void seat_destroy(struct MansionSeat* seat) {
+void seat_destroy(struct ElsewhereSeat* seat) {
     if (!seat) return;
     wl_list_remove(&seat->keyboard_focus_destroy.link);
     wl_list_remove(&seat->pointer_focus_destroy.link);
@@ -277,7 +277,7 @@ static uint32_t keyboard_time() {
         std::chrono::steady_clock::now().time_since_epoch()).count());
 }
 
-static void keyboard_modifiers(MansionSeat* seat, wl_resource* resource, uint32_t serial) {
+static void keyboard_modifiers(ElsewhereSeat* seat, wl_resource* resource, uint32_t serial) {
     wl_keyboard_send_modifiers(resource, serial,
         xkb_state_serialize_mods(seat->xkbstate, XKB_STATE_MODS_DEPRESSED),
         xkb_state_serialize_mods(seat->xkbstate, XKB_STATE_MODS_LATCHED),
@@ -285,7 +285,7 @@ static void keyboard_modifiers(MansionSeat* seat, wl_resource* resource, uint32_
         xkb_state_serialize_layout(seat->xkbstate, XKB_STATE_LAYOUT_EFFECTIVE));
 }
 
-static void keyboard_enter(MansionSeat* seat, wl_resource* keyboard, uint32_t serial) {
+static void keyboard_enter(ElsewhereSeat* seat, wl_resource* keyboard, uint32_t serial) {
     wl_array keys;
     wl_array_init(&keys);
     if (!seat->pressed_keys.empty()) {
@@ -298,7 +298,7 @@ static void keyboard_enter(MansionSeat* seat, wl_resource* keyboard, uint32_t se
     keyboard_modifiers(seat, keyboard, serial);
 }
 
-bool seat_keyboard_key(MansionSeat* seat, uint32_t keycode, bool pressed) {
+bool seat_keyboard_key(ElsewhereSeat* seat, uint32_t keycode, bool pressed) {
     if (!seat || !seat->focused_surface_resource || keycode == 0 || keycode > KEY_MAX) return false;
     auto found = std::find(seat->pressed_keys.begin(), seat->pressed_keys.end(), keycode);
     if (pressed == (found != seat->pressed_keys.end())) return true;
@@ -319,7 +319,7 @@ bool seat_keyboard_key(MansionSeat* seat, uint32_t keycode, bool pressed) {
     return true;
 }
 
-static void keyboard_release_all(MansionSeat* seat) {
+static void keyboard_release_all(ElsewhereSeat* seat) {
     while (!seat->pressed_keys.empty()) {
         const uint32_t key = seat->pressed_keys.back();
         if (seat->focused_surface_resource) seat_keyboard_key(seat, key, false);
@@ -341,7 +341,7 @@ static void keyboard_release_all(MansionSeat* seat) {
 }
 
 static void keyboard_focus_destroyed(wl_listener* listener, void* data) {
-    MansionSeat* seat = wl_container_of(listener, seat, keyboard_focus_destroy);
+    ElsewhereSeat* seat = wl_container_of(listener, seat, keyboard_focus_destroy);
     // The surface proxy is already gone. Never send a leave referencing it.
     keyboard_release_all(seat);
     seat->focused_surface_resource = nullptr;
@@ -351,7 +351,7 @@ static void keyboard_focus_destroyed(wl_listener* listener, void* data) {
     wl_list_init(&seat->keyboard_focus_destroy.link);
 }
 
-void seat_set_keyboard_focus(MansionSeat* seat, wl_resource* surface, MansionCompositor* comp) {
+void seat_set_keyboard_focus(ElsewhereSeat* seat, wl_resource* surface, ElsewhereCompositor* comp) {
     if (!seat || !comp) return;
     if (seat->focused_surface_resource == surface && comp->focused_surface_resource == surface) return;
     keyboard_release_all(seat);
@@ -378,8 +378,8 @@ void seat_set_keyboard_focus(MansionSeat* seat, wl_resource* surface, MansionCom
     }
 }
 
-void compositor_set_seat(struct MansionCompositor* compositor,
-                          struct MansionSeat* seat) {
+void compositor_set_seat(struct ElsewhereCompositor* compositor,
+                          struct ElsewhereSeat* seat) {
     if (!compositor) return;
     compositor->seat = seat;
 }
@@ -391,14 +391,14 @@ static bool pointer_value(double value) {
     return std::isfinite(value) && std::abs(value) <= 1000000.0;
 }
 
-wl_resource* seat_pointer_surface(MansionSeat* seat) {
+wl_resource* seat_pointer_surface(ElsewhereSeat* seat) {
     return seat ? seat->pointer_surface_resource : nullptr;
 }
-bool seat_pointer_grabbed(MansionSeat* seat) {
+bool seat_pointer_grabbed(ElsewhereSeat* seat) {
     return seat && !seat->pressed_buttons.empty();
 }
 
-bool seat_pointer_button(MansionSeat* seat, uint32_t button, bool pressed) {
+bool seat_pointer_button(ElsewhereSeat* seat, uint32_t button, bool pressed) {
     if (!seat || !seat->pointer_surface_resource || button < BTN_LEFT || button > BTN_TASK) return false;
     auto found = std::find(seat->pressed_buttons.begin(), seat->pressed_buttons.end(), button);
     if (pressed == (found != seat->pressed_buttons.end())) return true;
@@ -418,7 +418,7 @@ bool seat_pointer_button(MansionSeat* seat, uint32_t button, bool pressed) {
     return true;
 }
 
-static void pointer_release_all(MansionSeat* seat) {
+static void pointer_release_all(ElsewhereSeat* seat) {
     while (!seat->pressed_buttons.empty()) {
         if (seat->pointer_surface_resource) seat_pointer_button(seat, seat->pressed_buttons.back(), false);
         else seat->pressed_buttons.pop_back();
@@ -427,7 +427,7 @@ static void pointer_release_all(MansionSeat* seat) {
 }
 
 static void pointer_focus_destroyed(wl_listener* listener, void*) {
-    MansionSeat* seat = wl_container_of(listener, seat, pointer_focus_destroy);
+    ElsewhereSeat* seat = wl_container_of(listener, seat, pointer_focus_destroy);
     // Releases contain no surface reference; leave would refer to a dead proxy.
     pointer_release_all(seat);
     seat->pointer_surface_resource = nullptr;
@@ -435,7 +435,7 @@ static void pointer_focus_destroyed(wl_listener* listener, void*) {
     wl_list_init(&seat->pointer_focus_destroy.link);
 }
 
-void seat_pointer_reset(MansionSeat* seat) {
+void seat_pointer_reset(ElsewhereSeat* seat) {
     if (!seat) return;
     pointer_release_all(seat);
     if (seat->pointer_surface_resource) {
@@ -453,7 +453,7 @@ void seat_pointer_reset(MansionSeat* seat) {
     wl_list_init(&seat->pointer_focus_destroy.link);
 }
 
-bool seat_pointer_motion(MansionSeat* seat, wl_resource* surface, double x, double y) {
+bool seat_pointer_motion(ElsewhereSeat* seat, wl_resource* surface, double x, double y) {
     if (!seat || !pointer_value(x) || !pointer_value(y)) return false;
     // The caller must keep using the grabbed surface's coordinate system.
     if (seat_pointer_grabbed(seat) && surface != seat->pointer_surface_resource) return false;
@@ -478,7 +478,7 @@ bool seat_pointer_motion(MansionSeat* seat, wl_resource* surface, double x, doub
     return true;
 }
 
-bool seat_pointer_axis(MansionSeat* seat, double horizontal, double vertical) {
+bool seat_pointer_axis(ElsewhereSeat* seat, double horizontal, double vertical) {
     if (!seat || !seat->pointer_surface_resource || !pointer_value(horizontal) || !pointer_value(vertical)) return false;
     const auto time = keyboard_time();
     auto* client = wl_resource_get_client(seat->pointer_surface_resource);

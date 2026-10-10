@@ -33,7 +33,7 @@ Godot owns the UI and input boundary. An asynchronous Python/GIO helper discover
 freedesktop applications with localization, Hidden/NoDisplay and directory
 precedence; GTK resolves installed icon themes, including the optional KDE theme
 preference. No Plasma/KRunner service is invoked or required. The current
-container exposes 16 visible entries, including Mansion's entry for the installed
+container exposes 16 visible entries, including Elsewhere's entry for the installed
 Weston terminal. This is not a claim to discover every application on the host.
 
 Launch resolves a desktop ID again, expands Exec arguments without a shell,

@@ -7,7 +7,7 @@ retained Wayland compositor, not general Linux application compatibility.
 ## Diagnosis and implementation
 
 The launcher's old protocol warning was a generic twelve-second timeout. An
-isolated Chrome 154.0.8037.57 on Mansion's socket repeatedly synchronized without
+isolated Chrome 154.0.8037.57 on Elsewhere's socket repeatedly synchronized without
 creating a toplevel: no `wl_output` was advertised. Adding a fixed logical output
 let it map real pixels. Typing then crashed Chrome while creating the omnibox's
 subsurface. A debugger reproduced the null proxy access, and Chromium's
@@ -61,8 +61,8 @@ Known native Chrome/Chromium executable names receive `--ozone-platform=wayland`
 `--disable-gpu`, `--new-window`, and a separate profile under
 `.tools/browser-profiles/<binary>/`. Browser sandboxing stays enabled; neither
 `--no-sandbox` nor a host desktop/service change is used. The profile keeps browser
-state separate from the user's ordinary browser. Concurrent Mansion frontends
-should use different `MANSION_BROWSER_PROFILE_DIR` roots; the real-browser test
+state separate from the user's ordinary browser. Concurrent Elsewhere frontends
+should use different `ELSEWHERE_BROWSER_PROFILE_DIR` roots; the real-browser test
 always uses its own root. This override is also useful for a clean diagnostic
 profile. The command recipe is tested for Chromium names, but only installed
 Google Chrome is a verified browser here.
@@ -107,7 +107,7 @@ Current validation passed:
   three invalid relationships), `runtime-sanitize.log` (16 lifecycle trials,
   including output bind/release/unmap/remap and server-stop cleanup).
 - Full study suite: **20 Godot trials and 8 Python tests**,
-  `.tools/t65/full-study.log`, `/tmp/mansion-study-check.ns8C80`. This preceded
+  `.tools/t65/full-study.log`, `/tmp/elsewhere-study-check.ns8C80`. This preceded
   the final default-geometry fix; the affected terminal-resize trial passed again
   afterward (`final-terminal-resize.log`, four cell sizes, zero failures), along
   with the final native, tree sanitizer and real-browser checks above/below.

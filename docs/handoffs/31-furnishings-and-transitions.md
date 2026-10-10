@@ -111,7 +111,7 @@ SDL_JOYSTICK_LINUX_CLASSIC=1 \
 
 Native helper build, import/runtime validation, all 15 Godot trials and 7 Python
 tests pass. Full log: `.tools/t59/suite-final.log`; per-trial logs:
-`/tmp/mansion-study-check.VO36ka`. The existing wrapper uses the host input seat
+`/tmp/elsewhere-study-check.VO36ka`. The existing wrapper uses the host input seat
 and a private 1600×1000 GPU Weston desktop for the four actual client resize
 cases; see [handoff 28](28-godot-natural-navigation.md). Keyboard tested 11163
 client pixels; resize tested 8573. Furniture, Terminal/Vim, independent-instance,

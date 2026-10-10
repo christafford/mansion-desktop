@@ -6,7 +6,7 @@ screenshots are supporting evidence, not usability acceptance. Human tasks in TA
 ## 2026-10-09 agent-run Chrome and subsurfaces (P21-T65/T66)
 
 From `2cdfd15` plus T65/T66, the installed Google Chrome 154.0.8037.57 was
-launched from the actual application catalog on a private Mansion Wayland socket.
+launched from the actual application catalog on a private Elsewhere Wayland socket.
 Agent-injected Godot keys/pointer events typed an address and a note, clicked the
 page button, scrolled both ways, resized the actual page and returned to the room.
 A localhost fixture recorded browser-trusted input events and DOM dimensions.
@@ -220,7 +220,7 @@ Run from the repository root in the normal development container/session:
 meson setup build --buildtype=debug  # first time only
 meson compile -C build
 meson test -C build --print-errorlogs
-./build/mansion-desktop --help
+./build/elsewhere --help
 git rev-parse HEAD
 ```
 
@@ -237,18 +237,18 @@ navigation and upright output on 2026-10-02, but this terminal/input trial has
 not been observed. These remain legacy procedures, not the Project 21 work order.
 
 ```sh
-./build/mansion-desktop --flat --launch weston-terminal
-./build/mansion-desktop --room-camera --launch weston-terminal
+./build/elsewhere --flat --launch weston-terminal
+./build/elsewhere --room-camera --launch weston-terminal
 ```
 
-Perform the flat trial first, then the room trial. Mansion prints its private
-MANSION_SOCKET. Ensure the terminal connects there rather than appearing as an
+Perform the flat trial first, then the room trial. Elsewhere prints its private
+ELSEWHERE_SOCKET. Ensure the terminal connects there rather than appearing as an
 ordinary host window. Do not override the host WAYLAND_DISPLAY globally; the
 launcher sets child environment. If launching by hand, use its private display
 name with the same XDG_RUNTIME_DIR and explicit native toolkit backend.
 
 1. Confirm terminal content appears and updates; record a screenshot including
-   the Mansion window. Type a short command and confirm visible output.
+   the Elsewhere window. Type a short command and confirm visible output.
 2. In room mode, walk or use the documented T teleport, target the monitor and
    Enter to application mode. Confirm the full-size terminal is readable.
 3. Type lowercase/uppercase, punctuation and modifier combinations; select text
@@ -258,12 +258,12 @@ name with the same XDG_RUNTIME_DIR and explicit native toolkit backend.
 5. Use F12 (default reserved world key) to return to the world and re-enter at
    least five times. Confirm the same application/session/output persists.
 6. Hold a key or pointer button while changing modes/focus, then release it;
-   verify no stuck input. Switch to another host app and type; no Mansion client
-   should receive that input. Record any host shortcuts Mansion cannot capture.
-7. Close the terminal from its UI and confirm Mansion stays responsive in world
+   verify no stuck input. Switch to another host app and type; no Elsewhere client
+   should receive that input. Record any host shortcuts Elsewhere cannot capture.
+7. Close the terminal from its UI and confirm Elsewhere stays responsive in world
    mode. Restart with a fresh launch and repeat; client close must not leave stale
    focus/content masquerading as a live window.
-8. Quit Mansion using its host close control. Confirm the host desktop remains
+8. Quit Elsewhere using its host close control. Confirm the host desktop remains
    usable and launcher-owned child shutdown behavior matches documentation.
 
 Record observed pass/fail per step. If flat and room evidence covers the earlier
@@ -350,7 +350,7 @@ The other should retain its shell state. Double-click a room panel to see its
 live surface approach the camera; Ctrl+Alt+Escape sends it back. Try reversing
 quickly, resizing, losing host focus and closing the client. Confirm comfortable
 motion and readable native text separately from the agent's geometry, pixel
-and input assertions. Session placements still reset when Mansion restarts.
+and input assertions. Session placements still reset when Elsewhere restarts.
 
 ## Owner-requested hallway: T60
 

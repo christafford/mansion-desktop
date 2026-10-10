@@ -1,4 +1,4 @@
-# Mansion Desktop — Study Asset Manifest
+# Elsewhere — Study Asset Manifest
 
 > 2026-10-02 audit: this is a **candidate selection**, not a verified runtime
 > manifest. T02/T03 are reopened. All six cached glTF files lack their external

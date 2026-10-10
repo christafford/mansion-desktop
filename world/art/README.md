@@ -1,7 +1,7 @@
 # Original study details
 
 `fern.svg` and `ginkgo.svg` are original vector illustrations authored for
-Mansion Desktop on 2026-10-05. No external source, download, font or runtime
+Elsewhere on 2026-10-05. No external source, download, font or runtime
 dependency is required. The small source SVGs are tracked; Godot generates its
 own ignored texture cache. `study_details.gd` constructs the original twin-tube
 fixtures, wood frames, noticeboard and clock from measured geometry in meters.
@@ -20,10 +20,10 @@ The 2026-10-08 exploration rooms add four original vector prints: `atlas.svg`
 (an invented expedition map), `mechanism.svg` (a mechanical study), `stars.svg`
 (an invented constellation chart), and `geometry.svg` (an abstract composition).
 They are decorative artwork, not scientific/navigation references. No external
-images or fonts are embedded. `mansion_rooms.gd` authors the fitted architecture,
+images or fonts are embedded. `elsewhere_rooms.gd` authors the fitted architecture,
 turned worktables, map drawers, fountain, instrument pedestals, armillary rings,
 sculptures, parts bins, tools and pendant fittings in meters. The star ceiling
-is painted-ceiling-style geometry; `mansion_stone.gdshader` supplies floor tile,
+is painted-ceiling-style geometry; `elsewhere_stone.gdshader` supplies floor tile,
 grain and grout. Existing CC0 bookshelf, encyclopedia, chair, plant and desk-lamp
 packages and walnut/plaster photos are instanced from the verified local cache;
 no source downloads, new tools or dependencies were added. SVG sources/import

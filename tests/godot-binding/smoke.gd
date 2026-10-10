@@ -1,12 +1,12 @@
 extends SceneTree
 
 func _initialize() -> void:
-	if not ClassDB.class_exists("MansionBindingProbe"):
+	if not ClassDB.class_exists("ElsewhereBindingProbe"):
 		push_error("Native probe class was not registered")
 		quit(1)
 		return
 	for iteration in range(100):
-		var probe = ClassDB.instantiate("MansionBindingProbe")
+		var probe = ClassDB.instantiate("ElsewhereBindingProbe")
 		if probe == null or probe.answer() != 42:
 			push_error("Native probe call returned the wrong answer")
 			quit(1)

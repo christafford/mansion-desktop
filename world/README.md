@@ -20,7 +20,7 @@ fail explicitly. It does not download missing assets. Fresh-machine tool and
 asset bootstrap remains unfinished; see [status](../docs/STATUS.md).
 
 `tools/run-godot.sh --editor` opens the editor. The default command runs the
-study. `build/mansion-desktop --room-camera` is the separate legacy renderer.
+study. `build/elsewhere --room-camera` is the separate legacy renderer.
 Godot uses the Compatibility/OpenGL renderer, not Vulkan.
 
 The launcher builds and stages the recovered standard GDExtension before opening
@@ -67,16 +67,16 @@ tools/validate-godot-project.sh
 # Requires a display: controller, colors, live output and real shell typing.
 tools/check-godot-study.sh
 # Three actual GPU-rendered views. Use an absolute output directory.
-tools/run-godot.sh --audio-driver Dummy -- --capture=/tmp/mansion-study
+tools/run-godot.sh --audio-driver Dummy -- --capture=/tmp/elsewhere-study
 ```
 
 The smoke test injects input into the controller; it is not a human usability
 trial. Headless display drivers cannot verify pointer capture. Visual acceptance
 requires opening the captured images, not merely creating them.
 
-The old native bridge is preserved under `addons/mansion_godot/`, excluded from
+The old native bridge is preserved under `addons/elsewhere_godot/`, excluded from
 Godot discovery by `.gdignore` because initialization crashes. The recovered
-standard binding is staged under `addons/mansion_runtime/`; its separate
+standard binding is staged under `addons/elsewhere_runtime/`; its separate
 protocol/byte-level regression command is `tools/check-godot-binding.sh`.
 Generated test captures go under `.tools/terminal-output-test/` and
 `.tools/terminal-input-test/`, preserving committed historical evidence.

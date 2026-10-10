@@ -59,7 +59,7 @@ validator pass. No new Meson/sanitizer result is claimed.
   302 pointer-map cases; controller; GPU color; live output; keyboard; selection /
   scroll; four-size resize; launcher; application objects; six desktop-helper
   tests and one launcher-script test. Summary log: `.tools/t51/suite-host.log`;
-  individual logs: `/tmp/mansion-study-check.DNIm8p/`. Documentation links and
+  individual logs: `/tmp/elsewhere-study-check.DNIm8p/`. Documentation links and
   the new numeric task ID validate; pre-existing legacy P1-T06 duplicates remain
   unchanged. No debug tracing remains.
 - Four resize grids: 77×22, 95×25, 68×18, 103×26; 8,573 native-pixel samples.
@@ -75,9 +75,9 @@ host for input/capture, and only dispatches `terminal_resize.gd` to:
 
 ```sh
 weston --backend=headless --fake-seat --renderer=gl \
-  --width=1600 --height=1000 --socket=mansion-t51-resize --no-config \
+  --width=1600 --height=1000 --socket=elsewhere-t51-resize --no-config \
   --idle-time=0 --log="$PWD/.tools/t51/weston-resize.log" -- \
-  /usr/bin/env WAYLAND_DISPLAY=mansion-t51-resize \
+  /usr/bin/env WAYLAND_DISPLAY=elsewhere-t51-resize \
   tools/Godot_v4.7.2-stable_linux.x86_64 --display-driver wayland \
   --path world --audio-driver Dummy --max-fps 60 \
   --script res://tests/terminal_resize.gd

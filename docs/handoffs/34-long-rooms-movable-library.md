@@ -89,7 +89,7 @@ failure remains in `application_transition-final.log`, the passing recheck in
 four-support application-gravity trial also passed on 2026-10-09. This bounded
 room task does not close the broader client-lifecycle gate T45.
 
-Logs: `.tools/t62/suite.log`, `/tmp/mansion-study-check.pEqPqA`,
+Logs: `.tools/t62/suite.log`, `/tmp/elsewhere-study-check.pEqPqA`,
 `.tools/t62/remaining.log`, per-trial `*-final.log`, `transition-recheck.log`,
 `gravity-run.log` and `final-import.log`. The original failures, fixes and recheck
 are retained locally rather than silently overwritten.
@@ -112,11 +112,11 @@ Reproduction (substitute another test name as needed):
 ```sh
 SDL_JOYSTICK_LINUX_CLASSIC=1 tools/validate-godot-project.sh
 SDL_JOYSTICK_LINUX_CLASSIC=1 \
-MANSION_LAUNCHER_STATE_DIR="$PWD/.tools/t62/launcher-state" \
+ELSEWHERE_LAUNCHER_STATE_DIR="$PWD/.tools/t62/launcher-state" \
 timeout -k 2s 180s weston --backend=headless --fake-seat --renderer=gl \
-  --width=1280 --height=800 --socket=mansion-t62 --no-config --idle-time=0 \
+  --width=1280 --height=800 --socket=elsewhere-t62 --no-config --idle-time=0 \
   --log="$PWD/.tools/t62/weston.log" -- \
-  /usr/bin/env WAYLAND_DISPLAY=mansion-t62 \
+  /usr/bin/env WAYLAND_DISPLAY=elsewhere-t62 \
   "$PWD/tools/Godot_v4.7.2-stable_linux.x86_64" --display-driver wayland \
   --path "$PWD/world" --audio-driver Dummy --max-fps 60 \
   --script res://tests/room_furniture.gd
@@ -129,7 +129,7 @@ allowance for eight physics interactions and four extended-room routes; existing
 assertions and deadlines are unchanged. Local GPU drivers and detailed logs are
 under `.tools/t62/`. Generated caches and downloaded source models remain ignored.
 
-For performance, run `mansion_rooms.gd -- --rooms-profile` with the same display
+For performance, run `elsewhere_rooms.gd -- --rooms-profile` with the same display
 recipe. It samples 120 process-frame intervals per settled view, with a real
 terminal running and a 60 FPS cap. Final sample (2026-10-09),
 `.tools/t62/final-profile.log`:
@@ -150,6 +150,6 @@ then the authored joinery removed repeated draw calls while keeping the same
 visible geometry/materials and shadowing. These stationary private-compositor
 samples do not measure input latency, prolonged traversal or human comfort.
 The broader performance/art gates remain separate. Final import/runtime logs:
-`/tmp/mansion-godot-check.0CYuRc`. Documentation links, the unique added T62 ID,
+`/tmp/elsewhere-godot-check.0CYuRc`. Documentation links, the unique added T62 ID,
 shell syntax and diffs were checked. Existing historical task-ID references were
 left intact. Nothing was pushed; restart restoration and T45 remain out of scope.

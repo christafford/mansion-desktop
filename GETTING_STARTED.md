@@ -54,21 +54,21 @@ meson test -C build --print-errorlogs
 Headless (used by all automated tests; needs no display):
 
 ```sh
-./build/mansion-desktop --headless --exit-after-ms 2000
+./build/elsewhere --headless --exit-after-ms 2000
 ```
 
 Windowed, inside your existing desktop session (`DISPLAY` must be set):
 
 ```sh
-./build/mansion-desktop
-./build/mansion-desktop --launch weston-terminal
+./build/elsewhere
+./build/elsewhere --launch weston-terminal
 ```
 
-`--help` lists all options. The compositor prints `MANSION_SOCKET=<name>` on
+`--help` lists all options. The compositor prints `ELSEWHERE_SOCKET=<name>` on
 stdout; clients started by hand need `WAYLAND_DISPLAY=<name>` and the same
 `XDG_RUNTIME_DIR`.
 
-Protocol debugging: `WAYLAND_DEBUG=1 ./build/mansion-test-client --socket <name>`.
+Protocol debugging: `WAYLAND_DEBUG=1 ./build/elsewhere-test-client --socket <name>`.
 
 ## Workflow
 

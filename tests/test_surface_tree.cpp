@@ -124,19 +124,19 @@ static void client(const char* socket,int send,int receive) {
     }
     _exit(0);
 }
-static void pixel(const mansion::OwnedFrame& f,int x,int y,int r,int g,int b) {
+static void pixel(const elsewhere::OwnedFrame& f,int x,int y,int r,int g,int b) {
     check(f && f->mapped && x<f->width && y<f->height,"mapped pixel bounds");
     auto* p=&f->pixels[(y*f->width+x)*4];
     check(std::abs(int(p[0])-r)<=1 && std::abs(int(p[1])-g)<=1 && std::abs(int(p[2])-b)<=1,"composed pixel");
 }
 int main() {
-    alarm(25);char directory[]="/tmp/mansion-tree-XXXXXX";check(mkdtemp(directory),"directory");
-    mansion::CompositorRuntime runtime;check(runtime.start(directory),"runtime start");
+    alarm(25);char directory[]="/tmp/elsewhere-tree-XXXXXX";check(mkdtemp(directory),"directory");
+    elsewhere::CompositorRuntime runtime;check(runtime.start(directory),"runtime start");
     int to_parent[2],to_child[2];check(pipe2(to_parent,O_CLOEXEC)==0 && pipe2(to_child,O_CLOEXEC)==0,"pipes");
     pid_t pid=fork();check(pid>=0,"fork");
     if (!pid) { close(to_parent[0]);close(to_child[1]);client(runtime.socket_path().c_str(),to_parent[1],to_child[0]); }
     close(to_parent[1]);close(to_child[0]);fcntl(to_parent[0],F_SETFL,O_NONBLOCK);
-    int64_t handle=0;uint64_t revision=0;mansion::OwnedFrame retained;
+    int64_t handle=0;uint64_t revision=0;elsewhere::OwnedFrame retained;
     for (char expected='A';expected<='O';++expected) {
         char stage;ssize_t count;
         while ((count=read(to_parent[0],&stage,1))<0 && errno==EAGAIN) {check(runtime.pump(),"pump");usleep(1000);}

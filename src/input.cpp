@@ -77,9 +77,9 @@ int input_tab_key_get(void) {
 }
 
 /* Global pointer to seat for input forwarding */
-struct MansionSeat* g_seat = nullptr;
+struct ElsewhereSeat* g_seat = nullptr;
 /* Global pointer to compositor for pointer hit testing. */
-struct MansionCompositor* g_compositor = nullptr;
+struct ElsewhereCompositor* g_compositor = nullptr;
 
 static InputMode stored_mode_when_focus_lost = InputMode::World;
 
@@ -228,10 +228,10 @@ static struct wl_resource* pointer_hit_test(wl_fixed_t x, wl_fixed_t y) {
     if (!g_compositor) return nullptr;
 
     /* Collect surfaces, then iterate in reverse (z-order: last committed = top). */
-    MansionSurface* surfaces[64];
+    ElsewhereSurface* surfaces[64];
     int count = 0;
 
-    MansionSurface *s, *s_next;
+    ElsewhereSurface *s, *s_next;
     wl_list_for_each_safe(s, s_next, &g_compositor->surface_list, link) {
         if (count < 64) {
             surfaces[count++] = s;
@@ -239,7 +239,7 @@ static struct wl_resource* pointer_hit_test(wl_fixed_t x, wl_fixed_t y) {
     }
 
     for (int i = count - 1; i >= 0; i--) {
-        MansionSurface* surf = surfaces[i];
+        ElsewhereSurface* surf = surfaces[i];
         int sx = wl_fixed_to_int(surf->current_x);
         int sy = wl_fixed_to_int(surf->current_y);
         if (x >= wl_fixed_from_int(sx) && x < wl_fixed_from_int(sx + surf->width) &&
@@ -274,7 +274,7 @@ static void pointer_check_focus(uint32_t serial) {
 
         /* Enter new surface. */
         if (new_surface) {
-            MansionSurface* ms =
+            ElsewhereSurface* ms =
                 compositor_surface_from_resource(new_surface);
             if (ms) {
                 /* Compute position relative to the surface. */
@@ -299,7 +299,7 @@ static bool g_window_closed = false;
 
 /* Process Wayland client events (dispatch pending events, check close flag).
  * Returns 0 on success, -1 if the window was closed by the user. */
-int input_process_wayland_client(struct MansionDisplay* m_display) {
+int input_process_wayland_client(struct ElsewhereDisplay* m_display) {
     if (g_window_closed) {
         g_window_closed = false;
         return -1;
@@ -353,7 +353,7 @@ struct InputScript* input_script_init(const char* filename) {
     return s;
 }
 
-static void apply_movement(MansionDisplay* display, double delta_ms,
+static void apply_movement(ElsewhereDisplay* display, double delta_ms,
                            MovementState* ms) {
     if (!display || !ms || delta_ms <= 0) return;
     if (display->flat_mode) return;
@@ -388,7 +388,7 @@ static void apply_movement(MansionDisplay* display, double delta_ms,
         room_apply_collision(&cam->x, &cam->y, &cam->z);
 }
 
-static void apply_mouse_look(MansionDisplay* display,
+static void apply_mouse_look(ElsewhereDisplay* display,
                              MovementState* ms) {
     if (!display || !ms || display->flat_mode) return;
     /* Zero delta means no motion — no need for a button gate. */
@@ -406,7 +406,7 @@ static void apply_mouse_look(MansionDisplay* display,
     ms->mouseY = 0;
 }
 
-void input_wayland_apply_movement(MansionDisplay* display, double delta_ms) {
+void input_wayland_apply_movement(ElsewhereDisplay* display, double delta_ms) {
     if (!live_focused || input_mode_get() != InputMode::World) {
         live_movement = {};
         return;
@@ -422,9 +422,9 @@ void input_wayland_apply_movement(MansionDisplay* display, double delta_ms) {
 /* Execute the next command from the script. Returns 0 if more commands
    remain, 1 if quit, -1 on EOF. */
 int input_script_step(struct InputScript* s,
-                      struct MansionSeat* seat,
-                      struct MansionCompositor* comp,
-                      struct MansionDisplay* display) {
+                      struct ElsewhereSeat* seat,
+                      struct ElsewhereCompositor* comp,
+                      struct ElsewhereDisplay* display) {
     if (!s || s->done) return -1;
     if (!seat || !comp) return -1;
     if (s->remaining_wait_ms > 0) return 0;
@@ -651,7 +651,7 @@ void input_script_destroy(struct InputScript* s) {
 }
 
 void input_script_apply_movement(struct InputScript* s,
-                                 struct MansionDisplay* display,
+                                 struct ElsewhereDisplay* display,
                                  double delta_ms) {
     if (!s || !display) return;
     apply_movement(display, delta_ms, &s->movement);
@@ -660,12 +660,12 @@ void input_script_apply_movement(struct InputScript* s,
 
 
 // Legacy policy owns its global seat; the reusable server has no global seat.
-MansionSeat* create_seat(wl_display* display) {
+ElsewhereSeat* create_seat(wl_display* display) {
     stored_mode_when_focus_lost = InputMode::World;
     g_seat = seat_create(display);
     return g_seat;
 }
-void destroy_seat(MansionSeat* seat) {
+void destroy_seat(ElsewhereSeat* seat) {
     if (g_seat == seat) g_seat = nullptr;
     seat_destroy(seat);
 }

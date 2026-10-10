@@ -2,15 +2,15 @@
 
 #include <wayland-server.h>
 
-struct MansionXdgSurface;
-struct MansionSeat;
+struct ElsewhereXdgSurface;
+struct ElsewhereSeat;
 struct CoreFrameState;
 
 /* Forward declaration for the toplevel list link. */
 struct wl_list;
 
 /* Per-surface frame callback */
-struct MansionFrameCallback {
+struct ElsewhereFrameCallback {
     struct wl_resource* resource;
     struct wl_list link;
 };
@@ -25,16 +25,16 @@ typedef void (*surface_commit_callback)(struct wl_resource* surface_resource,
  * Only Wayland protocol state lives here.  GPU resources (textures) are owned
  * by the rendering layer (renderer-surface.h) and accessed via
  * display.h accessor functions. */
-struct MansionSurface {
+struct ElsewhereSurface {
     CoreFrameState* core_frame = nullptr; // Used only by compositor-core.
     struct wl_resource* resource;
     struct wl_list link;
 
     /* Pointer back to compositor (needed when resource is destroyed). */
-    struct MansionCompositor* compositor;
+    struct ElsewhereCompositor* compositor;
 
     /* Role object, owned by its own wl_resource; nullptr without a role. */
-    struct MansionXdgSurface* xdg_surface;
+    struct ElsewhereXdgSurface* xdg_surface;
 
     /* Buffer tracking */
     struct wl_resource* buffer_resource;              /* current (applied) buffer */
@@ -72,19 +72,19 @@ struct MansionSurface {
 };
 
 /* Internal compositor structure - shared between compositor.cpp and display.cpp */
-struct MansionCompositor {
+struct ElsewhereCompositor {
     struct wl_global* global;
     struct wl_list surface_list;
     struct wl_list orphaned_surfaces; /* surfaces that survived client disconnect */
 
     /* P5-T01: registry of all toplevel surfaces (across all clients).
-     * Each entry is the `link` field inside a MansionXdgSurface that has
+     * Each entry is the `link` field inside a ElsewhereXdgSurface that has
      * a non-null toplevel. Iterated left-to-right: oldest toplevel first. */
     struct wl_list toplevel_list;
     int toplevel_count;
 
     /* Keyboard focus (P1-T06-C). */
-    struct MansionSeat* seat;
+    struct ElsewhereSeat* seat;
     struct wl_resource* focused_surface_resource;
     uint32_t keyboard_focus_serial;
 };

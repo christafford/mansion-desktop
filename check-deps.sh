@@ -1,5 +1,5 @@
 #!/bin/sh
-# Check for Mansion Desktop build and test dependencies.
+# Check for Elsewhere build and test dependencies.
 status=0
 for prog in meson ninja g++ gcc pkg-config wayland-scanner node; do
     if command -v "$prog" >/dev/null 2>&1; then echo "  $prog: ok"; else echo "  $prog: missing"; status=1; fi

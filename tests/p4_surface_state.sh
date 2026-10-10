@@ -14,7 +14,7 @@ run_test() {
     SOCKET="SOCKET-$_name"
     COMPOSITOR_PID=""
 
-    "$MANSION" --headless --socket "$SOCKET" \
+    "$ELSEWHERE" --headless --socket "$SOCKET" \
         --camera 0,0,10,0,0 \
         --exit-after-ms 3000 \
         >"$WORK/compositor.out" 2>"$WORK/compositor.err" &
@@ -22,7 +22,7 @@ run_test() {
 
     # Wait for socket
     for _ in $(seq 1 100); do
-        if grep -q "^MANSION_SOCKET=$SOCKET\$" "$WORK/compositor.out" 2>/dev/null; then
+        if grep -q "^ELSEWHERE_SOCKET=$SOCKET\$" "$WORK/compositor.out" 2>/dev/null; then
             break
         fi
         if ! kill -0 "$COMPOSITOR_PID" 2>/dev/null; then
@@ -66,7 +66,7 @@ SCREEN_P3="$(mktemp /tmp/screenshot_p3.XXXXXX.ppm)"
 SOCKET="SOCKET-replaced-attach"
 COMPOSITOR_PID=""
 
-"$MANSION" --headless --socket "$SOCKET" \
+"$ELSEWHERE" --headless --socket "$SOCKET" \
     --camera 0,0,10,0,0 \
     --exit-after-ms 2000 \
     --screenshot "$SCREEN_P3" \
@@ -74,7 +74,7 @@ COMPOSITOR_PID=""
 COMPOSITOR_PID=$!
 
 for _ in $(seq 1 100); do
-    if grep -q "^MANSION_SOCKET=$SOCKET\$" "$WORK/compositor.out" 2>/dev/null; then
+    if grep -q "^ELSEWHERE_SOCKET=$SOCKET\$" "$WORK/compositor.out" 2>/dev/null; then
         break
     fi
     if ! kill -0 "$COMPOSITOR_PID" 2>/dev/null; then

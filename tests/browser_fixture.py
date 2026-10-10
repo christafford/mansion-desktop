@@ -7,12 +7,12 @@ import sys
 
 state = Path(sys.argv[1])
 state.mkdir(parents=True, exist_ok=True)
-page = b'''<!doctype html><meta charset="utf-8"><title>Mansion browser acceptance</title>
+page = b'''<!doctype html><meta charset="utf-8"><title>Elsewhere browser acceptance</title>
 <style>body{margin:36px;font:20px sans-serif;background:#f4efe5;color:#253338}
 h1{font-size:36px}input{display:block;font:24px sans-serif;padding:14px;width:470px}
 button{margin-top:24px;border:0;background:rgb(20,120,200);color:white;padding:20px 36px;font:22px sans-serif}
 footer{margin-top:1100px;padding:30px;background:#253338;color:white}</style>
-<h1>A browser in the mansion</h1><p>This page is running in real Chrome through Mansion's Wayland compositor.</p>
+<h1>A browser in the elsewhere</h1><p>This page is running in real Chrome through Elsewhere's Wayland compositor.</p>
 <label>Workspace note<input id="note" autofocus autocomplete="off"></label>
 <button id="save">Save note</button><p id="result">Ready for keyboard and pointer input.</p>
 <footer>End of the local scrolling test page.</footer>

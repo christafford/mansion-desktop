@@ -64,7 +64,7 @@ without an extension. GDB with the existing local development engine located a
 null `DocTools` access from `EditorHelp::_gen_extensions_docs`, called through a
 deferred message during `Main::cleanup`. The engine's asynchronous cached-doc
 loader can finish after documentation teardown. This is distinct from the old
-Mansion addon's crashing class registration.
+Elsewhere addon's crashing class registration.
 
 The tested mitigation is:
 

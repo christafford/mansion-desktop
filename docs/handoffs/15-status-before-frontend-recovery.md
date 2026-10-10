@@ -15,9 +15,9 @@ Decision [06](../decisions/06-godot-poly-haven.md) remains the product direction
 **P21-T13 in progress (2026-10-03):**
 - P21-T12 snapshot API complete (see below)
 - C API for pixel data transfer implemented:
-  - `mansion_gdextension_snapshot_get_pixels()` returns pointer to ARGB8888 data
-  - `mansion_gdextension_snapshot_get_pixels_size()` returns data size
-  - `mansion_gdextension_snapshot_copy_pixels()` copies to caller buffer
+  - `elsewhere_gdextension_snapshot_get_pixels()` returns pointer to ARGB8888 data
+  - `elsewhere_gdextension_snapshot_get_pixels_size()` returns data size
+  - `elsewhere_gdextension_snapshot_copy_pixels()` copies to caller buffer
 - GDExtension extension methods registered and callable from GDScript
 - GDScript bridge needs implementation to:
   - Get snapshot data size
@@ -25,14 +25,14 @@ Decision [06](../decisions/06-godot-poly-haven.md) remains the product direction
   - Copy pixel data into PoolByteArray
   - Create ImageTexture from pixel data
   - Update texture on revision change
-- Connection between `MansionAdapter` output and Viewport texture for rendering not yet implemented
+- Connection between `ElsewhereAdapter` output and Viewport texture for rendering not yet implemented
 
 **P21-T12 completed (2026-10-03):**
 - Snapshot struct with width/height/stride/format/revision/pixels/pixels_size
-- `mansion_gdextension_adapter_create_snapshot()` creates owned pixel copies
+- `elsewhere_gdextension_adapter_create_snapshot()` creates owned pixel copies
 - Format conversion: ABGR8888/XBGR8888 (swizzle to ARGB8888), ARGB8888/XRGB8888 (no swizzle)
 - Pixel data stored in ARGB8888 format (0xAARRGGBB, little-endian) for direct texture upload
-- `mansion_gdextension_adapter_destroy_snapshot()` releases snapshot memory
+- `elsewhere_gdextension_adapter_destroy_snapshot()` releases snapshot memory
 - Snapshot API functions exported: create, destroy, width, height, stride, format, revision, pixels, pixels_size, copy_pixels
 - wl_shm_buffer_get_data() used to access buffer pixels; wl_shm_buffer_end_access() called after copy
 - Buffer released after copying; snapshots survive source destruction
@@ -42,12 +42,12 @@ Decision [06](../decisions/06-godot-poly-haven.md) remains the product direction
 - GDExtension uses existing Wayland display and compositor (not create new ones)
 - Main loop integrates GDExtension adapter for pumping Wayland events
 - GDExtension entry point is `GDExtensionInit`
-- `mansion_gdextension_adapter` class with methods: initialize(), shutdown(), destroy(), pump(), flush(), get_focused_serial(), set_compositor()
+- `elsewhere_gdextension_adapter` class with methods: initialize(), shutdown(), destroy(), pump(), flush(), get_focused_serial(), set_compositor()
 - `.gdextension` file uses `entry_symbol = "GDExtensionInit"` with relative `res://` paths
-- Visibility macro `MANSION_GDEXT_EXPORT` added to ensure functions are exported
+- Visibility macro `ELSEWHERE_GDEXT_EXPORT` added to ensure functions are exported
 - Library builds successfully and loads without crashing
 - GDExtension loads successfully with Godot and `GDExtensionInit` is called
-- `client_serial` field added to `MansionSurface` structure
+- `client_serial` field added to `ElsewhereSurface` structure
 - `compositor_surface_from_serial()` helper function added for surface lookup by serial
 
 **P21-T10 completed (2026-10-02):**
@@ -174,7 +174,7 @@ an old run with `/autostop` before starting the intended scope.
 
 | Component | Reality on disk | Status |
 | --- | --- | --- |
-| `build/mansion-desktop --room-camera` | Old C++/EGL room; fixed event dispatch, camera input and vertical export | Legacy prototype, not Godot |
+| `build/elsewhere --room-camera` | Old C++/EGL room; fixed event dispatch, camera input and vertical export | Legacy prototype, not Godot |
 | `world/project.godot`, `world/scenes/main.tscn` | Furnished scene with imported glTF models, room structure (floor/wall/ceiling/rug/window), distinct materials | P21-T05 completed (2026-10-02) |
 | `world/scripts/game_world.gd` | Controller: camera, movement, teleop, input mode switching; no bridge integration | P21-T01 verified |
 | `tools/Godot_v4.7.2-stable_linux.x86_64` | Present; version command works; a bounded GUI run initializes OpenGL | Verified baseline (T00) |
@@ -182,7 +182,7 @@ an old run with `/autostop` before starting the intended scope.
 | `world/assets/manifest.json` | Authoritative asset manifest with 13 assets, complete provenance, MD5 verification, and SHA-256 hashes for all files; `missing_files` section removed (all files present) | P21-T02/T03 completed (2026-10-02) |
 | `world/assets/manifest.md` | Prose asset proposal; replaced by authoritative `manifest.json` | Historical reference only |
 | Compositor extraction | Surface texture field moved, but compositor still includes GL/display headers and calls renderer helpers; no core-library Meson target | P21-T10 completed (2026-10-02) |
-| `src/godot/`, deployed `.so` | Draft API/wrapper, empty initialization callbacks, no class registration, unresolved Mansion symbols, `extension.toml` instead of a loadable `.gdextension` resource | T11 incomplete; building a `.so` did not integrate Godot |
+| `src/godot/`, deployed `.so` | Draft API/wrapper, empty initialization callbacks, no class registration, unresolved Elsewhere symbols, `extension.toml` instead of a loadable `.gdextension` resource | T11 incomplete; building a `.so` did not integrate Godot |
 | Godot snapshots/input/terminal | No scene wiring to bridge or live ImageTexture | T12–T19 unimplemented/unaccepted |
 
 ## P21-T02 verification 2026-10-02 (asset selection and provenance)
@@ -286,7 +286,7 @@ For interactive editor use:
 tools/run-godot.sh --editor
 ```
 
-**Note:** `build/mansion-desktop --room-camera` still runs the legacy C++/EGL renderer.
+**Note:** `build/elsewhere --room-camera` still runs the legacy C++/EGL renderer.
 
 ## Verified by a person
 

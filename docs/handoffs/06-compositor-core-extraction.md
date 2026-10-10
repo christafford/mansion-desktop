@@ -16,17 +16,17 @@ and input. The compositor core (`compositor.cpp`, `compositor-private.h`,
 ## Changes
 
 ### New file
-- **`src/renderer-surface.h`** — Rendering-layer per-surface state (`MansionRendererSurface`
+- **`src/renderer-surface.h`** — Rendering-layer per-surface state (`ElsewhereRendererSurface`
   with `GLuint gl_texture`). Only included by presentation-layer code.
 
 ### Modified files
 - **`src/compositor-private.h`** — Removed `#include <GLES2/gl2.h>` and
-  `GLuint gl_texture` field from `MansionSurface`. The struct now contains
+  `GLuint gl_texture` field from `ElsewhereSurface`. The struct now contains
   only Wayland protocol state.
 - **`src/display.h`** — Added `#include "renderer-surface.h"` and four
   accessor function declarations.
 - **`src/display.cpp`** — Added static `unordered_map` mapping protocol
-  surface `wl_resource*` → `MansionRendererSurface*`, a global pointer
+  surface `wl_resource*` → `ElsewhereRendererSurface*`, a global pointer
   (`g_current_display`) for surface-creation-time access, and four
   accessor implementations:
   - `get_renderer_surface()` — lookup by resource pointer
@@ -40,8 +40,8 @@ and input. The compositor core (`compositor.cpp`, `compositor-private.h`,
 
 ```
 compositor.cpp ──→ protocol objects, surface state, frame callbacks
-compositor-private.h ──→ MansionSurface (Wayland-only), MansionCompositor
-renderer-surface.h ──→ MansionRendererSurface (GL texture only)
+compositor-private.h ──→ ElsewhereSurface (Wayland-only), ElsewhereCompositor
+renderer-surface.h ──→ ElsewhereRendererSurface (GL texture only)
 display.cpp ──→ presentation: EGL, rendering, host window, seat input
 display.h ──→ accessor API that bridges protocol ↔ presentation
 main.cpp ──→ integration: creates compositor, display, input, launches clients
@@ -55,7 +55,7 @@ The bridge needs these without pulling in EGL/rendering:
 2. **Non-blocking pump** — `wl_event_loop_dispatch(event_loop, 0)`
 3. **Surface enumeration** — iterate `compositor->surface_list`
 4. **Surface state access** — width, height, buffer_resource, needs_upload,
-   damage (all in `MansionSurface`, no GL deps)
+   damage (all in `ElsewhereSurface`, no GL deps)
 5. **Frame callback firing** — `wl_list_for_each_safe` over
    `surface->frame_callback_list`
 6. **Seat config** — seat is created in `create_seat()` (input.cpp)

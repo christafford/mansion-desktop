@@ -18,7 +18,7 @@ static std::string read(const std::string& path) {
     std::ifstream stream(path); return {std::istreambuf_iterator<char>(stream), {}};
 }
 static void mark(const std::string& path) { std::ofstream stream(path); check(bool(stream), "marker creation"); }
-static void until(mansion::CompositorRuntime& runtime, const std::function<bool()>& predicate) {
+static void until(elsewhere::CompositorRuntime& runtime, const std::function<bool()>& predicate) {
     auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
     while (!predicate()) {
         check(runtime.pump(), runtime.last_error().c_str());
@@ -26,10 +26,10 @@ static void until(mansion::CompositorRuntime& runtime, const std::function<bool(
         usleep(1000);
     }
 }
-static void wait_file(mansion::CompositorRuntime& runtime, const std::string& path) {
+static void wait_file(elsewhere::CompositorRuntime& runtime, const std::string& path) {
     until(runtime, [&] { return access(path.c_str(), F_OK) == 0; });
 }
-static void wait_event(mansion::CompositorRuntime& runtime, const std::string& path, const std::string& event) {
+static void wait_event(elsewhere::CompositorRuntime& runtime, const std::string& path, const std::string& event) {
     until(runtime, [&] { return read(path).find(event) != std::string::npos; });
 }
 static size_t occurrences(const std::string& text, const std::string& part) {
@@ -44,8 +44,8 @@ static pid_t spawn(const char* fixture, const std::string& socket, const std::st
 }
 int main(int argc, char** argv) {
     check(argc == 2, "fixture executable"); alarm(30);
-    char directory[] = "/tmp/mansion-pointer-XXXXXX"; check(mkdtemp(directory), "test directory");
-    mansion::CompositorRuntime runtime;
+    char directory[] = "/tmp/elsewhere-pointer-XXXXXX"; check(mkdtemp(directory), "test directory");
+    elsewhere::CompositorRuntime runtime;
     check(!runtime.pointer_motion(0, 0, 0) && !runtime.pointer_button(272, true) && !runtime.pointer_axis(0, 10), "stopped input rejected");
     runtime.pointer_reset();
     check(runtime.start(directory), runtime.last_error().c_str());

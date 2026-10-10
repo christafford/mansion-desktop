@@ -16,7 +16,7 @@
 static constexpr int kMaxOrphanedSurfaces = 10;
 
 static void surface_destroy_callback(struct wl_resource* resource) {
-    auto* surface = static_cast<MansionSurface*>(wl_resource_get_user_data(resource));
+    auto* surface = static_cast<ElsewhereSurface*>(wl_resource_get_user_data(resource));
     if (!surface) return;
 
     wl_list_remove(&surface->link);
@@ -48,13 +48,13 @@ static void surface_destroy_callback(struct wl_resource* resource) {
      * the oldest surface (first in the list) and free its resources. */
     if (surface->compositor->orphaned_surfaces.next != &surface->compositor->orphaned_surfaces) {
         int count = 0;
-        MansionSurface *s;
+        ElsewhereSurface *s;
         wl_list_for_each(s, &surface->compositor->orphaned_surfaces, link) {
             (void)s;
             count++;
         }
         if (count >= kMaxOrphanedSurfaces) {
-            MansionSurface* oldest = wl_container_of(
+            ElsewhereSurface* oldest = wl_container_of(
                 surface->compositor->orphaned_surfaces.next, oldest, link);
             wl_list_remove(&oldest->link);
             destroy_renderer_surface(oldest);
@@ -73,8 +73,8 @@ static void surface_destroy(struct wl_client* client, struct wl_resource* resour
  * Clean up the GL texture since the backing storage is gone. */
 static void buffer_destroy_notify(struct wl_listener* listener, void* data) {
     (void)data;
-    MansionSurface* surface = (MansionSurface*)
-        wl_container_of(listener, (MansionSurface*)NULL, buffer_destroy_listener);
+    ElsewhereSurface* surface = (ElsewhereSurface*)
+        wl_container_of(listener, (ElsewhereSurface*)NULL, buffer_destroy_listener);
 
     if (!surface) return;
     surface->buffer_destroyed = true;
@@ -88,7 +88,7 @@ static void buffer_destroy_notify(struct wl_listener* listener, void* data) {
 static void surface_attach(struct wl_client* client, struct wl_resource* resource,
                            struct wl_resource* buffer_resource, int32_t x, int32_t y) {
     (void)client; (void)x; (void)y;
-    auto* surface = static_cast<MansionSurface*>(wl_resource_get_user_data(resource));
+    auto* surface = static_cast<ElsewhereSurface*>(wl_resource_get_user_data(resource));
 
     /* Always remove the listener — it may be registered for the current
      * buffer from a previous commit. We will re-register it for the new
@@ -131,7 +131,7 @@ static void surface_attach(struct wl_client* client, struct wl_resource* resourc
 static void surface_damage(struct wl_client* client, struct wl_resource* resource,
                            int32_t x, int32_t y, int32_t width, int32_t height) {
     (void)client;
-    auto* surface = static_cast<MansionSurface*>(wl_resource_get_user_data(resource));
+    auto* surface = static_cast<ElsewhereSurface*>(wl_resource_get_user_data(resource));
     (void)surface; (void)x; (void)y; (void)width; (void)height;
     /* Accumulate damage into a single bounding box. */
     if (surface->damage_count == 0) {
@@ -159,7 +159,7 @@ static void surface_damage(struct wl_client* client, struct wl_resource* resourc
 
 static void surface_commit(struct wl_client* client, struct wl_resource* resource) {
     (void)client;
-    auto* surface = static_cast<MansionSurface*>(wl_resource_get_user_data(resource));
+    auto* surface = static_cast<ElsewhereSurface*>(wl_resource_get_user_data(resource));
 
     /* Apply pending position. */
     if (surface->has_pending_position) {
@@ -215,7 +215,7 @@ static void surface_commit(struct wl_client* client, struct wl_resource* resourc
 static void surface_frame(struct wl_client* client, struct wl_resource* resource,
                           uint32_t callback_id) {
     (void)client;
-    auto* surface = static_cast<MansionSurface*>(wl_resource_get_user_data(resource));
+    auto* surface = static_cast<ElsewhereSurface*>(wl_resource_get_user_data(resource));
 
     auto* cb = wl_resource_create(client, &wl_callback_interface, 1, callback_id);
     if (!cb) {
@@ -292,9 +292,9 @@ static const struct wl_region_interface region_impl = {
 
 static void compositor_create_surface(struct wl_client* client, struct wl_resource* compositor_resource,
                                        uint32_t id) {
-    auto* compositor = static_cast<MansionCompositor*>(wl_resource_get_user_data(compositor_resource));
+    auto* compositor = static_cast<ElsewhereCompositor*>(wl_resource_get_user_data(compositor_resource));
 
-    auto* surface = new MansionSurface;
+    auto* surface = new ElsewhereSurface;
     surface->resource = wl_resource_create(client, &wl_surface_interface, 4, id);
     if (!surface->resource) {
         delete surface;
@@ -331,7 +331,7 @@ static void compositor_create_surface(struct wl_client* client, struct wl_resour
 
 static void compositor_create_region(struct wl_client* client, struct wl_resource* compositor_resource,
                                        uint32_t id) {
-    auto* compositor = static_cast<MansionCompositor*>(wl_resource_get_user_data(compositor_resource));
+    auto* compositor = static_cast<ElsewhereCompositor*>(wl_resource_get_user_data(compositor_resource));
     (void)compositor;
 
     auto* region = wl_resource_create(client, &wl_region_interface, 1, id);
@@ -354,7 +354,7 @@ static const struct wl_compositor_interface compositor_impl = {
 };
 
 static void compositor_bind(struct wl_client* client, void* data, uint32_t version, uint32_t id) {
-    auto* compositor = static_cast<MansionCompositor*>(data);
+    auto* compositor = static_cast<ElsewhereCompositor*>(data);
     (void)version;
 
     auto* resource = wl_resource_create(client, &wl_compositor_interface, 4, id);
@@ -365,8 +365,8 @@ static void compositor_bind(struct wl_client* client, void* data, uint32_t versi
     wl_resource_set_implementation(resource, &compositor_impl, compositor, nullptr);
 }
 
-struct MansionCompositor* create_compositor(struct wl_display* display) {
-    auto* compositor = new MansionCompositor{};
+struct ElsewhereCompositor* create_compositor(struct wl_display* display) {
+    auto* compositor = new ElsewhereCompositor{};
     wl_list_init(&compositor->surface_list);
     wl_list_init(&compositor->orphaned_surfaces);
     wl_list_init(&compositor->toplevel_list);
@@ -384,14 +384,14 @@ struct MansionCompositor* create_compositor(struct wl_display* display) {
     return compositor;
 }
 
-struct MansionSurface* compositor_surface_from_resource(struct wl_resource* resource) {
-    return static_cast<MansionSurface*>(wl_resource_get_user_data(resource));
+struct ElsewhereSurface* compositor_surface_from_resource(struct wl_resource* resource) {
+    return static_cast<ElsewhereSurface*>(wl_resource_get_user_data(resource));
 }
 
-struct MansionSurface* compositor_surface_from_serial(struct MansionCompositor* compositor, uint32_t serial) {
+struct ElsewhereSurface* compositor_surface_from_serial(struct ElsewhereCompositor* compositor, uint32_t serial) {
     if (!compositor) return nullptr;
 
-    struct MansionSurface *surface;
+    struct ElsewhereSurface *surface;
     wl_list_for_each(surface, &compositor->surface_list, link) {
         if (surface->client_serial == serial) {
             return surface;
@@ -408,18 +408,18 @@ struct MansionSurface* compositor_surface_from_serial(struct MansionCompositor* 
     return nullptr;
 }
 
-void compositor_surface_set_size(struct MansionSurface* surface, int32_t width, int32_t height) {
+void compositor_surface_set_size(struct ElsewhereSurface* surface, int32_t width, int32_t height) {
     if (surface) {
         surface->width = width;
         surface->height = height;
     }
 }
 
-void destroy_compositor(struct MansionCompositor* compositor) {
+void destroy_compositor(struct ElsewhereCompositor* compositor) {
     if (!compositor) return;
     wl_global_destroy(compositor->global);
 
-    struct MansionSurface *surface, *next;
+    struct ElsewhereSurface *surface, *next;
     wl_list_for_each_safe(surface, next, &compositor->surface_list, link) {
         wl_resource_destroy(surface->resource);
     }

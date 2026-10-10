@@ -12,13 +12,13 @@
 
 #include "launch.h"
 
-struct MansionApp {
+struct ElsewhereApp {
     struct wl_display* display;
     pid_t pid;
     std::string command;
 };
 
-void destroy_app(struct MansionApp* app) {
+void destroy_app(struct ElsewhereApp* app) {
     if (!app) return;
     if (app->pid > 0) {
         int status = 0;
@@ -48,7 +48,7 @@ static std::vector<std::string> split_command(const char* command) {
     return words;
 }
 
-MansionApp* launch_app(struct wl_display* display, const char* socket_name, const char* command) {
+ElsewhereApp* launch_app(struct wl_display* display, const char* socket_name, const char* command) {
     std::vector<std::string> words = split_command(command);
     if (words.empty()) {
         std::cerr << "launch: empty command" << std::endl;
@@ -81,17 +81,17 @@ MansionApp* launch_app(struct wl_display* display, const char* socket_name, cons
         _exit(127);
     }
 
-    auto* app = new MansionApp;
+    auto* app = new ElsewhereApp;
     app->display = display;
     app->pid = child_pid;
     app->command = command;
     return app;
 }
 
-pid_t app_pid(struct MansionApp* app) {
+pid_t app_pid(struct ElsewhereApp* app) {
     return app ? app->pid : -1;
 }
 
-bool app_has_pid(struct MansionApp* app) {
+bool app_has_pid(struct ElsewhereApp* app) {
     return app && app->pid > 0;
 }

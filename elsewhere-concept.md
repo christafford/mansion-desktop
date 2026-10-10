@@ -1,4 +1,4 @@
-# Mansion Desktop
+# Elsewhere
 
 ## Current implementation direction
 
@@ -11,23 +11,23 @@ in this concept are not instructions for an automatic migration.
 
 ## Concept and Architecture
 
-Mansion Desktop is a proposed Linux desktop environment that replaces the traditional two-dimensional desktop metaphor with a persistent, navigable three-dimensional world.
+Elsewhere is a proposed Linux desktop environment that replaces the traditional two-dimensional desktop metaphor with a persistent, navigable three-dimensional world.
 
-The user begins inside a large mansion and moves through it much like a first-person game, using a conventional monitor, keyboard, and mouse. Rooms, desks, shelves, walls, drawers, and other locations provide spatial organization for applications, documents, projects, and running sessions.
+The user begins inside a large elsewhere and moves through it much like a first-person game, using a conventional monitor, keyboard, and mouse. Rooms, desks, shelves, walls, drawers, and other locations provide spatial organization for applications, documents, projects, and running sessions.
 
 The central idea is:
 
 > Application and file identity should be associated with persistent physical location, not merely window coordinates, virtual desktops, or directory paths.
 
-The mansion is not just a decorative file browser. It is the desktop shell itself. Ordinary Linux applications continue to run through Wayland, while the compositor presents their surfaces as objects in the 3D environment.
+The elsewhere is not just a decorative file browser. It is the desktop shell itself. Ordinary Linux applications continue to run through Wayland, while the compositor presents their surfaces as objects in the 3D environment.
 
 ---
 
 ## 1. Core Experience
 
-### 1.1 The mansion is the desktop
+### 1.1 The elsewhere is the desktop
 
-At login, the user appears inside a mansion rather than on a conventional desktop. The mansion might include:
+At login, the user appears inside a elsewhere rather than on a conventional desktop. The elsewhere might include:
 
 - A large central hall
 - Offices and studies
@@ -54,7 +54,7 @@ From the application's perspective, it remains a normal Wayland application. The
 
 ### 1.3 Files are physical artifacts
 
-Files also have persistent representations in the mansion. A PDF might appear as a document on a desk, source code as a notebook or project object, an image as a framed picture, or a folder as a container.
+Files also have persistent representations in the elsewhere. A PDF might appear as a document on a desk, source code as a notebook or project object, an image as a framed picture, or a folder as a container.
 
 The 3D location is metadata layered on top of the ordinary Linux filesystem. For example:
 
@@ -66,11 +66,11 @@ Spatial location:
   Second Floor / Study / Desk / Left Drawer
 ```
 
-Moving the artifact within the mansion does not need to move the underlying file. This preserves compatibility with shells, scripts, Git, backups, Samba, and other conventional tools.
+Moving the artifact within the elsewhere does not need to move the underlying file. This preserves compatibility with shells, scripts, Git, backups, Samba, and other conventional tools.
 
 ### 1.4 Opening files with a weapon wheel
 
-When the user interacts directly with a file, Mansion Desktop can display a radial, weapon-wheel-style application chooser.
+When the user interacts directly with a file, Elsewhere can display a radial, weapon-wheel-style application chooser.
 
 For a PDF, the choices might include:
 
@@ -86,7 +86,7 @@ The available applications can come from standard Linux desktop entries, MIME as
 Saving a new document can become a spatial action rather than only a pathname-based dialog:
 
 1. The application requests a save location.
-2. Mansion Desktop returns the user to the world carrying a new artifact.
+2. Elsewhere returns the user to the world carrying a new artifact.
 3. The user places it on a desk, shelf, wall, or in a drawer.
 4. The file is saved to a normal filesystem path.
 5. Its spatial placement is recorded separately.
@@ -110,15 +110,15 @@ This allows users and applications to continue using:
 - Network shares
 - Existing application save and open behavior
 
-### 2.2 Applications should not need Mansion-specific support
+### 2.2 Applications should not need Elsewhere-specific support
 
-The compositor should make ordinary Wayland applications usable without requiring them to understand the mansion metaphor.
+The compositor should make ordinary Wayland applications usable without requiring them to understand the elsewhere metaphor.
 
-An application should see an ordinary Wayland display, receive ordinary input events, and render ordinary windows. Mansion Desktop decides whether the resulting surface is fullscreen or mapped onto an object in the world.
+An application should see an ordinary Wayland display, receive ordinary input events, and render ordinary windows. Elsewhere decides whether the resulting surface is fullscreen or mapped onto an object in the world.
 
 ### 2.3 Use spatial memory without becoming trapped by realism
 
-The mansion should provide locality and memory cues, but it should not force users to imitate every inconvenience of physical space.
+The elsewhere should provide locality and memory cues, but it should not force users to imitate every inconvenience of physical space.
 
 Useful nonphysical features could include:
 
@@ -142,7 +142,7 @@ The system can reliably restore placement, file associations, launch commands, a
 
 ## 3. System Architecture
 
-Mansion Desktop is best understood as a Wayland compositor and desktop shell whose primary user interface is a 3D engine.
+Elsewhere is best understood as a Wayland compositor and desktop shell whose primary user interface is a 3D engine.
 
 ```text
 Linux applications
@@ -150,14 +150,14 @@ Firefox / Terminal / VS Code / LibreOffice
                 |
         Wayland and XWayland
                 |
-       Mansion compositor
+       Elsewhere compositor
  window management, input, focus,
  app lifecycle, surface management
                 |
        live application surfaces
                 |
          3D world renderer
- mansion, objects, lighting, physics,
+ elsewhere, objects, lighting, physics,
  interaction, transitions, shell UI
                 |
           Vulkan / GPU
@@ -172,7 +172,7 @@ The compositor receives application buffers and can either:
 
 The project can be divided conceptually into four major components.
 
-#### `mansion-compositor`
+#### `elsewhere-compositor`
 
 - Wayland server
 - Surface and window lifecycle
@@ -182,17 +182,17 @@ The project can be divided conceptually into four major components.
 - XWayland integration
 - Clipboard and drag-and-drop integration
 
-#### `mansion-world`
+#### `elsewhere-world`
 
 - 3D rendering
-- Mansion geometry
+- Elsewhere geometry
 - Camera and movement
 - Lighting and animation
 - Physics and ray casting
 - In-world object interaction
 - Mapping application surfaces onto scene geometry
 
-#### `mansion-shell`
+#### `elsewhere-shell`
 
 - Application launcher
 - Weapon-wheel application chooser
@@ -202,7 +202,7 @@ The project can be divided conceptually into four major components.
 - Global shortcuts
 - Inventory or quick-access interface
 
-#### `mansion-indexer`
+#### `elsewhere-indexer`
 
 - Filesystem observation and indexing
 - MIME-type detection
@@ -331,7 +331,7 @@ Applications often create several related Wayland surfaces:
 - Context menus
 - Subsurfaces
 
-These must remain spatially and behaviorally connected. A dialog belonging to an application should not accidentally appear as an unrelated object elsewhere in the mansion.
+These must remain spatially and behaviorally connected. A dialog belonging to an application should not accidentally appear as an unrelated object elsewhere in the elsewhere.
 
 ### 5.3 GPU buffer integration
 
@@ -352,11 +352,11 @@ XWayland support will be needed for older or X11-only applications. Its windows 
 
 ### 5.5 File chooser integration
 
-Applications that use XDG Desktop Portals can eventually receive a Mansion-native open/save experience. Applications with custom or toolkit-native file choosers may initially continue to show ordinary dialogs.
+Applications that use XDG Desktop Portals can eventually receive a Elsewhere-native open/save experience. Applications with custom or toolkit-native file choosers may initially continue to show ordinary dialogs.
 
 ### 5.6 Session restoration
 
-Mansion Desktop can restore:
+Elsewhere can restore:
 
 - Artifact positions
 - Associated file paths or URIs
@@ -382,10 +382,10 @@ Search, teleportation, global shortcuts, adjustable movement, optional reduced-m
 
 ## 6. Example Organization
 
-The mansion can reflect projects and areas of responsibility.
+The elsewhere can reflect projects and areas of responsibility.
 
 ```text
-Mansion
+Elsewhere
 |- Account Processor room
 |  |- VS Code workstation
 |  |- Architecture document on table
@@ -411,7 +411,7 @@ An SSH connection could appear as a terminal in a server room. A door or portal 
 
 The project should begin as a nested compositor running inside an existing desktop session. Applications launched into its Wayland display appear inside the prototype window.
 
-This allows development of the novel parts before Mansion Desktop must control physical displays, input devices, virtual terminals, or Linux sessions directly.
+This allows development of the novel parts before Elsewhere must control physical displays, input devices, virtual terminals, or Linux sessions directly.
 
 ### Milestone 1: Prove the core interaction
 
@@ -419,7 +419,7 @@ Build one simple room containing one desk and one application surface.
 
 The exact proof should be:
 
-1. Start Mansion Desktop as a nested compositor.
+1. Start Elsewhere as a nested compositor.
 2. Walk around a basic 3D room.
 3. Launch one native Wayland terminal.
 4. Display its live surface on a monitor on the desk.
@@ -439,7 +439,7 @@ The first room should use simple geometry, simple lighting, and a modest resolut
 - Give each one an in-world representation.
 - Move application artifacts between valid locations.
 - Save their transforms and room membership.
-- Restore the world layout after restarting Mansion Desktop.
+- Restore the world layout after restarting Elsewhere.
 - Add basic task switching and search.
 
 ### Milestone 3: File artifacts
@@ -456,11 +456,11 @@ The first room should use simple geometry, simple lighting, and a modest resolut
 - Implement XWayland support.
 - Add clipboard and drag-and-drop behavior.
 - Add notifications.
-- Implement a Mansion-native XDG portal backend for open/save workflows.
+- Implement a Elsewhere-native XDG portal backend for open/save workflows.
 - Improve session recreation.
 - Add audio and richer shell controls.
 
-### Milestone 5: Full mansion
+### Milestone 5: Full elsewhere
 
 - Multiple rooms and floors
 - Project-oriented spaces
@@ -471,7 +471,7 @@ The first room should use simple geometry, simple lighting, and a modest resolut
 
 ### Milestone 6: Native desktop session
 
-Only after the nested version is mature should Mansion Desktop run directly as the desktop session. This phase adds:
+Only after the nested version is mature should Elsewhere run directly as the desktop session. This phase adds:
 
 - DRM/KMS display control
 - GBM and direct GPU integration
@@ -487,7 +487,7 @@ Only after the nested version is mature should Mansion Desktop run directly as t
 
 The initial prototype should not attempt to provide:
 
-- A complete mansion
+- A complete elsewhere
 - Photorealistic graphics
 - A replacement filesystem
 - Perfect session restoration
@@ -509,7 +509,7 @@ Several decisions can remain open until the core prototype works:
 
 - Should application surfaces always become fullscreen, or can some be operated directly in the world?
 - How should multiple windows belonging to one application be represented?
-- What happens when a file is moved, renamed, or deleted outside Mansion Desktop?
+- What happens when a file is moved, renamed, or deleted outside Elsewhere?
 - Should room placement be per-user, per-machine, or synchronized?
 - How are artifacts created for files that have never been explicitly placed?
 - How should very large collections be represented without filling rooms with clutter?
@@ -524,7 +524,7 @@ The prototype should collect evidence for these decisions instead of settling th
 
 ## 10. Definition of Success
 
-Mansion Desktop succeeds if physical locality provides a genuinely useful way to remember and resume work—not merely an impressive visual effect.
+Elsewhere succeeds if physical locality provides a genuinely useful way to remember and resume work—not merely an impressive visual effect.
 
 The project should make it natural to think:
 
@@ -534,7 +534,7 @@ rather than:
 
 > "Which virtual desktop, tab, directory, or window did I leave that in?"
 
-The smallest meaningful validation is therefore not a beautiful mansion. It is a single room in which an ordinary Linux application becomes a persistent, interactive object and can move cleanly between the 3D world and focused desktop use.
+The smallest meaningful validation is therefore not a beautiful elsewhere. It is a single room in which an ordinary Linux application becomes a persistent, interactive object and can move cleanly between the 3D world and focused desktop use.
 
 ## Living-world features to preserve in the roadmap
 

@@ -1,0 +1,6 @@
+[configuration]
+entry_symbol = "elsewhere_probe_init"
+compatibility_minimum = "4.7"
+[libraries]
+linux.debug.x86_64 = "res://addons/elsewhere_runtime/libelsewhere_runtime.so"
+linux.release.x86_64 = "res://addons/elsewhere_runtime/libelsewhere_runtime.so"

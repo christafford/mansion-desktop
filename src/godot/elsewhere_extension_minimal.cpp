@@ -1,5 +1,5 @@
 /*
- * MansionExtension Minimal — GDExtension entry point for testing
+ * ElsewhereExtension Minimal — GDExtension entry point for testing
  *
  * This file provides a minimal GDExtension that doesn't use any external
  * libraries to test if the hang is caused by library loading issues.

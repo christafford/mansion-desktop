@@ -17,9 +17,9 @@ static void mark(const std::string& path) {
 int main(int argc, char** argv) {
     require(argc == 2, "fixture executable argument required");
     alarm(30);
-    char temp[] = "/tmp/mansion-runtime-test-XXXXXX";
+    char temp[] = "/tmp/elsewhere-runtime-test-XXXXXX";
     require(mkdtemp(temp), "test directory");
-    mansion::CompositorRuntime runtime;
+    elsewhere::CompositorRuntime runtime;
     require(!runtime.pump(), "pump stopped server must fail");
     require(!runtime.start("relative"), "relative directory must fail");
     require(!runtime.start(std::string(temp) + "/missing"), "missing directory must fail");
@@ -78,7 +78,7 @@ int main(int argc, char** argv) {
     }
     std::string scoped_socket;
     {
-        mansion::CompositorRuntime scoped;
+        elsewhere::CompositorRuntime scoped;
         require(scoped.start(temp), "scoped server start");
         scoped_socket = scoped.socket_path();
     }

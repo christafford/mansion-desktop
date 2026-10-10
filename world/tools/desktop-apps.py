@@ -33,7 +33,7 @@ def applications():
             if isinstance(app, GioUnix.DesktopAppInfo) and app.should_show()}
     # Weston ships its clients without desktop entries on this development host.
     for identifier, name, binary, icon in [
-        ("mansion-weston-terminal.desktop", "Terminal", "weston-terminal", "utilities-terminal"),
+        ("elsewhere-weston-terminal.desktop", "Terminal", "weston-terminal", "utilities-terminal"),
     ]:
         executable = shutil.which(binary)
         if executable:
@@ -147,15 +147,15 @@ def launch(identifier, socket):
         raise ValueError("Application was removed or is no longer visible")
     argv, directory = command(app)
     if not Path(socket).is_socket():
-        raise ValueError("The Mansion Wayland display is unavailable")
+        raise ValueError("The Elsewhere Wayland display is unavailable")
     env = dict(os.environ)
     for key in ("DISPLAY", "WAYLAND_SOCKET", "WAYLAND_DEBUG", "ENV", "BASH_ENV", "PROMPT_COMMAND", "DESKTOP_STARTUP_ID"):
         env.pop(key, None)
     env.update(WAYLAND_DISPLAY=socket, GDK_BACKEND="wayland", QT_QPA_PLATFORM="wayland",
                SDL_VIDEODRIVER="wayland", ELECTRON_OZONE_PLATFORM_HINT="wayland",
-               DBUS_SESSION_BUS_ADDRESS="disabled:", XDG_CURRENT_DESKTOP="Mansion",
+               DBUS_SESSION_BUS_ADDRESS="disabled:", XDG_CURRENT_DESKTOP="Elsewhere",
                XDG_SESSION_TYPE="wayland")
-    if identifier == "mansion-weston-terminal.desktop" or app.get_boolean("Terminal"):
+    if identifier == "elsewhere-weston-terminal.desktop" or app.get_boolean("Terminal"):
         # Match the initial study terminal: host shell prompts/config must not
         # turn into escape garbage or execute unavailable prompt functions.
         config = Path(__file__).resolve().parents[2] / ".tools/terminal-config"
@@ -163,19 +163,19 @@ def launch(identifier, socket):
         env.update(XDG_CONFIG_HOME=str(config), HISTFILE=str(config / "history"),
                    PS1="$ ", PS2="> ",
                    INPUTRC=str(Path(__file__).resolve().parents[1] / "config/terminal.inputrc"))
-    if identifier == "mansion-weston-terminal.desktop":
+    if identifier == "elsewhere-weston-terminal.desktop":
         argv += ["--font=monospace", "--font-size=16", "--shell=/bin/sh"]
     if app.get_boolean("Terminal"):
-        env["MANSION_TERMINAL_ARGV"] = json.dumps(argv)
+        env["ELSEWHERE_TERMINAL_ARGV"] = json.dumps(argv)
         argv = [shutil.which("weston-terminal"), "--font=monospace", "--font-size=16", "--shell=" + str(Path(__file__).resolve())]
-    argv = graphical_command(argv, os.environ.get("MANSION_BROWSER_PROFILE_DIR") or Path(__file__).resolve().parents[2] / ".tools/browser-profiles")
+    argv = graphical_command(argv, os.environ.get("ELSEWHERE_BROWSER_PROFILE_DIR") or Path(__file__).resolve().parents[2] / ".tools/browser-profiles")
     if directory:
         os.chdir(directory)
     os.execvpe(argv[0], argv, env)
 
 
 def main():
-    shell_command = os.environ.pop("MANSION_TERMINAL_ARGV", None)
+    shell_command = os.environ.pop("ELSEWHERE_TERMINAL_ARGV", None)
     if shell_command and len(sys.argv) == 1:
         argv = json.loads(shell_command)
         os.execvp(argv[0], argv)

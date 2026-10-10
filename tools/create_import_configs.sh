@@ -1,7 +1,7 @@
 #!/bin/bash
 # Create .import config files for all glTF assets
 
-ASSETS_DIR="/home/deck/code/mansion-desktop/world/assets"
+ASSETS_DIR="/home/deck/code/elsewhere/world/assets"
 
 for gltf in "$ASSETS_DIR"/*.gltf; do
     if [ -f "$gltf" ]; then

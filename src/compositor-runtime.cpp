@@ -20,20 +20,20 @@
 
 // One logical display for the nested workspace, independent of the host's
 // monitor registry. Bound output objects belong to their clients.
-struct MansionOutput {
+struct ElsewhereOutput {
     wl_global* global = nullptr;
-    MansionCompositor* compositor = nullptr;
+    ElsewhereCompositor* compositor = nullptr;
     wl_list resources;
 };
 namespace {
 struct OutputBinding {
     wl_resource* resource;
-    MansionOutput* output;
+    ElsewhereOutput* output;
     std::unordered_set<int64_t> entered;
 };
 void update_output(OutputBinding* binding) try {
     std::unordered_set<int64_t> live;
-    MansionSurface* surface;
+    ElsewhereSurface* surface;
     wl_list_for_each(surface, &binding->output->compositor->surface_list, link) {
         if (wl_resource_get_client(surface->resource) != wl_resource_get_client(binding->resource)) continue;
         const auto handle = surface->core_frame->handle;
@@ -57,7 +57,7 @@ void output_destroyed(wl_resource* resource) {
     delete static_cast<OutputBinding*>(wl_resource_get_user_data(resource));
 }
 void bind_output(wl_client* client, void* data, uint32_t version, uint32_t id) {
-    auto* output = static_cast<MansionOutput*>(data);
+    auto* output = static_cast<ElsewhereOutput*>(data);
     auto* resource = wl_resource_create(client, &wl_output_interface, std::min(version, 3u), id);
     if (!resource) { wl_client_post_no_memory(client); return; }
     auto* binding = new (std::nothrow) OutputBinding{resource, output, {}};
@@ -65,16 +65,16 @@ void bind_output(wl_client* client, void* data, uint32_t version, uint32_t id) {
     wl_resource_set_implementation(resource, &output_impl, binding, output_destroyed);
     wl_list_insert(&output->resources, wl_resource_get_link(resource));
     wl_output_send_geometry(resource, 0, 0, 338, 211, WL_OUTPUT_SUBPIXEL_UNKNOWN,
-                            "Mansion", "Workspace", WL_OUTPUT_TRANSFORM_NORMAL);
+                            "Elsewhere", "Workspace", WL_OUTPUT_TRANSFORM_NORMAL);
     wl_output_send_mode(resource, WL_OUTPUT_MODE_CURRENT | WL_OUTPUT_MODE_PREFERRED, 1280, 800, 60000);
     if (version >= 2) { wl_output_send_scale(resource, 1); wl_output_send_done(resource); }
     update_output(binding);
 }
 }
 
-namespace mansion {
+namespace elsewhere {
 CompositorRuntime::~CompositorRuntime() {
-    if (!stop()) std::fprintf(stderr, "Mansion server cleanup: %s\n", error_.c_str());
+    if (!stop()) std::fprintf(stderr, "Elsewhere server cleanup: %s\n", error_.c_str());
 }
 
 bool CompositorRuntime::fail(const std::string& operation) {
@@ -92,7 +92,7 @@ bool CompositorRuntime::start(const std::string& runtime_directory) {
         error_ = "runtime directory must be an absolute existing directory";
         return false;
     }
-    std::string pattern = runtime_directory + "/mansion-XXXXXX";
+    std::string pattern = runtime_directory + "/elsewhere-XXXXXX";
     std::vector<char> name(pattern.begin(), pattern.end());
     name.push_back('\0');
     if (!mkdtemp(name.data())) return fail("create private runtime directory");
@@ -125,7 +125,7 @@ bool CompositorRuntime::start(const std::string& runtime_directory) {
     compositor_set_seat(compositor_, seat_);
     subcompositor_ = surface_tree_create_global(display_);
     if (!subcompositor_) { error_ = "create subcompositor global"; stop(); return false; }
-    output_ = new (std::nothrow) MansionOutput{};
+    output_ = new (std::nothrow) ElsewhereOutput{};
     if (!output_) { error_ = "allocate workspace output"; stop(); return false; }
     output_->compositor = compositor_;
     wl_list_init(&output_->resources);
@@ -191,7 +191,7 @@ bool CompositorRuntime::stop() {
 std::vector<int64_t> CompositorRuntime::surface_handles() const {
     std::vector<int64_t> result;
     if (!compositor_) return result;
-    MansionSurface* surface;
+    ElsewhereSurface* surface;
     wl_list_for_each(surface, &compositor_->surface_list, link)
         result.push_back(surface->core_frame->handle);
     return result;
@@ -200,7 +200,7 @@ std::vector<int64_t> CompositorRuntime::surface_handles() const {
 std::vector<int64_t> CompositorRuntime::toplevel_handles() const {
     std::vector<int64_t> result;
     if (!compositor_) return result;
-    MansionSurface* surface;
+    ElsewhereSurface* surface;
     wl_list_for_each(surface, &compositor_->surface_list, link)
         if (xdg_surface_has_toplevel(surface->xdg_surface)) result.push_back(surface->core_frame->handle);
     return result;
@@ -208,7 +208,7 @@ std::vector<int64_t> CompositorRuntime::toplevel_handles() const {
 
 OwnedFrame CompositorRuntime::snapshot(int64_t handle) const {
     if (!compositor_ || handle <= 0) return {};
-    MansionSurface* surface;
+    ElsewhereSurface* surface;
     wl_list_for_each(surface, &compositor_->surface_list, link)
         if (surface->core_frame->handle == handle) return surface_tree_snapshot(surface);
     return {};
@@ -216,7 +216,7 @@ OwnedFrame CompositorRuntime::snapshot(int64_t handle) const {
 
 std::optional<XdgWindowState> CompositorRuntime::window_state(int64_t handle) const {
     if (!compositor_) return {};
-    MansionSurface* surface;
+    ElsewhereSurface* surface;
     wl_list_for_each(surface, &compositor_->surface_list, link) {
         const auto& frame = surface->core_frame->frame;
         if (surface->core_frame->handle == handle && frame && frame->mapped &&
@@ -242,7 +242,7 @@ std::optional<XdgWindowState> CompositorRuntime::window_state(int64_t handle) co
 
 bool CompositorRuntime::request_resize(int64_t handle, int32_t width, int32_t height) {
     if (compositor_) {
-        MansionSurface* surface;
+        ElsewhereSurface* surface;
         wl_list_for_each(surface, &compositor_->surface_list, link) {
             const auto& frame = surface->core_frame->frame;
             if (surface->core_frame->handle == handle && frame && frame->mapped &&
@@ -255,7 +255,7 @@ bool CompositorRuntime::request_resize(int64_t handle, int32_t width, int32_t he
 
 int64_t CompositorRuntime::keyboard_focus_handle() const {
     if (!compositor_ || !compositor_->focused_surface_resource) return 0;
-    MansionSurface* surface;
+    ElsewhereSurface* surface;
     wl_list_for_each(surface, &compositor_->surface_list, link) {
         const auto& frame = surface->core_frame->frame;
         if (surface->resource == compositor_->focused_surface_resource && frame &&
@@ -271,7 +271,7 @@ bool CompositorRuntime::focus_keyboard(int64_t handle) {
         seat_set_keyboard_focus(seat_, nullptr, compositor_);
         return true;
     }
-    MansionSurface* surface;
+    ElsewhereSurface* surface;
     wl_list_for_each(surface, &compositor_->surface_list, link) {
         const auto& frame = surface->core_frame->frame;
         if (surface->core_frame->handle == handle && frame && frame->mapped &&
@@ -298,7 +298,7 @@ bool CompositorRuntime::keyboard_key(uint32_t evdev_code, bool pressed) {
 
 int64_t CompositorRuntime::pointer_focus_handle() const {
     if (!compositor_) return 0;
-    MansionSurface* surface;
+    ElsewhereSurface* surface;
     wl_list_for_each(surface, &compositor_->surface_list, link) {
         if (surface->resource != seat_pointer_surface(seat_) || !surface_tree_mapped(surface)) continue;
         auto* root = surface_tree_root(surface);
@@ -314,16 +314,16 @@ bool CompositorRuntime::pointer_motion(int64_t handle, double x, double y) try {
         error_ = "pointer leave requires valid coordinates and no active grab; use reset to cancel";
         return false;
     }
-    MansionSurface* root;
+    ElsewhereSurface* root;
     wl_list_for_each(root, &compositor_->surface_list, link) {
         if (root->core_frame->handle != handle || !surface_tree_mapped(root) || !xdg_surface_has_toplevel(root->xdg_surface)) continue;
         auto frame = surface_tree_snapshot(root);
         if (!frame) break;
         if (!pointer_grabbed() && (x < 0 || y < 0 || x >= frame->logical_width || y >= frame->logical_height)) break;
         x += frame->origin_x; y += frame->origin_y;
-        MansionSurface* target = nullptr;
+        ElsewhereSurface* target = nullptr;
         if (pointer_grabbed()) {
-            target = static_cast<MansionSurface*>(wl_resource_get_user_data(seat_pointer_surface(seat_)));
+            target = static_cast<ElsewhereSurface*>(wl_resource_get_user_data(seat_pointer_surface(seat_)));
             if (!surface_tree_coordinates(root, target, x, y)) break;
         } else target = surface_tree_at(root, x, y);
         if (seat_pointer_motion(seat_, target ? target->resource : nullptr, x, y)) return true;
@@ -363,4 +363,4 @@ int CompositorRuntime::surface_count() const {
          resource; resource = compositor_core_surface_next(resource)) ++count;
     return count;
 }
-} // namespace mansion
+} // namespace elsewhere

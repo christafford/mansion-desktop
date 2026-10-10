@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Ordinary terminal program for observing live output; no Mansion client API."""
+"""Ordinary terminal program for observing live output; no Elsewhere client API."""
 import datetime
 import os
 import time
 
-print("\033[2J\033[H\033[1;36mMANSION  /  LIVE TERMINAL\033[0m\n")
+print("\033[2J\033[H\033[1;36mELSEWHERE  /  LIVE TERMINAL\033[0m\n")
 print("Weston terminal  •  native Wayland client")
 print(f"Linux {os.uname().release}\n")
 print("This text is rendered by the terminal process.")

@@ -57,7 +57,7 @@ func run() -> void:
 	if not check(args.size() == 2, "Expected fixture path and temporary directory"):
 		quit(1)
 		return
-	session = ClassDB.instantiate("MansionCompositorSession")
+	session = ClassDB.instantiate("ElsewhereCompositorSession")
 	for trial in range(8):
 		if not check(session.start(args[1]), session.last_error()):
 			break

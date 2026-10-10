@@ -24,7 +24,7 @@ func run() -> void:
 	objects = study.application_objects
 	var player = study.get_node("Player")
 	var hall = study.get_node("Hallway")
-	# Hold doors closed for this collision regression; mansion_rooms.gd tests opening.
+	# Hold doors closed for this collision regression; elsewhere_rooms.gd tests opening.
 	for door in get_nodes_in_group("hallway_doors"): door.get_node("Hinge").set_physics_process(false)
 	var deadline := Time.get_ticks_msec() + 15000
 	while objects.bindings.is_empty() and Time.get_ticks_msec() < deadline: await process_frame
@@ -101,15 +101,15 @@ func run() -> void:
 	await activate(window)
 	check(app.active and app.focused_handle == window, "Hallway application lost focus/activation")
 	await return_to_room()
-	# Full rotated bounds remain inside the expanded mansion, not just its center.
+	# Full rotated bounds remain inside the expanded elsewhere, not just its center.
 	panel.rotation.y = 0.4
 	panel.position = objects.bounded_position(panel, Vector3(100, 100, 100))
-	var volumes = preload("res://scripts/hallway.gd").PLACEMENT + preload("res://scripts/mansion_rooms.gd").placement_volumes()
+	var volumes = preload("res://scripts/hallway.gd").PLACEMENT + preload("res://scripts/elsewhere_rooms.gd").placement_volumes()
 	for x in [-0.7, 0.7]:
 		for y in [-0.51, 0.51]:
 			for z in [-0.04, 0.04]:
 				var corner: Vector3 = panel.to_global(Vector3(x, y, z))
-				check(absf(corner.x) <= 14.061 and corner.y <= 12.781 and corner.z <= 42.361, "Panel extends outside mansion")
+				check(absf(corner.x) <= 14.061 and corner.y <= 12.781 and corner.z <= 42.361, "Panel extends outside elsewhere")
 				var inside := false
 				for volume in volumes:
 					if volume.grow(0.001).has_point(corner): inside = true

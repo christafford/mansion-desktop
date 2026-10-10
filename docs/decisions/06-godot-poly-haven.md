@@ -38,7 +38,7 @@ or acceptance has occurred. Historical decisions and checkmarks remain records.
    and fast access. Prefer Poly Haven PBR models, textures and HDRIs. Other assets
    may fill genuine catalog gaps with recorded provenance. A second connected
    room, persistent artifacts, search and reminder creatures follow the live
-   terminal integration gate; a vast empty mansion is not an acceptance target.
+   terminal integration gate; a vast empty elsewhere is not an acceptance target.
 7. Visual authoring and core extraction are independently eligible. They meet at
    the live-terminal gate. GPU import, wlroots migration, DRM/logind session work,
    portals and broad desktop compatibility are later programs, not prerequisites

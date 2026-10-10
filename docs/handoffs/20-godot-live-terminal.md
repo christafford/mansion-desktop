@@ -16,13 +16,13 @@ tools/run-godot.sh --audio-driver Dummy -- --terminal-demo
 The default launches `/usr/bin/weston-terminal --font=monospace --font-size=16
 --shell=/bin/sh`. The demo substitutes executable `world/tools/terminal-demo.py`
 as its shell; Python writes ANSI text to the real terminal's PTY. It has no
-Mansion API and supplies no image. The C++ core receives actual Wayland shm
+Elsewhere API and supplies no image. The C++ core receives actual Wayland shm
 buffers from Weston. There is no screenshot replay or fake terminal widget.
 
 `tools/build-godot-runtime.sh` builds the existing standard godot-cpp target and
-atomically copies it to `world/addons/mansion_runtime/libmansion_runtime.so`.
+atomically copies it to `world/addons/elsewhere_runtime/libelsewhere_runtime.so`.
 The run and project validation helpers invoke it. Generated libraries stay
-untracked. The crashing `mansion_godot` addon remains ignored and preserved.
+untracked. The crashing `elsewhere_godot` addon remains ignored and preserved.
 This uses the already-installed Weston 15.0.1-3; missing executables fail visibly,
 without system installation or fallback to a synthetic client.
 

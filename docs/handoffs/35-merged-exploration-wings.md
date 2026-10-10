@@ -42,8 +42,8 @@ Agent-inspected [left wing](../evidence/t63/left-wing.png) and
 repositioned contents. These are live engine captures, not concept art.
 
 Import/runtime/native-helper checks pass (`.tools/t63/final-import.log`,
-`/tmp/mansion-godot-check.9Vcs6m`). The five affected graphical trials pass:
-`hallway`, `mansion_rooms`, `merged_rooms`, `room_furniture`, and
+`/tmp/elsewhere-godot-check.9Vcs6m`). The five affected graphical trials pass:
+`hallway`, `elsewhere_rooms`, `merged_rooms`, `room_furniture`, and
 `application_gravity`. Logs/drivers: `.tools/t63/check.log`, `check-final.log`,
 `*-final.log`, `check.sh`, `run.sh`, `godot-check.sh`. A stale side-wall assertion
 in the existing room trial initially targeted the removed partitions; it now

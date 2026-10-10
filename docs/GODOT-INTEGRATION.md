@@ -25,7 +25,7 @@ compare Compatibility and Mobile using actual scenes, driver support and
 measurements. Don't depend on a RenderingDevice in a renderer that lacks it.
 Put the engine project in `world/`, core library in an appropriate C++ source
 boundary, adapter in `src/godot/`, and bootstrap/check commands in `tools/`.
-The tested `MansionCompositorSession` owns the reusable server and protocol state;
+The tested `ElsewhereCompositorSession` owns the reusable server and protocol state;
 `tools/check-godot-binding.sh` exercises it from a fresh isolated Godot project.
 The shared `seat.cpp`/`xdg-shell.cpp` protocol library has no legacy display or
 camera dependencies. Legacy input policy remains in `input.cpp`; its global
@@ -34,7 +34,7 @@ seat wrapper is separate from each runtime's seat. See
 [frame contract](handoffs/19-godot-owned-frames.md) for ownership and limits.
 
 `tools/build-godot-runtime.sh` stages the same tested library in the world's
-`addons/mansion_runtime/`; the run/import helpers invoke it automatically.
+`addons/elsewhere_runtime/`; the run/import helpers invoke it automatically.
 `terminal_screen.gd` owns a session, its initial terminal and additional
 launcher-owned child processes.
 It chooses from `toplevel_handles()` and calls `snapshot(handle, after_revision)`

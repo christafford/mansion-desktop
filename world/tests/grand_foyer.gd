@@ -1,5 +1,5 @@
 ## GPU views and actual WASD/RMB stair traversal with a live Wayland terminal.
-extends "res://tests/mansion_rooms.gd"
+extends "res://tests/elsewhere_rooms.gd"
 
 const Foyer = preload("res://scripts/grand_foyer.gd")
 var walker: CharacterBody3D

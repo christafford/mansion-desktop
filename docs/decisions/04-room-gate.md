@@ -76,10 +76,10 @@ directly in non-EGL mode. All 24 tests pass with this fix. **Passes.**
 ## Test results
 
 ```
- 24/24 p4 - mansion-desktop:milestone1  OK
- 24/24 p4 - mansion-desktop:teleport     OK
- 24/24 p4 - mansion-desktop:room-render  OK
- 24/24 p4 - mansion-desktop:room-collision OK
+ 24/24 p4 - elsewhere:milestone1  OK
+ 24/24 p4 - elsewhere:teleport     OK
+ 24/24 p4 - elsewhere:room-render  OK
+ 24/24 p4 - elsewhere:room-collision OK
 24/24 total — all pass
 ```
 

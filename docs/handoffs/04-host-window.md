@@ -11,18 +11,18 @@ The camera and screenshot path needed no orientation change.
 expanded `host-input` passes separately. It tests asymmetric rows/channels and
 renders the room through EGL, then checks the exact host-export conversion:
 brown floor below grey wall. Reproduce its inspectable rendered capture with
-`MANSION_HOST_CAPTURE=/tmp/mansion-host-orientation.ppm build/test_host_input`.
+`ELSEWHERE_HOST_CAPTURE=/tmp/elsewhere-host-orientation.ppm build/test_host_input`.
 Agent inspected that exported render (converted losslessly to PNG locally):
 floor below wall. This is an agent-observed export capture, not a host screenshot
 or human acceptance. Bounded real-host launch
-`timeout -k 2s 8s build/mansion-desktop --room-camera --exit-after-ms 1000`
+`timeout -k 2s 8s build/elsewhere --room-camera --exit-after-ms 1000`
 exits 0 after 36 frames.
 
-An initial nested-Mansion-as-host capture experiment produced background pixels
+An initial nested-Elsewhere-as-host capture experiment produced background pixels
 both before and after the fix, so it could not establish export orientation.
 It was replaced during development by direct tests of the exported pixels and
 an actual EGL room render. No pre-existing regression was removed. Compatibility
-of Mansion hosting another Mansion remains unverified and outside this repair.
+of Elsewhere hosting another Elsewhere remains unverified and outside this repair.
 
 **Not verified:** human confirmation of the upright host window or broader
 application usability. Existing screenshot tests use an independent row flip;
@@ -55,14 +55,14 @@ independent releases, ordinary/fractional relative mouse look, one-time delta
 consumption, focus loss/re-entry, and application-mode isolation.
 
 Agent-run command:
-`WAYLAND_DEBUG=1 timeout -k 2s 15s build/mansion-desktop --room-camera --exit-after-ms 8000`.
+`WAYLAND_DEBUG=1 timeout -k 2s 15s build/elsewhere --room-camera --exit-after-ms 8000`.
 It exits 0 after 274 frames; the host sends seat capabilities and keyboard
 enter, and ping serial 5443 receives pong 5443. This proves host protocol
 progress, not physical-input or visual usability.
 
 **Not verified:** human keyboard/mouse usability, application typing/clicks,
 unlimited mouse look (no pointer lock), resizing, real terminal acceptance.
-For manual navigation: launch `build/mansion-desktop --room-camera`, focus its
+For manual navigation: launch `build/elsewhere --room-camera`, focus its
 window, hold WASD and move the pointer inside it; releasing keys stops movement,
 and switching to another window clears held navigation. Do not tick P4-T12 or
 human tasks from the synthetic tests. Continue Project 21 per STATUS.md.
@@ -71,7 +71,7 @@ human tasks from the synthetic tests. Continue Project 21 per STATUS.md.
 
 Agent-run evidence against base revision `04ecfe6` plus this repair:
 
-- `timeout -k 2s 8s build/mansion-desktop --room-camera --exit-after-ms 1000`
+- `timeout -k 2s 8s build/elsewhere --room-camera --exit-after-ms 1000`
   before the fix completed EGL initialization but logged no rendered frames;
   the timeout had to SIGKILL it (exit 137). After rebuilding, the identical
   command rendered 18 frames and exited 0. These are process/log observations,
@@ -156,10 +156,10 @@ documents the migration attempt to a native Wayland client presentation.
   listener; updates live mouse delta.
 
 ### meson.build
-- Removed x11 from mansion_exe dependencies.
-- Added wayland_client to mansion_exe dependencies.
+- Removed x11 from elsewhere_exe dependencies.
+- Added wayland_client to elsewhere_exe dependencies.
 - Added xdg_shell_client_h, xdg_shell_code, and relative_ptr_client_h,
-  relative_ptr_code to mansion_exe sources.
+  relative_ptr_code to elsewhere_exe sources.
 
 ## Verification
 

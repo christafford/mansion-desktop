@@ -5,10 +5,10 @@
 #include <godot_cpp/variant/dictionary.hpp>
 #include <godot_cpp/variant/packed_int64_array.hpp>
 
-namespace mansion {
+namespace elsewhere {
 // Godot owns this on its main thread. Native runtime owns every server resource.
-class MansionCompositorSession : public godot::RefCounted {
-    GDCLASS(MansionCompositorSession, godot::RefCounted)
+class ElsewhereCompositorSession : public godot::RefCounted {
+    GDCLASS(ElsewhereCompositorSession, godot::RefCounted)
     CompositorRuntime runtime_;
 
 protected:
@@ -46,4 +46,4 @@ public:
     godot::String socket_path() const { return godot::String::utf8(runtime_.socket_path().c_str()); }
     godot::String last_error() const { return godot::String::utf8(runtime_.last_error().c_str()); }
 };
-} // namespace mansion
+} // namespace elsewhere

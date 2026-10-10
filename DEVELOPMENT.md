@@ -16,10 +16,10 @@ launch separately. No native session or host service changes are authorized.
 
 ## Environment used so far
 
-- Steam Deck (SteamOS, Wayland session) hosting a `distrobox` container named
-  `mansion-dev` (Arch Linux, podman). The repository is bind-mounted at
-  `/home/deck/code/mansion-desktop`; the container home is
-  `/home/deck/distrobox-homes/mansion-dev`.
+- Steam Deck (SteamOS, Wayland session) hosting an Arch Linux `distrobox`
+  container through podman. The repository is bind-mounted at
+  `/home/deck/code/elsewhere`; use `$HOME` for the container home.
+  The project rename does not rename the existing host container or its home.
 - Historical configuration: `DISPLAY=:0` reached the host through XWayland and
   was unstable. Since 2026-09-28 the windowed mode connects to the host
   `WAYLAND_DISPLAY` instead; that path is unverified (reported flicker, no
@@ -27,7 +27,7 @@ launch separately. No native session or host service changes are authorized.
   display/socket availability rather than assuming it.
 - `XDG_RUNTIME_DIR=/run/user/1000` is shared with the host. Never create a
   socket named like the host's `WAYLAND_DISPLAY` (`wayland-0`); the compositor
-  defaults to `mansion-<pid>` for this reason, and tests use a private
+  defaults to `elsewhere-<pid>` for this reason, and tests use a private
   temporary runtime directory.
 - `/dev/dri/renderD128` is accessible, so EGL can use the GPU; llvmpipe is the
   fallback.
@@ -49,8 +49,8 @@ meson test -C build-asan --print-errorlogs
 `Dockerfile.dev` builds an Arch image with the dependencies:
 
 ```sh
-docker build -t mansion-desktop-dev -f Dockerfile.dev .
-docker run -ti --rm -v "$PWD:/src" -w /src mansion-desktop-dev sh -c \
+docker build -t elsewhere-dev -f Dockerfile.dev .
+docker run -ti --rm -v "$PWD:/src" -w /src elsewhere-dev sh -c \
     'meson setup build && meson compile -C build && meson test -C build'
 ```
 
@@ -63,7 +63,7 @@ headless tests do not.
 - `meson test -C build <name> --verbose` shows the test script's stdout; the
   shell helpers dump compositor stderr on failure.
 - Tests leave nothing behind: each creates and removes its own runtime dir.
-- A stuck trial: terminate only the PID you started; do not kill other Mansion
+- A stuck trial: terminate only the PID you started; do not kill other Elsewhere
   sessions by a broad pattern. Remove only that trial's private stale socket/lock
   after confirming its owner exited. Never remove the host's Wayland socket.
 

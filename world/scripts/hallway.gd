@@ -20,7 +20,7 @@ var elapsed := 0.0
 static func bounded_center(center: Vector3, extents: Vector3) -> Vector3:
 	var result := center
 	var nearest := INF
-	for volume in PLACEMENT + preload("res://scripts/mansion_rooms.gd").placement_volumes():
+	for volume in PLACEMENT + preload("res://scripts/elsewhere_rooms.gd").placement_volumes():
 		if volume.size.x < extents.x * 2 or volume.size.y < extents.y * 2 or volume.size.z < extents.z * 2: continue
 		var candidate := center.clamp(volume.position + extents, volume.end - extents)
 		var distance := candidate.distance_squared_to(center)
@@ -43,7 +43,7 @@ func _ready() -> void:
 	for z in [11.0, 15.0]: door(Vector3(1.28, 0, z), -PI / 2, "LeftDoor%d" % z)
 	for z in [9.0]: door(Vector3(-1.28, 0, z), PI / 2, "RightDoor%d" % z)
 	door(Vector3(0, 0, END - 0.09), PI, "EndDoor")
-	var rooms := preload("res://scripts/mansion_rooms.gd").new()
+	var rooms := preload("res://scripts/elsewhere_rooms.gd").new()
 	rooms.name = "Rooms"
 	add_child(rooms)
 	for z in [9.0, 13.0, 17.0]: oil_lamp(Vector3(1.29, 1.42, z), -PI / 2)

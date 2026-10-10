@@ -35,7 +35,7 @@ Mesa 26.2.4, AMD Custom GPU 0405, Weston Terminal 15.0.1 and installed Vim.
 - `SDL_JOYSTICK_LINUX_CLASSIC=1 GODOT_BINARY="$PWD/.tools/t51/godot-check.sh" tools/check-godot-study.sh`: exit 0, all 11 Godot trials and seven Python tests
   pass. Uses the [T51 host-input/isolated-resize setup](28-godot-natural-navigation.md).
   Full output: `.tools/t52/suite.log`; individual logs:
-  `/tmp/mansion-study-check.H4k3iH/`. No error markers or failed assertions.
+  `/tmp/elsewhere-study-check.H4k3iH/`. No error markers or failed assertions.
 - `APPLICATION_OBJECTS_OK clients=2 failures=0`; native-pixel typing/selection,
   scrolling, four-size resize, launcher, walking/carrying, GUI releases and owned
   client shutdown remain covered. No C++ source changed; no fresh Meson or

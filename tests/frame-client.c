@@ -60,7 +60,7 @@ static const uint32_t xrgb[6] = {0x000a141e, 0x2828323c, 0x5546505a, 0x00646e78,
 static void make_buffer(struct client *c, struct buffer *b, int width, int height, int stride, uint32_t format, const uint32_t *pixels) {
     b->releases = 0;
     b->size = (size_t)stride * height;
-    int fd = memfd_create("mansion-frame-test", MFD_CLOEXEC);
+    int fd = memfd_create("elsewhere-frame-test", MFD_CLOEXEC);
     check(fd >= 0 && ftruncate(fd, b->size) == 0, "buffer allocation");
     b->map = mmap(NULL, b->size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     check(b->map != MAP_FAILED, "map buffer");

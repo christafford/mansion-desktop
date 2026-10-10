@@ -2,7 +2,7 @@
 extends CanvasLayer
 
 const Radial = preload("res://addons/advanced_radial_menu/radial_menu_class.gd")
-const TERMINAL_ID := "mansion-weston-terminal.desktop"
+const TERMINAL_ID := "elsewhere-weston-terminal.desktop"
 var terminal: Node
 var app: CanvasLayer
 var player: CharacterBody3D
@@ -32,7 +32,7 @@ var heading: Label
 func _ready() -> void:
 	layer = 20
 	helper = ProjectSettings.globalize_path("res://tools/desktop-apps.py")
-	directory = OS.get_environment("MANSION_LAUNCHER_STATE_DIR")
+	directory = OS.get_environment("ELSEWHERE_LAUNCHER_STATE_DIR")
 	if directory.is_empty():
 		directory = ProjectSettings.globalize_path("res://../.tools/launcher-state").simplify_path()
 	cache_directory = directory.path_join("session-%d-%d" % [OS.get_process_id(), Time.get_ticks_usec()])
@@ -315,7 +315,7 @@ func launch(identifier: String) -> void:
 		notice.text = item.unavailable
 		return
 	if terminal.session == null or not terminal.session.is_running():
-		notice.text = "The Mansion display is unavailable"
+		notice.text = "The Elsewhere display is unavailable"
 		return
 	var error_path := cache_directory.path_join("launch-%d.json" % Time.get_ticks_usec())
 	var pid := OS.create_process("/usr/bin/python3", PackedStringArray([helper, "launch", "--id", identifier, "--socket", terminal.session.socket_path(), "--output", error_path]))

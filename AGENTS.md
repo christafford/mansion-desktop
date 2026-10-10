@@ -2,7 +2,7 @@
 
 ## Product and acceptance rules
 
-Mansion Desktop is a functional Linux desktop presented as a persistent
+Elsewhere is a functional Linux desktop presented as a persistent
 first-person 3D environment. The immediate target is a real terminal on a
 monitor in one attractive room, with reliable movement, focus, typing,
 pointer input, resizing, return to world mode, and application close.
@@ -26,7 +26,7 @@ acceptance passes. Split large tasks into unique numeric IDs with dependencies.
 No fixed deadline does not authorize endless retries or unchecked completion.
 
 1. Application content comes from real Wayland clients; clients need no
-   Mansion-specific changes. Synthetic clients remain valuable test fixtures.
+   Elsewhere-specific changes. Synthetic clients remain valuable test fixtures.
 2. Persistent world/artifact IDs are independent of PIDs, Wayland resource
    addresses/IDs, live-window handles, and GPU objects.
 3. Application mode preserves readable text and ordinary input behavior.

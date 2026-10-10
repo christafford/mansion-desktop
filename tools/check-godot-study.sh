@@ -4,15 +4,15 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 GODOT="${GODOT_BINARY:-$ROOT/tools/Godot_v4.7.2-stable_linux.x86_64}"
 "$ROOT/tools/validate-godot-project.sh"
-LOG_DIR=$(mktemp -d "${TMPDIR:-/tmp}/mansion-study-check.XXXXXX")
+LOG_DIR=$(mktemp -d "${TMPDIR:-/tmp}/elsewhere-study-check.XXXXXX")
 echo "Study check logs: $LOG_DIR"
-export MANSION_LAUNCHER_STATE_DIR="$ROOT/.tools/study-launcher-check-$$"
+export ELSEWHERE_LAUNCHER_STATE_DIR="$ROOT/.tools/study-launcher-check-$$"
 python3 "$ROOT/tests/test_desktop_apps.py"
 python3 "$ROOT/tests/test_godot_launcher.py"
 run() {
     local label=$1 marker=$2
     local timeout_seconds=45
-    if [[ "$label" == mansion-rooms ]]; then timeout_seconds=120; fi
+    if [[ "$label" == elsewhere-rooms ]]; then timeout_seconds=120; fi
     if [[ "$label" == merged-rooms ]]; then timeout_seconds=90; fi
     if [[ "$label" == grand-foyer ]]; then timeout_seconds=180; fi
     if [[ "$label" == room-furniture ]]; then timeout_seconds=180; fi
@@ -33,7 +33,7 @@ run pointer-map 'POINTER_MAP_OK .*failures=0' --headless --script res://tests/po
 run controller 'STUDY_SMOKE .*failures=0' --script res://tests/study_smoke.gd -- --no-terminal
 run furniture 'FURNITURE_DRAG_OK .*failures=0' --script res://tests/furniture_drag.gd -- --no-terminal
 run hallway 'HALLWAY_OK doors=4 lamps=6 failures=0' --script res://tests/hallway.gd
-run mansion-rooms 'MANSION_ROOMS_OK rooms=6 entrances=4 failures=0' --script res://tests/mansion_rooms.gd
+run elsewhere-rooms 'ELSEWHERE_ROOMS_OK rooms=6 entrances=4 failures=0' --script res://tests/elsewhere_rooms.gd
 run merged-rooms 'MERGED_ROOMS_OK crossings=12 sealed=2 failures=0' --script res://tests/merged_rooms.gd
 run room-furniture 'ROOM_FURNITURE_OK types=8 extended=4 failures=0' --script res://tests/room_furniture.gd
 run grand-foyer 'GRAND_FOYER_OK levels=2 risers=40 failures=0' --script res://tests/grand_foyer.gd

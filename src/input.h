@@ -4,12 +4,12 @@
 #include <cstdio>
 #include "seat.h"
 
-struct MansionDisplay;
-struct MansionSeat;
-struct MansionCompositor;
+struct ElsewhereDisplay;
+struct ElsewhereSeat;
+struct ElsewhereCompositor;
 
-struct MansionSeat* create_seat(struct wl_display* display);
-void destroy_seat(struct MansionSeat* seat);
+struct ElsewhereSeat* create_seat(struct wl_display* display);
+void destroy_seat(struct ElsewhereSeat* seat);
 
 /* ---------- Input mode (P3-T01) ---------- */
 
@@ -34,8 +34,8 @@ void input_tab_key_set(int code);
 int input_tab_key_get(void);
 
 /* External globals for main.cpp to set. */
-extern struct MansionSeat* g_seat;
-extern struct MansionCompositor* g_compositor;
+extern struct ElsewhereSeat* g_seat;
+extern struct ElsewhereCompositor* g_compositor;
 
 /* P3-T06: Clear all seat-level focus pointers to prevent dangling references
  * when a focused surface is destroyed. */
@@ -65,14 +65,14 @@ struct InputScript* input_script_init(const char* filename);
 /* Execute the next command from the script. Returns 0 if more commands
    remain, 1 if the script requested quit, -1 on EOF (all commands done). */
 int input_script_step(struct InputScript* s,
-                      struct MansionSeat* seat,
-                      struct MansionCompositor* comp,
-                      struct MansionDisplay* display);
+                      struct ElsewhereSeat* seat,
+                      struct ElsewhereCompositor* comp,
+                      struct ElsewhereDisplay* display);
 
 /* Apply accumulated movement / mouse look to the camera.
    Called from the main render loop with the frame delta. */
 void input_script_apply_movement(struct InputScript* s,
-                                 struct MansionDisplay* display,
+                                 struct ElsewhereDisplay* display,
                                  double delta_ms);
 
 /* Destroy the script handle. */
@@ -89,11 +89,11 @@ void input_handle_window_close(void);
 
 /* Process Wayland client events (dispatch pending events, check close flag).
  * Returns 0 on success, -1 if the window was closed by the user. */
-int input_process_wayland_client(struct MansionDisplay* m_display);
+int input_process_wayland_client(struct ElsewhereDisplay* m_display);
 
 /* Wayland seat input callbacks — called from the Wayland client
  * display event handlers to drive camera movement in windowed mode. */
 void input_wayland_focus(bool focused);
 void input_wayland_key(uint32_t key, bool pressed);
 void input_wayland_pointer_motion(double dx, double dy);
-void input_wayland_apply_movement(struct MansionDisplay* display, double delta_ms);
+void input_wayland_apply_movement(struct ElsewhereDisplay* display, double delta_ms);

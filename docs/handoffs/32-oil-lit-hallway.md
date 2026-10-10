@@ -60,7 +60,7 @@ SDL_JOYSTICK_LINUX_CLASSIC=1 \
 It passed native-helper build, import/runtime, seven Python tests and the first
 12 Godot trials, including hallway, client colors, keyboard/pointer and four
 actual resize cases. Logs: `.tools/t60/suite.log`,
-`/tmp/mansion-study-check.Q2aZJj`; import `/tmp/mansion-godot-check.gKsJ0x`.
+`/tmp/elsewhere-study-check.Q2aZJj`; import `/tmp/elsewhere-godot-check.gKsJ0x`.
 The launcher then lost actual host focus (`host_focus=false window_focus=false`)
 and its shell assertions failed; a host-seat retry also lost focus. This is
 recorded as a failed run, not silently counted as a pass. Product focus policy
@@ -72,15 +72,15 @@ in private GPU Weston desktops, using the same installed engine and scripts:
 ```sh
 SDL_JOYSTICK_LINUX_CLASSIC=1 timeout -k 2s 65s weston \
   --backend=headless --fake-seat --renderer=gl --width=1280 --height=800 \
-  --socket=mansion-t60-launcher --no-config --idle-time=0 \
+  --socket=elsewhere-t60-launcher --no-config --idle-time=0 \
   --log="$PWD/.tools/t60/weston-launcher.log" -- \
-  /usr/bin/env WAYLAND_DISPLAY=mansion-t60-launcher \
+  /usr/bin/env WAYLAND_DISPLAY=elsewhere-t60-launcher \
   "$PWD/tools/Godot_v4.7.2-stable_linux.x86_64" --display-driver wayland \
   --path "$PWD/world" --audio-driver Dummy --max-fps 60 \
   --script res://tests/app_launcher.gd
 ```
 
-The same recipe used socket `mansion-t60-apps` for `application_objects.gd`,
+The same recipe used socket `elsewhere-t60-apps` for `application_objects.gd`,
 `application_transition.gd` and `application_gravity.gd`. Isolated launcher
 history stayed under `.tools/t60/`. Logs: `launcher-isolated.log`,
 `application_objects-isolated.log`, `application_transition-isolated.log`,

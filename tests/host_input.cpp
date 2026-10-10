@@ -22,7 +22,7 @@ int main() {
     assert(pixels[2] == 0x0c090a0b && pixels[3] == 0x100d0e0f);
     assert(pixels[4] == 0x04010203 && pixels[5] == 0x08050607);
 
-    MansionDisplay display{};
+    ElsewhereDisplay display{};
     host_window_state host{};
     g_hws = &host;
     keyboard_enter(nullptr, nullptr, 0, nullptr, nullptr);
@@ -101,7 +101,7 @@ int main() {
     };
     assert(matches(exported[(h - 1) * w + w / 2], 97, 71, 44));
     assert(matches(exported[w + w / 2], 127, 127, 140));
-    if (const char* path = std::getenv("MANSION_HOST_CAPTURE")) {
+    if (const char* path = std::getenv("ELSEWHERE_HOST_CAPTURE")) {
         FILE* capture = fopen(path, "wb");
         assert(capture);
         fprintf(capture, "P6\n%d %d\n255\n", w, h);

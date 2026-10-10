@@ -18,7 +18,7 @@ struct SeatPointerClient {
     struct wl_list seat_link;         /* Link in seat->pointer_clients */
 };
 
-struct MansionSeat {
+struct ElsewhereSeat {
     struct wl_display* display;
     struct wl_global* global;
     struct wl_list resources;
@@ -31,7 +31,7 @@ struct MansionSeat {
     /* Keyboard focus (P1-T06-C). */
     struct wl_resource* focused_surface_resource;
     struct wl_listener keyboard_focus_destroy;
-    struct MansionCompositor* keyboard_compositor;
+    struct ElsewhereCompositor* keyboard_compositor;
 
     /* Pointer focus and grab (P1-T06-D). */
     struct wl_resource* pointer_surface_resource; /* surface pointer is over */

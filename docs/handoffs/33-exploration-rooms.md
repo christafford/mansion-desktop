@@ -28,7 +28,7 @@ CC0 furniture/textures are instanced, with original authored joinery, turned
 legs, curved instrument/fountain meshes, floor material and vector prints.
 See [art provenance](../../world/art/README.md). No dependencies or downloads.
 
-`mansion_rooms.gd` owns local room transforms and stable `mansion.*` room IDs.
+`elsewhere_rooms.gd` owns local room transforms and stable `elsewhere.*` room IDs.
 The hallway's existing placement helper includes transformed room volumes and
 small overlapping threshold volumes; full rotated bounds still have to fit.
 Existing placement collision checks, live texture ownership, gravity, selection,
@@ -84,23 +84,23 @@ SDL_JOYSTICK_LINUX_CLASSIC=1 \
   GODOT_BINARY="$PWD/.tools/t61/godot-check.sh" tools/check-godot-study.sh
 ```
 
-Full-run logs: `.tools/t61/suite.log`, `/tmp/mansion-study-check.dSgFhI`.
+Full-run logs: `.tools/t61/suite.log`, `/tmp/elsewhere-study-check.dSgFhI`.
 Final import/runtime: `.tools/t61/final-import.log`,
-`/tmp/mansion-godot-check.aPN469`. Local test drivers `run.sh`, `remaining.sh`
+`/tmp/elsewhere-godot-check.aPN469`. Local test drivers `run.sh`, `remaining.sh`
 and `godot-check.sh` are under `.tools/t61/`; the reproducible standalone recipe
 is below (substitute `app_launcher`, `application_objects`,
-`application_transition` or `application_gravity` for `mansion_rooms`):
+`application_transition` or `application_gravity` for `elsewhere_rooms`):
 
 ```sh
 SDL_JOYSTICK_LINUX_CLASSIC=1 \
-MANSION_LAUNCHER_STATE_DIR="$PWD/.tools/t61/launcher-state" \
+ELSEWHERE_LAUNCHER_STATE_DIR="$PWD/.tools/t61/launcher-state" \
 timeout -k 2s 120s weston --backend=headless --fake-seat --renderer=gl \
-  --width=1280 --height=800 --socket=mansion-t61 --no-config --idle-time=0 \
+  --width=1280 --height=800 --socket=elsewhere-t61 --no-config --idle-time=0 \
   --log="$PWD/.tools/t61/weston.log" -- \
-  /usr/bin/env WAYLAND_DISPLAY=mansion-t61 \
+  /usr/bin/env WAYLAND_DISPLAY=elsewhere-t61 \
   "$PWD/tools/Godot_v4.7.2-stable_linux.x86_64" --display-driver wayland \
   --path "$PWD/world" --audio-driver Dummy --max-fps 60 \
-  --script res://tests/mansion_rooms.gd
+  --script res://tests/elsewhere_rooms.gd
 ```
 
 The full-run wrapper uses a 1600×1000 private display for the existing four-size

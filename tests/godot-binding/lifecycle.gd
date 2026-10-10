@@ -34,10 +34,10 @@ func run() -> void:
 	if not check(args.size() == 2, "Expected fixture executable and runtime directory"):
 		quit(1)
 		return
-	if not check(ClassDB.class_exists("MansionCompositorSession"), "Missing native compositor class"):
+	if not check(ClassDB.class_exists("ElsewhereCompositorSession"), "Missing native compositor class"):
 		quit(1)
 		return
-	session = ClassDB.instantiate("MansionCompositorSession")
+	session = ClassDB.instantiate("ElsewhereCompositorSession")
 	check(not session.pump(), "Stopped pump succeeded")
 	check(not session.start("relative"), "Relative runtime directory accepted")
 	for trial in range(16):

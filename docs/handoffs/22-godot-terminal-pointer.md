@@ -8,7 +8,7 @@ This completes the bounded pointer gate; resize is next, P21-T44.
 
 ## Implementation boundary
 
-Godot still uses its owned `MansionCompositorSession`; no legacy global input
+Godot still uses its owned `ElsewhereCompositorSession`; no legacy global input
 seat is involved. Runtime methods are `pointer_motion(handle, x, y)`,
 `pointer_button(evdev, pressed)`, `pointer_axis(horizontal, vertical)`,
 `pointer_reset()`, `pointer_focus_handle()` and `pointer_grabbed()`.
@@ -101,7 +101,7 @@ The final complete study run passes with error-free success markers. Benign
 Weston missing `dnd-copy`/`dnd-none` cursor warnings remain.
 
 Logs: `.tools/recovery/t43/`, plus native binding logs under `build-godot-probe/`
-and detailed study logs in `/tmp/mansion-study-check.3RIMAC/`. Test captures are
+and detailed study logs in `/tmp/elsewhere-study-check.3RIMAC/`. Test captures are
 regenerated in `.tools/terminal-pointer-test/`, not over historical evidence.
 
 ## Limits and exact continuation

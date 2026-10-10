@@ -1,5 +1,11 @@
 # Project status
 
+The project is now **elsewhere**, hosted at
+[christafford/elsewhere](https://github.com/christafford/elsewhere).
+The owner-requested P21-T67 rename covers maintained text, identifiers and paths;
+see [handoff 38](handoffs/38-elsewhere-rename.md). The native binary is
+`build/elsewhere`, and environment overrides use `ELSEWHERE_`.
+
 Current authority: basic Chrome and surface-tree T65–T66 verified 2026-10-09
 from `2cdfd15`. Grand foyer T64 verified 2026-10-09 from `817aff3`;
 merged exploration wings T63 verified 2026-10-09 from `95ea216`. Longer rooms
@@ -62,7 +68,7 @@ The launcher now defaults to SDL's classic Linux joystick path to avoid the
 reported pre-render startup crash. Explicit `SDL_JOYSTICK_LINUX_CLASSIC` overrides
 are preserved; see [startup evidence](handoffs/27-godot-startup.md). This is a
 tested workaround for the bundled engine, not an upstream engine repair.
-`build/mansion-desktop --room-camera` still uses the separate legacy renderer.
+`build/elsewhere --room-camera` still uses the separate legacy renderer.
 
 WASD walks relative to your heading; A/D always strafe. Hold right mouse to
 look (mouse right turns right, mouse up looks up); release to free the pointer.
@@ -84,7 +90,7 @@ Double-click an existing room panel to use that particular instance. Esc returns
 Tab still belongs to applications in application mode. Recents persist in
 `.tools/launcher-state/recent.json`; tests use an isolated state directory.
 Chrome launched through Applications uses native Wayland/software rendering and
-a separate browser profile under `.tools/browser-profiles`; restart Mansion to
+a separate browser profile under `.tools/browser-profiles`; restart Elsewhere to
 load the new native runtime. Browser menus using `xdg_popup` and clipboard are
 not yet supported. Failed launches show a diagnostic log path under the current
 launcher session directory instead of guessing which protocol is missing.
@@ -130,7 +136,7 @@ working. Instances elsewhere retain their locations for this session.
 Rooms 01–04 are twice as deep (12.8m); room 05 retains its size. The library has
 black antique bookcases with warm wood interiors
 and a reading table with a green banker lamp. Common furnishings throughout
-the mansion use the same drag/carry/rotate/push controls: bookcases, chairs,
+the elsewhere use the same drag/carry/rotate/push controls: bookcases, chairs,
 plants, worktables, cabinets, instruments, display stands and parts bins.
 Books, ornaments, table lamps and sculptures move with their furniture.
 Moving a supporting table away lets an application fall and remain usable.
@@ -138,6 +144,12 @@ Fixed architecture and mounted decorations stay fixed. Restart restoration
 remains unimplemented.
 
 ## Verified by automated checks in this recovery
+
+- T67 (2026-10-09, from `9c2de0c`): project rename to elsewhere. Fresh Meson
+  build and 34 tests, native/Godot binding suite, clean Godot import/runtime,
+  20 study trials, real Chrome check, 8 Python tests and 62 plugin/parser tests
+  pass under the new names. Maintained text and filenames have no old-name
+  references; UIDs are preserved. See [handoff 38](handoffs/38-elsewhere-rename.md).
 
 - T65–T66 (2026-10-09, from `2cdfd15`): real Google Chrome 154.0.8037.57 through
   the installed desktop entry; omnibox subsurface, local page navigation, trusted
@@ -359,13 +371,13 @@ This records approval of its appearance, not a terminal/input/comfort trial.
   Flatpak handoff and D-Bus activation remain unsupported. Third-party single-
   instance IPC may reuse a host instance; private display variables are not a
   process sandbox. The verified Terminal/Vim paths create owned private clients;
-  Chrome uses a separate Mansion profile and the browser sandbox stays enabled.
-  Concurrent Mansion frontends need separate browser profile roots.
+  Chrome uses a separate Elsewhere profile and the browser sandbox stays enabled.
+  Concurrent Elsewhere frontends need separate browser profile roots.
 - Client cursor images, clipboard/primary selection and popup menus. The host
   cursor remains visible; highlighting does not implement copy/paste. A right-click
   menu request can disconnect the client because xdg_popup remains unsupported.
 - Original addon initialization: reproduced segmentation fault; isolated with
-  `world/addons/mansion_godot/.gdignore`, source and binary preserved.
+  `world/addons/elsewhere_godot/.gdignore`, source and binary preserved.
 - Full renderer-independent compositor extraction: socket/wl_compositor/shm
   lifecycle, initial xdg-shell/seat checks and owned shm snapshots pass. Broader
   protocol conformance and popup presentation remain open; bounded subsurface

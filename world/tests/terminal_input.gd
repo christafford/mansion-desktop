@@ -106,10 +106,10 @@ func run() -> void:
 	await chord(KEY_CTRL, KEY_G) # Cancel readline's Escape prefix before editing.
 	await tap(KEY_END)
 	await chord(KEY_CTRL, KEY_U)
-	await type_text("printf 'MANSION: AbC_42!\\n' | tee '" + output_dir.path_join("typed.txt") + "'X")
+	await type_text("printf 'ELSEWHERE: AbC_42!\\n' | tee '" + output_dir.path_join("typed.txt") + "'X")
 	await tap(KEY_BACKSPACE)
 	await tap(KEY_ENTER)
-	check(await wait_file("typed.txt") == "MANSION: AbC_42!\n", "Real shell typing/modifiers/backspace result")
+	check(await wait_file("typed.txt") == "ELSEWHERE: AbC_42!\n", "Real shell typing/modifiers/backspace result")
 	await type_text("printf '")
 	await key(KEY_X, true)
 	await key(KEY_X, true, true) # Host echo must not produce a second press.

@@ -44,8 +44,8 @@ end to end, and several choices block Project 1:
    buffers (EGL `WL_bind_wayland_display` or `linux-dmabuf`) are the Project 2
    integration experiment and remain optional until they are demonstrated.
 5. **Socket naming.** The compositor never reuses the host's `WAYLAND_DISPLAY`
-   for its own socket. Default name is `mansion-<pid>`; `--socket NAME`
-   overrides it. The chosen name is printed as `MANSION_SOCKET=<name>` on
+   for its own socket. Default name is `elsewhere-<pid>`; `--socket NAME`
+   overrides it. The chosen name is printed as `ELSEWHERE_SOCKET=<name>` on
    stdout so scripts can pick it up.
 6. **Launcher environment.** Children inherit the parent's environment,
    with `WAYLAND_DISPLAY` set to the compositor's socket and `DISPLAY` unset so

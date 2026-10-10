@@ -63,7 +63,7 @@ from the old chronological status history.
 
 The milestone ends only when **a real terminal works in the furnished Godot
 study (T19)**. T09's room alone or a compiled `.so` is not completion. The
-legacy `build/mansion-desktop --room-camera` executable is not the Godot frontend.
+legacy `build/elsewhere --room-camera` executable is not the Godot frontend.
 T20–T35 remain later work; start a broader scope only when you intend that work.
 
 Do not use `Projects 1–21`: it includes deferred legacy work. Do not put

@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 
-namespace mansion {
+namespace elsewhere {
 // Runtime-only identity; never persisted. Pixels are tightly packed, top-left
 // buffer coordinates, RGBA8 with straight alpha. Presentation applies the inverse
 // buffer transform and scale. No client memory or protocol pointers escape here.
@@ -21,4 +21,4 @@ struct FrameSnapshot {
     std::vector<uint8_t> pixels;
 };
 using OwnedFrame = std::shared_ptr<const FrameSnapshot>;
-} // namespace mansion
+} // namespace elsewhere

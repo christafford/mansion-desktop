@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Mansion Desktop — Asset Fetcher and Verifier (P21-T03)
+Elsewhere — Asset Fetcher and Verifier (P21-T03)
 
 Fetches Poly Haven assets from the curated manifest, verifies MD5 hashes
 from the API response, and manages a local cache with atomic downloads
@@ -45,7 +45,7 @@ from urllib.error import HTTPError, URLError
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import shutil
 
-logger = logging.getLogger("mansion.fetch")
+logger = logging.getLogger("elsewhere.fetch")
 
 # ─── Manifest ────────────────────────────────────────────────────────
 
@@ -439,7 +439,7 @@ def atomic_download(url: str, dest: Path, dry_run: bool = False,
         try:
             fd, tmp_path = tempfile.mkstemp(
                 dir=str(dest.parent),
-                prefix=f".mansion_{dest.name}.",
+                prefix=f".elsewhere_{dest.name}.",
             )
             os.close(fd)
 
@@ -768,7 +768,7 @@ def _print_summary(results: list[AssetInfo]) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Mansion Desktop asset fetcher and verifier",
+        description="Elsewhere asset fetcher and verifier",
     )
     parser.add_argument(
         "--all", dest="all_assets", action="store_true", default=False,

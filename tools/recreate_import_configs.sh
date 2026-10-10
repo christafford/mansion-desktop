@@ -1,7 +1,7 @@
 #!/bin/bash
 # Recreate .import config files to match existing .scn files
 
-SCN_DIR="/home/deck/code/mansion-desktop/world/.godot/imported"
+SCN_DIR="/home/deck/code/elsewhere/world/.godot/imported"
 
 for scn in "$SCN_DIR"/*.scn; do
     if [ -f "$scn" ]; then
@@ -10,7 +10,7 @@ for scn in "$SCN_DIR"/*.scn; do
         # Format: name-md5.scn
         gltf_base=$(echo "$scn_name" | sed 's/\.scn$//')
         
-        cat > "/home/deck/code/mansion-desktop/world/assets/${gltf_base}.import" << INNER
+        cat > "/home/deck/code/elsewhere/world/assets/${gltf_base}.import" << INNER
 [remap]
 type="PackedScene"
 loader="scene"

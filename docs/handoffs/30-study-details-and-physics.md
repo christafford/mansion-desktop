@@ -93,7 +93,7 @@ SDL_JOYSTICK_LINUX_CLASSIC=1 \
 The local wrapper described in [handoff 28](28-godot-natural-navigation.md) uses
 the host input seat except for `terminal_resize.gd`, which runs in a private
 1600×1000 GPU-rendered Weston desktop. This preserves the host's display limits.
-Logs: `.tools/t55/suite-complete.log` and `/tmp/mansion-study-check.4TMHgU`.
+Logs: `.tools/t55/suite-complete.log` and `/tmp/elsewhere-study-check.4TMHgU`.
 Native helper build, import/runtime validation, seven Python tests and all 13
 Godot study trials pass. The keyboard trial checked 11163 client pixels, pointer
 selection/scroll passed, four actual terminal sizes passed, two live clients

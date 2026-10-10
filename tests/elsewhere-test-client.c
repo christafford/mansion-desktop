@@ -1,4 +1,4 @@
-/* Minimal Wayland test client for Mansion Desktop automated tests.
+/* Minimal Wayland test client for Elsewhere automated tests.
  *
  * Prints what it observes as single lines on stdout so shell tests can grep them:
  *   global <interface> <version>     one per advertised global (after the first roundtrip)
@@ -341,7 +341,7 @@ static const struct wl_pointer_listener pointer_listener = {
 
 static void usage(void) {
     fprintf(stderr,
-            "Usage: mansion-test-client [--socket NAME] [--exit-after-ms N] "
+            "Usage: elsewhere-test-client [--socket NAME] [--exit-after-ms N] "
             "[--toplevel] [--buffer WxH --color RRGGBB] [--report-input]\n"
             "  --socket NAME       Wayland socket name (default: $WAYLAND_DISPLAY)\n"
             "  --exit-after-ms N   keep dispatching events for N ms before exiting (default 0)\n"
@@ -359,7 +359,7 @@ static struct wl_buffer* create_buffer_only(struct client* c, int w, int h, int 
     int32_t stride = w * 4;
     int32_t size = stride * h;
 
-    int fd = memfd_create("mansion-shm", 0);
+    int fd = memfd_create("elsewhere-shm", 0);
     if (fd < 0) {
         perror("memfd_create");
         return NULL;
@@ -546,7 +546,7 @@ int main(int argc, char** argv) {
         c.xdg_surface = xdg_wm_base_get_xdg_surface(c.xdg_wm_base, c.surface);
         c.toplevel = xdg_surface_get_toplevel(c.xdg_surface);
         xdg_toplevel_set_title(c.toplevel, "test-client-egl");
-        xdg_toplevel_set_app_id(c.toplevel, "mansion-test-client");
+        xdg_toplevel_set_app_id(c.toplevel, "elsewhere-test-client");
         xdg_surface_set_window_geometry(c.xdg_surface, 0, 0, bw, bh);
         xdg_toplevel_add_listener(c.toplevel, &toplevel_listener, &c);
         xdg_surface_add_listener(c.xdg_surface, &surface_listener, &c);
@@ -588,7 +588,7 @@ int main(int argc, char** argv) {
                                     /* Create memfd-backed shm buffer with ARGB8888 data */
                                     int32_t stride = bw * 4;
                                     int32_t size = stride * bh;
-                                    int fd = memfd_create("mansion-egl", 0);
+                                    int fd = memfd_create("elsewhere-egl", 0);
                                     if (fd >= 0) {
                                         if (ftruncate(fd, size) == 0) {
                                             void* ptr = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
@@ -713,7 +713,7 @@ int main(int argc, char** argv) {
         xdg_toplevel_add_listener(c.toplevel, &toplevel_listener, &c);
 
         xdg_toplevel_set_title(c.toplevel, "test-client");
-        xdg_toplevel_set_app_id(c.toplevel, "mansion-test-client");
+        xdg_toplevel_set_app_id(c.toplevel, "elsewhere-test-client");
         xdg_surface_set_window_geometry(c.xdg_surface, 0, 0, bw, bh);
 
         /* Commit an empty surface first to trigger the compositor's
@@ -774,7 +774,7 @@ int main(int argc, char** argv) {
 
         /* Set metadata: title, app_id, window geometry */
         xdg_toplevel_set_title(c.toplevel, "xdg-test-title");
-        xdg_toplevel_set_app_id(c.toplevel, "mansion-xdg-test");
+        xdg_toplevel_set_app_id(c.toplevel, "elsewhere-xdg-test");
         xdg_surface_set_window_geometry(c.xdg_surface, 10, 20, 300, 200);
         printf("xdg-metadata-set\n");
 

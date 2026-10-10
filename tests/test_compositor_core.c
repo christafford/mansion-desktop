@@ -35,7 +35,7 @@ int main(int argc, char** argv) {
             return 1;
         }
 
-        struct MansionCompositor* compositor = compositor_core_create(display);
+        struct ElsewhereCompositor* compositor = compositor_core_create(display);
         test("compositor_core_create succeeds", compositor != NULL);
 
         if (compositor) {

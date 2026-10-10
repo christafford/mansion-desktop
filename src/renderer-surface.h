@@ -11,6 +11,6 @@
  * The bridge (P21-T11) queries surface state through display.h
  * accessor functions rather than reaching into this struct.
  */
-struct MansionRendererSurface {
+struct ElsewhereRendererSurface {
     GLuint gl_texture = 0;  /* 0 = no texture uploaded yet */
 };

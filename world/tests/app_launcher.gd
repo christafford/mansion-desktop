@@ -97,7 +97,7 @@ func run() -> void:
 	check(launcher.recent[0] == "vim.desktop", "Successful launch not newest")
 	if not failures:
 		var revision: int = terminal.revision
-		await type_text("iMansion launches real applications.\n")
+		await type_text("iElsewhere launches real applications.\n")
 		await settle()
 		check(terminal.revision > revision, "Real editor did not repaint after typing")
 		await capture("live-editor.png")
@@ -118,11 +118,11 @@ func run() -> void:
 		await settle()
 		for name in ["instance-second.txt", "instance-first.txt"]:
 			if FileAccess.file_exists(output_dir.path_join(name)): DirAccess.remove_absolute(output_dir.path_join(name))
-		await type_text("MANSION_INSTANCE=SECOND; printf '%s\\n' \"$MANSION_INSTANCE\" > '" + output_dir.path_join("instance-second.txt") + "'\n")
+		await type_text("ELSEWHERE_INSTANCE=SECOND; printf '%s\\n' \"$ELSEWHERE_INSTANCE\" > '" + output_dir.path_join("instance-second.txt") + "'\n")
 		check(await wait_file("instance-second.txt") == "SECOND\n", "Second terminal did not accept independent input")
 		launcher._activate(original_handle)
 		await settle()
-		await type_text("printf '%s\\n' \"${MANSION_INSTANCE-unset}\" > '" + output_dir.path_join("instance-first.txt") + "'\n")
+		await type_text("printf '%s\\n' \"${ELSEWHERE_INSTANCE-unset}\" > '" + output_dir.path_join("instance-first.txt") + "'\n")
 		check(await wait_file("instance-first.txt") == "unset\n", "First terminal inherited the second terminal's shell state")
 		launcher._activate(second_handle)
 		await settle()

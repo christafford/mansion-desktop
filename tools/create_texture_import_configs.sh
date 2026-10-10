@@ -1,7 +1,7 @@
 #!/bin/bash
 # Create .import config files for texture assets
 
-SCN_DIR="/home/deck/code/mansion-desktop/world/.godot/imported"
+SCN_DIR="/home/deck/code/elsewhere/world/.godot/imported"
 
 # Process all .md5 files to find source textures
 for md5_file in "$SCN_DIR"/*.md5; do

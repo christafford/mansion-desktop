@@ -10,7 +10,7 @@ import unittest
 
 class GodotLauncherTest(unittest.TestCase):
     def test_joystick_default_override_and_argument_boundary(self):
-        with tempfile.TemporaryDirectory(prefix="mansion launch ") as directory:
+        with tempfile.TemporaryDirectory(prefix="elsewhere launch ") as directory:
             root = Path(directory)
             scripts = root / "tools"
             scripts.mkdir()

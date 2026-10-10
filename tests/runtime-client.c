@@ -66,7 +66,7 @@ static void output_geometry(void *data, struct wl_output *output, int32_t x, int
         int32_t w, int32_t h, int32_t subpixel, const char *make, const char *model, int32_t transform) {
     (void)output;
     require(x == 0 && y == 0 && w == 338 && h == 211 && subpixel == WL_OUTPUT_SUBPIXEL_UNKNOWN &&
-        !strcmp(make, "Mansion") && !strcmp(model, "Workspace") && transform == WL_OUTPUT_TRANSFORM_NORMAL, "output geometry");
+        !strcmp(make, "Elsewhere") && !strcmp(model, "Workspace") && transform == WL_OUTPUT_TRANSFORM_NORMAL, "output geometry");
     ((struct output_state*)data)->geometry++;
 }
 static void output_mode(void *data, struct wl_output *output, uint32_t flags, int32_t w, int32_t h, int32_t refresh) {
@@ -170,7 +170,7 @@ static void create_window(struct globals *g, struct window *w, int with_role) {
         w->top = xdg_surface_get_toplevel(w->xdg);
         xdg_toplevel_add_listener(w->top, &top_listener, w);
         xdg_toplevel_set_title(w->top, "Runtime protocol fixture");
-        xdg_toplevel_set_app_id(w->top, "mansion.runtime-test");
+        xdg_toplevel_set_app_id(w->top, "elsewhere.runtime-test");
     }
 }
 static void destroy_window(struct window *w, int local) {
@@ -225,7 +225,7 @@ int main(int argc, char **argv) {
     struct window no_role = {0};
     create_window(&g, &no_role, 0);
     destroy_window(&no_role, 0); // Unconstructed role must not corrupt the registry.
-    int fd = memfd_create("mansion-runtime-fixture", MFD_CLOEXEC);
+    int fd = memfd_create("elsewhere-runtime-fixture", MFD_CLOEXEC);
     require(fd >= 0 && ftruncate(fd, 16) == 0, "buffer fd");
     struct wl_shm_pool *pool = wl_shm_create_pool(g.shm, fd, 16);
     struct wl_buffer *buffer = wl_shm_pool_create_buffer(pool, 0, 2, 2, 8, WL_SHM_FORMAT_ARGB8888);

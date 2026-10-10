@@ -17,7 +17,7 @@ These are inspected GPU viewport captures, not source-buffer images:
 
 Each application capture shows new shell output and text selected using the
 resized view's pointer mapping. The shell writes its actual rows/columns to
-files; no content is synthesized by Mansion. After initial activation at
+files; no content is synthesized by Elsewhere. After initial activation at
 1280×800, the sequence shrinks twice and grows twice. New buffers are committed,
 not merely stretched. Across these four captures, 8,573 sampled opaque client
 pixels match within two bytes/channel at native size.

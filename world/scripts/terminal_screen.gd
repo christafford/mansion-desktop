@@ -21,10 +21,10 @@ func _ready() -> void:
 		status.text = "Terminal disabled for scene test"
 		set_process(false)
 		return
-	if not ClassDB.class_exists("MansionCompositorSession"):
+	if not ClassDB.class_exists("ElsewhereCompositorSession"):
 		fail("Missing native runtime; run tools/build-godot-runtime.sh")
 		return
-	session = ClassDB.instantiate("MansionCompositorSession")
+	session = ClassDB.instantiate("ElsewhereCompositorSession")
 	var runtime_dir := OS.get_environment("XDG_RUNTIME_DIR")
 	if runtime_dir.is_empty():
 		runtime_dir = "/tmp"

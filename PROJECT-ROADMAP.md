@@ -1,6 +1,6 @@
-# Mansion Desktop: assessment and executable project roadmap
+# Elsewhere: assessment and executable project roadmap
 
-This plan accompanies [the concept](mansion-desktop-concept.md). It proposes an implementation sequence; it does not claim that any prototype has been built or tested.
+This plan accompanies [the concept](elsewhere-concept.md). It proposes an implementation sequence; it does not claim that any prototype has been built or tested.
 
 **Working from this roadmap:** the numbered projects below are broken into small, individually testable tasks in [docs/TASKS.md](docs/TASKS.md). Autonomous sessions work from that file; this document defines each project's scope, acceptance boundary, dependencies, and decision gates. Current verified state lives in [docs/STATUS.md](docs/STATUS.md); binding technical decisions live in [docs/decisions/](docs/decisions/).
 
@@ -24,7 +24,7 @@ cover visuals/integration. Final personal usability remains a human task.
 
 The concept is coherent and technically plausible. Its strongest decisions are keeping ordinary files and applications, storing spatial placement separately, distinguishing world input from application input, acknowledging the limits of session restoration, and developing as a nested compositor first.
 
-The difficult part is building a reliable compositor with a spatial shell. Drawing a mansion is comparatively straightforward. A terminal demo will establish feasibility for one client; it will not establish compatibility with browsers, editors, dialogs, accelerated clients, or an entire desktop session.
+The difficult part is building a reliable compositor with a spatial shell. Drawing a elsewhere is comparatively straightforward. A terminal demo will establish feasibility for one client; it will not establish compatibility with browsers, editors, dialogs, accelerated clients, or an entire desktop session.
 
 There are two independent questions to answer:
 
@@ -35,7 +35,7 @@ The first four projects answer the initial engineering question. Projects 5–8 
 
 ## Changes I recommend to the concept
 
-- **Treat fullscreen as a presentation mode initially.** Show the client at full size inside Mansion's host window. Do not require direct scanout, changing the physical display mode, or a client fullscreen state transition just to focus it. Define client-requested fullscreen behavior separately.
+- **Treat fullscreen as a presentation mode initially.** Show the client at full size inside Elsewhere's host window. Do not require direct scanout, changing the physical display mode, or a client fullscreen state transition just to focus it. Define client-requested fullscreen behavior separately.
 - **Make integration choices evidence-based.** Continue the implemented C++20,
   Meson compositor core. Decision 06 now authorizes Godot's world renderer and
   GDExtension bridge. Direct GPU buffer import and compositor-stack replacement
@@ -44,7 +44,7 @@ The first four projects answer the initial engineering question. Projects 5–8 
 - **Separate resources, artifacts, and live windows.** A file or launch recipe is a resource; its representation in a room is an artifact; a connected client window is temporary runtime state. One application can have several windows, and one resource may eventually have several spatial references. Never persist Wayland object IDs or process IDs as durable identity.
 - **Avoid promising exact launch-to-window matching.** Application IDs and titles are hints, not unique instance identifiers. Applications may reuse existing processes. Use launch tracking and supported activation mechanisms, with an explicit manual assignment fallback.
 - **Treat saving as a pending operation.** A file chooser selects a destination; the application writes the file afterward. Placement should initially be provisional, with cancellation, failure, overwrite, and filename handling. The portal response is not evidence that bytes were saved. [FileChooser API](https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.portal.FileChooser.html).
-- **Introduce fast access early.** A task list, search, teleportation, and reduced-motion navigation are needed to evaluate the product fairly. Do not wait for a full mansion.
+- **Introduce fast access early.** A task list, search, teleportation, and reduced-motion navigation are needed to evaluate the product fairly. Do not wait for a full elsewhere.
 - **Prefer deliberate placement over automatic clutter.** Indexing a directory should not spawn thousands of physical objects. Search results become artifacts when the user places them.
 - **Keep broad desktop replacement as a later program.** Locking, display hotplug, suspend/resume, input methods, screen sharing, and recovery deserve their own acceptance criteria.
 
@@ -75,7 +75,7 @@ Suggested locations: `docs/decisions/`, `docs/handoffs/NN.md`, and `docs/STATUS.
 
 **Deliver:** a reproducible minimal compositor launched inside the existing desktop, plus a helper that launches a native Wayland terminal on its private display socket. Inspect the host environment, pin dependencies, and record the stack decision (done: decisions 01 and 02; libwayland-server, xdg-shell, host-window input). Keep child-client environment changes local to the launcher. Ship a headless mode and a test client so every protocol behaviour has an automated check (tasks P1-T01 to P1-T09).
 
-**Done when:** a terminal displays in 2D, accepts typing and pointer input, resizes, and can close without killing Mansion. The host desktop remains usable after Mansion exits. Document what happens to connected clients when Mansion stops. The terminal step (P1-T10) needs a person; all other criteria are covered by `meson test`.
+**Done when:** a terminal displays in 2D, accepts typing and pointer input, resizes, and can close without killing Elsewhere. The host desktop remains usable after Elsewhere exits. Document what happens to connected clients when Elsewhere stops. The terminal step (P1-T10) needs a person; all other criteria are covered by `meson test`.
 
 **Exclude:** 3D, persistence, XWayland, portals, native session installation.
 
@@ -97,9 +97,9 @@ Suggested locations: `docs/decisions/`, `docs/handoffs/NN.md`, and `docs/STATUS.
 
 **Depends on:** 2.
 
-**Deliver:** explicit world and application modes; selecting the panel shows its application at full size inside Mansion. A configurable reserved shortcut returns to world mode. Handle focus loss, held keys/buttons, cursor visibility, client exit, and window resize during transitions.
+**Deliver:** explicit world and application modes; selecting the panel shows its application at full size inside Elsewhere. A configurable reserved shortcut returns to world mode. Handle focus loss, held keys/buttons, cursor visibility, client exit, and window resize during transitions.
 
-**Done when:** repeated enter/type/click/scroll/leave cycles work without input leaking into the world or leaving stuck keys in the client. Losing host-window focus releases capture appropriately. The app remains running when returning to the world. Document host shortcuts Mansion cannot capture.
+**Done when:** repeated enter/type/click/scroll/leave cycles work without input leaking into the world or leaving stuck keys in the client. Losing host-window focus releases capture appropriately. The app remains running when returning to the world. Document host shortcuts Elsewhere cannot capture.
 
 **Exclude:** embedded application interaction and pointer-lock-dependent applications.
 
@@ -171,7 +171,7 @@ data-driven rooms/assets rather than introducing all scene capability at once.
 
 **Deliver:** a versioned SQLite schema separating resources, artifacts, world entities, and temporary live-window bindings; stable artifact/entity UUIDs independent of PIDs, Wayland resources and GPU objects; slot-based movement; transactional saves; reset/export support. Define local versus room-relative transforms. Enforce valid container membership without cycles.
 
-**Done when:** move three artifacts, restart Mansion, and find their placeholders at the saved positions. Schema migration and interrupted-write behavior are checked. No stale surface pointer or process ID is treated as a restorable application.
+**Done when:** move three artifacts, restart Elsewhere, and find their placeholders at the saved positions. Schema migration and interrupted-write behavior are checked. No stale surface pointer or process ID is treated as a restorable application.
 
 **Exclude:** automatic application relaunch and arbitrary physics placement.
 
@@ -183,7 +183,7 @@ data-driven rooms/assets rather than introducing all scene capability at once.
 
 **Deliver:** explicit launch recipes with application identity, argument arrays, working directory, and optional document URI; user-triggered restoration; launch state/error feedback; duplicate suppression and manual reassociation. Distinguish placeholders, launching, connected, and failed states.
 
-**Done when:** after restarting Mansion, activating a saved artifact recreates a supported terminal or document application at its previous location. Missing executables and ambiguous instances produce recoverable states. Document which application-owned session details survive.
+**Done when:** after restarting Elsewhere, activating a saved artifact recreates a supported terminal or document application at its previous location. Missing executables and ambiguous instances produce recoverable states. Document which application-owned session details survive.
 
 **Exclude:** restoring unsaved application memory and automatically rerunning arbitrary shell history.
 
@@ -201,7 +201,7 @@ data-driven rooms/assets rather than introducing all scene capability at once.
 
 **Session task:** “Implement Project 8. Make all existing work reachable with keyboard search and evaluate whether the spatial layout helps a real workflow.”
 
-**Decision gate B:** This is the first useful nested MVP. Improve it until it is pleasant to use before building the rest of the mansion. If users consistently bypass spatial navigation, investigate whether rooms still help organization or whether the metaphor needs revision.
+**Decision gate B:** This is the first useful nested MVP. Improve it until it is pleasant to use before building the rest of the elsewhere. If users consistently bypass spatial navigation, investigate whether rooms still help organization or whether the metaphor needs revision.
 
 ## Projects 9–14: files and desktop integration
 
@@ -211,7 +211,7 @@ data-driven rooms/assets rather than introducing all scene capability at once.
 
 **Deliver:** explicit file import, selected-directory indexing, MIME metadata, and watching/reconciliation. Keep search inventory separate from placed artifacts. Define policies for rename, deletion, replacement, symlinks, and unavailable mounts. Provide manual relinking when identity is uncertain; paths and inode numbers alone are not universal durable identity.
 
-**Done when:** moving an artifact never moves its file; a watched rename updates the reference when detectable; deletion or an unavailable mount leaves a recoverable placeholder. Restart reconciliation catches changes missed while Mansion was stopped. Indexing a large folder does not create a room full of objects or block rendering.
+**Done when:** moving an artifact never moves its file; a watched rename updates the reference when detectable; deletion or an unavailable mount leaves a recoverable placeholder. Restart reconciliation catches changes missed while Elsewhere was stopped. Indexing a large folder does not create a room full of objects or block rendering.
 
 **Session task:** “Implement Project 9. Add file-backed artifacts and a bounded index with explicit external-change and missing-resource behavior.”
 
@@ -367,7 +367,7 @@ None of these is necessary to prove the core concept.
 ## Copyable prompt for a single project
 
 ```text
-Read mansion-desktop-concept.md and PROJECT-ROADMAP.md.
+Read elsewhere-concept.md and PROJECT-ROADMAP.md.
 Read docs/STATUS.md, relevant docs/decisions/, and the latest applicable
 docs/handoffs/ if they exist. Inspect the current repository before changing it.
 

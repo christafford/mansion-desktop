@@ -14,7 +14,7 @@ fi
 if [[ "$(realpath "$PROJECT_DIR")" == "$(realpath "$SCRIPT_DIR/../world")" ]]; then
     "$SCRIPT_DIR/build-godot-runtime.sh"
 fi
-LOG_DIR=$(mktemp -d "${TMPDIR:-/tmp}/mansion-godot-check.XXXXXX")
+LOG_DIR=$(mktemp -d "${TMPDIR:-/tmp}/elsewhere-godot-check.XXXXXX")
 echo "Godot validation logs: $LOG_DIR"
 check() {
     local phase=$1

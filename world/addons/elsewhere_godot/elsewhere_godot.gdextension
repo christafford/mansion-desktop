@@ -1,0 +1,10 @@
+[configuration]
+
+entry_symbol = "GDExtensionInit"
+version = "1.0"
+compatibility_minimum = "4.1"
+
+[libraries]
+
+linux.x86_64.release = "res://addons/elsewhere_godot/libelsewhere_godot.so"
+linux.x86_64.debug = "res://addons/elsewhere_godot/libelsewhere_godot.so"

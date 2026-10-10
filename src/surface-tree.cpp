@@ -7,24 +7,24 @@
 #include <cstring>
 #include <new>
 
-struct MansionSubsurface {
+struct ElsewhereSubsurface {
     wl_resource* resource = nullptr;
-    MansionSurface* surface = nullptr;
-    MansionSurface* parent = nullptr;
+    ElsewhereSurface* surface = nullptr;
+    ElsewhereSurface* parent = nullptr;
     int32_t x = 0, y = 0, pending_x = 0, pending_y = 0, cached_x = 0, cached_y = 0;
     bool sync = true;
 };
 namespace {
-auto& state(MansionSurface* s) { return *s->core_frame; }
-MansionSurface* parent(MansionSurface* s) {
+auto& state(ElsewhereSurface* s) { return *s->core_frame; }
+ElsewhereSurface* parent(ElsewhereSurface* s) {
     return state(s).subsurface ? state(s).subsurface->parent : nullptr;
 }
-bool synchronized(MansionSurface* s) {
+bool synchronized(ElsewhereSurface* s) {
     for (; s && state(s).subsurface; s = parent(s))
         if (state(s).subsurface->sync) return true;
     return false;
 }
-void apply(MansionSurface* s, bool ancestor_sync) {
+void apply(ElsewhereSurface* s, bool ancestor_sync) {
     auto& f = state(s);
     if (f.cached_commit) {
         f.visible_frame = f.frame;
@@ -43,7 +43,7 @@ void apply(MansionSurface* s, bool ancestor_sync) {
         if (sync) apply(child, true);
     }
 }
-void detach(MansionSubsurface* sub) {
+void detach(ElsewhereSubsurface* sub) {
     if (sub->parent) {
         auto& p = state(sub->parent);
         std::erase(p.order, sub->surface);
@@ -54,7 +54,7 @@ void detach(MansionSubsurface* sub) {
 }
 void destroy_request(wl_client*, wl_resource* r) { wl_resource_destroy(r); }
 void sub_destroyed(wl_resource* r) {
-    auto* sub = static_cast<MansionSubsurface*>(wl_resource_get_user_data(r));
+    auto* sub = static_cast<ElsewhereSubsurface*>(wl_resource_get_user_data(r));
     detach(sub);
     if (sub->surface) {
         state(sub->surface).subsurface = nullptr;
@@ -65,16 +65,16 @@ void sub_destroyed(wl_resource* r) {
 void position(wl_client*, wl_resource* r, int32_t x, int32_t y) {
     // Bound eventual composite allocation and integer arithmetic explicitly.
     if (x < -8192 || x > 8192 || y < -8192 || y > 8192) {
-        wl_client_post_implementation_error(wl_resource_get_client(r), "subsurface position exceeds Mansion's +/-8192 limit");
+        wl_client_post_implementation_error(wl_resource_get_client(r), "subsurface position exceeds Elsewhere's +/-8192 limit");
         return;
     }
-    auto* sub = static_cast<MansionSubsurface*>(wl_resource_get_user_data(r));
+    auto* sub = static_cast<ElsewhereSubsurface*>(wl_resource_get_user_data(r));
     sub->pending_x = x; sub->pending_y = y;
 }
 void place(wl_resource* r, wl_resource* sibling_resource, bool above) {
-    auto* sub = static_cast<MansionSubsurface*>(wl_resource_get_user_data(r));
+    auto* sub = static_cast<ElsewhereSubsurface*>(wl_resource_get_user_data(r));
     if (!sub->surface || !sub->parent) return;
-    auto* sibling = static_cast<MansionSurface*>(wl_resource_get_user_data(sibling_resource));
+    auto* sibling = static_cast<ElsewhereSurface*>(wl_resource_get_user_data(sibling_resource));
     auto& order = state(sub->parent).pending_order;
     if (sibling == sub->surface || std::find(order.begin(), order.end(), sibling) == order.end()) {
         wl_resource_post_error(r, WL_SUBSURFACE_ERROR_BAD_SURFACE, "stacking target must be parent or sibling");
@@ -87,9 +87,9 @@ void place(wl_resource* r, wl_resource* sibling_resource, bool above) {
 }
 void above(wl_client*, wl_resource* r, wl_resource* sibling) { place(r, sibling, true); }
 void below(wl_client*, wl_resource* r, wl_resource* sibling) { place(r, sibling, false); }
-void sync(wl_client*, wl_resource* r) { static_cast<MansionSubsurface*>(wl_resource_get_user_data(r))->sync = true; }
+void sync(wl_client*, wl_resource* r) { static_cast<ElsewhereSubsurface*>(wl_resource_get_user_data(r))->sync = true; }
 void desync(wl_client* client, wl_resource* r) {
-    auto* sub = static_cast<MansionSubsurface*>(wl_resource_get_user_data(r));
+    auto* sub = static_cast<ElsewhereSubsurface*>(wl_resource_get_user_data(r));
     sub->sync = false;
     if (sub->surface && !synchronized(sub->surface)) {
         try { apply(sub->surface, false); }
@@ -97,14 +97,14 @@ void desync(wl_client* client, wl_resource* r) {
     }
 }
 const struct wl_subsurface_interface sub_impl = {destroy_request, position, above, below, sync, desync};
-int subtree_depth(MansionSurface* s) {
+int subtree_depth(ElsewhereSurface* s) {
     int depth = 1;
     for (auto* child : state(s).pending_order) if (child != s) depth = std::max(depth, 1 + subtree_depth(child));
     return depth;
 }
 void get_subsurface(wl_client* client, wl_resource* r, uint32_t id, wl_resource* child_r, wl_resource* parent_r) try {
-    auto* child = static_cast<MansionSurface*>(wl_resource_get_user_data(child_r));
-    auto* p = static_cast<MansionSurface*>(wl_resource_get_user_data(parent_r));
+    auto* child = static_cast<ElsewhereSurface*>(wl_resource_get_user_data(child_r));
+    auto* p = static_cast<ElsewhereSurface*>(wl_resource_get_user_data(parent_r));
     if (!child || !p || !child->core_frame || !p->core_frame || child->xdg_surface ||
         state(child).subsurface) {
         wl_resource_post_error(r, WL_SUBCOMPOSITOR_ERROR_BAD_SURFACE, "surface already has a role or invalid parent"); return;
@@ -120,12 +120,12 @@ void get_subsurface(wl_client* client, wl_resource* r, uint32_t id, wl_resource*
     }
     auto& pf = state(p);
     if (pf.pending_order.size() >= 256) {
-        wl_client_post_implementation_error(client, "Mansion supports at most 255 direct subsurfaces"); return;
+        wl_client_post_implementation_error(client, "Elsewhere supports at most 255 direct subsurfaces"); return;
     }
     if (pf.pending_order.empty()) { pf.pending_order.push_back(p); pf.order.push_back(p); }
     // Allocate before creating a live resource with cross-links.
     pf.pending_order.reserve(pf.pending_order.size() + 1);
-    auto* sub = new (std::nothrow) MansionSubsurface;
+    auto* sub = new (std::nothrow) ElsewhereSubsurface;
     if (!sub) { wl_client_post_no_memory(client); return; }
     sub->resource = wl_resource_create(client, &wl_subsurface_interface, 1, id);
     if (!sub->resource) { delete sub; wl_client_post_no_memory(client); return; }
@@ -143,8 +143,8 @@ void bind(wl_client* client, void*, uint32_t, uint32_t id) {
     if (!r) { wl_client_post_no_memory(client); return; }
     wl_resource_set_implementation(r, &impl, nullptr, nullptr);
 }
-struct Layer { MansionSurface* surface; int x, y; };
-void collect(MansionSurface* s, int x, int y, std::vector<Layer>& layers) {
+struct Layer { ElsewhereSurface* surface; int x, y; };
+void collect(ElsewhereSurface* s, int x, int y, std::vector<Layer>& layers) {
     const auto& f = state(s);
     if (!f.visible_frame || !f.visible_frame->mapped) return;
     if (f.order.empty()) { layers.push_back({s, x, y}); return; }
@@ -164,7 +164,7 @@ bool input_contains(const InputRegion& region, double x, double y) {
             inside = !rect.subtract;
     return inside;
 }
-const uint8_t* pixel(const mansion::FrameSnapshot& f, int x, int y) {
+const uint8_t* pixel(const elsewhere::FrameSnapshot& f, int x, int y) {
     const int rw = (f.transform & 1) ? f.height : f.width;
     if (f.transform >= 4) x = rw - 1 - x;
     int sx = x, sy = y;
@@ -180,7 +180,7 @@ const uint8_t* pixel(const mansion::FrameSnapshot& f, int x, int y) {
 wl_global* surface_tree_create_global(wl_display* display) {
     return wl_global_create(display, &wl_subcompositor_interface, 1, nullptr, bind);
 }
-void surface_tree_commit(MansionSurface* s) {
+void surface_tree_commit(ElsewhereSurface* s) {
     auto& f = state(s);
     f.cached_input = f.pending_input;
     f.cached_order = f.pending_order;
@@ -193,18 +193,18 @@ void surface_tree_commit(MansionSurface* s) {
     wl_list_init(&s->frame_callback_list);
     if (!synchronized(s)) apply(s, false);
 }
-void surface_tree_destroyed(MansionSurface* s) {
+void surface_tree_destroyed(ElsewhereSurface* s) {
     auto& f = state(s);
     if (f.subsurface) { detach(f.subsurface); f.subsurface->surface = nullptr; }
     for (auto* child : f.pending_order) if (child != s) state(child).subsurface->parent = nullptr;
     for (auto* child : f.order) if (child != s) state(child).subsurface->parent = nullptr;
     while (!wl_list_empty(&f.cached_callbacks)) wl_resource_destroy(wl_resource_from_link(f.cached_callbacks.next));
 }
-MansionSurface* surface_tree_root(MansionSurface* s) {
+ElsewhereSurface* surface_tree_root(ElsewhereSurface* s) {
     while (s && state(s).subsurface_role) s = parent(s);
     return s;
 }
-bool surface_tree_mapped(MansionSurface* s) {
+bool surface_tree_mapped(ElsewhereSurface* s) {
     for (; s; s = parent(s)) {
         if (!state(s).visible_frame || !state(s).visible_frame->mapped) return false;
         if (state(s).subsurface_role && !parent(s)) return false;
@@ -215,7 +215,7 @@ bool surface_tree_mapped(MansionSurface* s) {
     }
     return true;
 }
-mansion::OwnedFrame surface_tree_snapshot(MansionSurface* s) try {
+elsewhere::OwnedFrame surface_tree_snapshot(ElsewhereSurface* s) try {
     auto& f = state(s);
     if (!f.tree_used || !f.visible_frame) return f.visible_frame;
     std::vector<Layer> layers;
@@ -232,12 +232,12 @@ mansion::OwnedFrame surface_tree_snapshot(MansionSurface* s) try {
     const int scale = f.visible_frame->scale;
     const int64_t width = int64_t(right - left) * scale, height = int64_t(bottom - top) * scale;
     if (width > 4096 || height > 4096 || width * height > 16777216) {
-        wl_client_post_implementation_error(wl_resource_get_client(s->resource), "composed surface exceeds Mansion's 4096px/64 MiB limit"); return {};
+        wl_client_post_implementation_error(wl_resource_get_client(s->resource), "composed surface exceeds Elsewhere's 4096px/64 MiB limit"); return {};
     }
     if (surface_tree_storage(s->compositor) + size_t(width * height * 4) > 256u * 1024 * 1024) {
         wl_client_post_implementation_error(wl_resource_get_client(s->resource), "composed frame storage exceeds 256 MiB limit"); return {};
     }
-    auto result = std::make_shared<mansion::FrameSnapshot>();
+    auto result = std::make_shared<elsewhere::FrameSnapshot>();
     result->handle = f.handle;
     f.composite_revision = std::max(f.composite_revision + 1, f.visible_frame->revision);
     result->revision = f.composite_revision;
@@ -275,7 +275,7 @@ mansion::OwnedFrame surface_tree_snapshot(MansionSurface* s) try {
     f.composite = result;
     return result;
 } catch (const std::bad_alloc&) { wl_client_post_no_memory(wl_resource_get_client(s->resource)); return {}; }
-MansionSurface* surface_tree_at(MansionSurface* root, double& x, double& y) {
+ElsewhereSurface* surface_tree_at(ElsewhereSurface* root, double& x, double& y) {
     std::vector<Layer> layers;
     collect(root, 0, 0, layers);
     for (auto it = layers.rbegin(); it != layers.rend(); ++it) {
@@ -287,15 +287,15 @@ MansionSurface* surface_tree_at(MansionSurface* root, double& x, double& y) {
     }
     return nullptr;
 }
-bool surface_tree_coordinates(MansionSurface* root, MansionSurface* target, double& x, double& y) {
+bool surface_tree_coordinates(ElsewhereSurface* root, ElsewhereSurface* target, double& x, double& y) {
     if (surface_tree_root(target) != root || !surface_tree_mapped(target)) return false;
     for (auto* s = target; s != root; s = parent(s)) { x -= state(s).subsurface->x; y -= state(s).subsurface->y; }
     return true;
 }
 
-size_t surface_tree_storage(MansionCompositor* compositor) {
+size_t surface_tree_storage(ElsewhereCompositor* compositor) {
     size_t bytes = 0;
-    MansionSurface* s;
+    ElsewhereSurface* s;
     wl_list_for_each(s, &compositor->surface_list, link) {
         const auto& f = state(s);
         if (f.frame) bytes += f.frame->pixels.size();
@@ -305,7 +305,7 @@ size_t surface_tree_storage(MansionCompositor* compositor) {
     return bytes;
 }
 
-SurfaceTreeBounds surface_tree_bounds(MansionSurface* surface) {
+SurfaceTreeBounds surface_tree_bounds(ElsewhereSurface* surface) {
     std::vector<Layer> layers;
     collect(surface, 0, 0, layers);
     int left = 0, top = 0, right = surface->width, bottom = surface->height;

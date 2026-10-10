@@ -3,46 +3,46 @@
 #include <godot_cpp/variant/packed_byte_array.hpp>
 #include <cstring>
 
-namespace mansion {
-void MansionCompositorSession::_bind_methods() {
-    godot::ClassDB::bind_method(godot::D_METHOD("request_resize", "handle", "width", "height"), &MansionCompositorSession::request_resize);
-    godot::ClassDB::bind_method(godot::D_METHOD("window_state", "handle"), &MansionCompositorSession::window_state);
-    godot::ClassDB::bind_method(godot::D_METHOD("pointer_motion", "handle", "x", "y"), &MansionCompositorSession::pointer_motion);
-    godot::ClassDB::bind_method(godot::D_METHOD("pointer_button", "button", "pressed"), &MansionCompositorSession::pointer_button);
-    godot::ClassDB::bind_method(godot::D_METHOD("pointer_axis", "horizontal", "vertical"), &MansionCompositorSession::pointer_axis);
-    godot::ClassDB::bind_method(godot::D_METHOD("pointer_reset"), &MansionCompositorSession::pointer_reset);
-    godot::ClassDB::bind_method(godot::D_METHOD("pointer_focus_handle"), &MansionCompositorSession::pointer_focus_handle);
-    godot::ClassDB::bind_method(godot::D_METHOD("pointer_grabbed"), &MansionCompositorSession::pointer_grabbed);
-    godot::ClassDB::bind_method(godot::D_METHOD("focus_keyboard", "handle"), &MansionCompositorSession::focus_keyboard);
-    godot::ClassDB::bind_method(godot::D_METHOD("keyboard_focus_handle"), &MansionCompositorSession::keyboard_focus_handle);
-    godot::ClassDB::bind_method(godot::D_METHOD("keyboard_key", "evdev_code", "pressed"), &MansionCompositorSession::keyboard_key);
-    godot::ClassDB::bind_method(godot::D_METHOD("surface_handles"), &MansionCompositorSession::surface_handles);
-    godot::ClassDB::bind_method(godot::D_METHOD("toplevel_handles"), &MansionCompositorSession::toplevel_handles);
-    godot::ClassDB::bind_method(godot::D_METHOD("snapshot", "handle", "after_revision"), &MansionCompositorSession::snapshot, DEFVAL(0));
-    godot::ClassDB::bind_method(godot::D_METHOD("start", "runtime_directory"), &MansionCompositorSession::start);
-    godot::ClassDB::bind_method(godot::D_METHOD("pump"), &MansionCompositorSession::pump);
-    godot::ClassDB::bind_method(godot::D_METHOD("stop"), &MansionCompositorSession::stop);
-    godot::ClassDB::bind_method(godot::D_METHOD("is_running"), &MansionCompositorSession::is_running);
-    godot::ClassDB::bind_method(godot::D_METHOD("client_count"), &MansionCompositorSession::client_count);
-    godot::ClassDB::bind_method(godot::D_METHOD("toplevel_count"), &MansionCompositorSession::toplevel_count);
-    godot::ClassDB::bind_method(godot::D_METHOD("surface_count"), &MansionCompositorSession::surface_count);
-    godot::ClassDB::bind_method(godot::D_METHOD("socket_path"), &MansionCompositorSession::socket_path);
-    godot::ClassDB::bind_method(godot::D_METHOD("last_error"), &MansionCompositorSession::last_error);
+namespace elsewhere {
+void ElsewhereCompositorSession::_bind_methods() {
+    godot::ClassDB::bind_method(godot::D_METHOD("request_resize", "handle", "width", "height"), &ElsewhereCompositorSession::request_resize);
+    godot::ClassDB::bind_method(godot::D_METHOD("window_state", "handle"), &ElsewhereCompositorSession::window_state);
+    godot::ClassDB::bind_method(godot::D_METHOD("pointer_motion", "handle", "x", "y"), &ElsewhereCompositorSession::pointer_motion);
+    godot::ClassDB::bind_method(godot::D_METHOD("pointer_button", "button", "pressed"), &ElsewhereCompositorSession::pointer_button);
+    godot::ClassDB::bind_method(godot::D_METHOD("pointer_axis", "horizontal", "vertical"), &ElsewhereCompositorSession::pointer_axis);
+    godot::ClassDB::bind_method(godot::D_METHOD("pointer_reset"), &ElsewhereCompositorSession::pointer_reset);
+    godot::ClassDB::bind_method(godot::D_METHOD("pointer_focus_handle"), &ElsewhereCompositorSession::pointer_focus_handle);
+    godot::ClassDB::bind_method(godot::D_METHOD("pointer_grabbed"), &ElsewhereCompositorSession::pointer_grabbed);
+    godot::ClassDB::bind_method(godot::D_METHOD("focus_keyboard", "handle"), &ElsewhereCompositorSession::focus_keyboard);
+    godot::ClassDB::bind_method(godot::D_METHOD("keyboard_focus_handle"), &ElsewhereCompositorSession::keyboard_focus_handle);
+    godot::ClassDB::bind_method(godot::D_METHOD("keyboard_key", "evdev_code", "pressed"), &ElsewhereCompositorSession::keyboard_key);
+    godot::ClassDB::bind_method(godot::D_METHOD("surface_handles"), &ElsewhereCompositorSession::surface_handles);
+    godot::ClassDB::bind_method(godot::D_METHOD("toplevel_handles"), &ElsewhereCompositorSession::toplevel_handles);
+    godot::ClassDB::bind_method(godot::D_METHOD("snapshot", "handle", "after_revision"), &ElsewhereCompositorSession::snapshot, DEFVAL(0));
+    godot::ClassDB::bind_method(godot::D_METHOD("start", "runtime_directory"), &ElsewhereCompositorSession::start);
+    godot::ClassDB::bind_method(godot::D_METHOD("pump"), &ElsewhereCompositorSession::pump);
+    godot::ClassDB::bind_method(godot::D_METHOD("stop"), &ElsewhereCompositorSession::stop);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_running"), &ElsewhereCompositorSession::is_running);
+    godot::ClassDB::bind_method(godot::D_METHOD("client_count"), &ElsewhereCompositorSession::client_count);
+    godot::ClassDB::bind_method(godot::D_METHOD("toplevel_count"), &ElsewhereCompositorSession::toplevel_count);
+    godot::ClassDB::bind_method(godot::D_METHOD("surface_count"), &ElsewhereCompositorSession::surface_count);
+    godot::ClassDB::bind_method(godot::D_METHOD("socket_path"), &ElsewhereCompositorSession::socket_path);
+    godot::ClassDB::bind_method(godot::D_METHOD("last_error"), &ElsewhereCompositorSession::last_error);
 }
 
-godot::PackedInt64Array MansionCompositorSession::surface_handles() const {
+godot::PackedInt64Array ElsewhereCompositorSession::surface_handles() const {
     godot::PackedInt64Array handles;
     for (auto handle : runtime_.surface_handles()) handles.push_back(handle);
     return handles;
 }
 
-godot::PackedInt64Array MansionCompositorSession::toplevel_handles() const {
+godot::PackedInt64Array ElsewhereCompositorSession::toplevel_handles() const {
     godot::PackedInt64Array handles;
     for (auto handle : runtime_.toplevel_handles()) handles.push_back(handle);
     return handles;
 }
 
-godot::Dictionary MansionCompositorSession::snapshot(int64_t handle, int64_t after_revision) const {
+godot::Dictionary ElsewhereCompositorSession::snapshot(int64_t handle, int64_t after_revision) const {
     auto frame = runtime_.snapshot(handle);
     godot::Dictionary result;
     if (!frame || (after_revision >= 0 && frame->revision <= static_cast<uint64_t>(after_revision))) return result;
@@ -66,7 +66,7 @@ godot::Dictionary MansionCompositorSession::snapshot(int64_t handle, int64_t aft
     return result;
 }
 
-godot::Dictionary MansionCompositorSession::window_state(int64_t handle) const {
+godot::Dictionary ElsewhereCompositorSession::window_state(int64_t handle) const {
     godot::Dictionary result;
     auto state = runtime_.window_state(handle);
     if (!state) return result;
@@ -82,7 +82,7 @@ godot::Dictionary MansionCompositorSession::window_state(int64_t handle) const {
     return result;
 }
 
-bool MansionCompositorSession::start(const godot::String& runtime_directory) {
+bool ElsewhereCompositorSession::start(const godot::String& runtime_directory) {
     return runtime_.start(runtime_directory.utf8().get_data());
 }
-} // namespace mansion
+} // namespace elsewhere

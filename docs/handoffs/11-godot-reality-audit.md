@@ -28,7 +28,7 @@ Follow Depends lines; reopened prerequisites block dependent completion.
 | T02 | Curated set complete | Prose candidate list exists; no reviewable preview evidence or authoritative complete file manifest |
 | T03 | All assets fetched | 22 files cached, but six glTF models reference 30 absent files; offline/failure-path acceptance missing |
 | T10 | Core independent of GL | `compositor.cpp` includes GLES/display and calls renderer helpers; `input.cpp` couples seat and camera; Meson has no independent core-library target |
-| T11 (already open) | Only blocked on GUI registration | `.gdextension` resource/class registration missing; init callbacks are empty; deployed library lists unresolved Mansion functions; no Godot-driven socket/fixture proof |
+| T11 (already open) | Only blocked on GUI registration | `.gdextension` resource/class registration missing; init callbacks are empty; deployed library lists unresolved Elsewhere functions; no Godot-driven socket/fixture proof |
 
 The executable the owner tested remains the C++/EGL renderer. Earlier fixes in
 `a5ba64a`, `99fcedb`, `3dfaa26` repaired it; they did not implement Godot. Owner
@@ -68,7 +68,7 @@ First command: SIGABRT, `ERROR: Parameter "singleton" is null`,
 `editor/editor_node.cpp:6618`. Headless runtime: exit 0. GUI runtime: exit 0;
 OpenGL 4.6, Mesa 26.2.3-arch1.1, AMD Custom GPU 0405. Audio library/device warnings
 ended in dummy-driver fallback. No image inspection or physical input trial.
-Logs were recorded at `/tmp/mansion-godot-audit-jxx6pmxz/{import,run}.log`.
+Logs were recorded at `/tmp/elsewhere-godot-audit-jxx6pmxz/{import,run}.log`.
 
 Follow-up with the correct minimal import invocation:
 
@@ -78,7 +78,7 @@ timeout -k 2s 30s tools/Godot_v4.7.2-stable_linux.x86_64 \
 ```
 
 **Exit 0 on both the first copy and a fresh copy with no `.godot` cache.**
-Fresh-copy log: `/tmp/mansion-godot-clean-audit-zxm7i69d/import.log`.
+Fresh-copy log: `/tmp/elsewhere-godot-clean-audit-zxm7i69d/import.log`.
 Use this invocation; do not invent a persistent missing-editor/display blocker.
 The cause of the first abort was not established; successful follow-ups do not
 prove all scaffold behavior, toolchain provenance or extension compatibility.
@@ -125,11 +125,11 @@ usable; a repeat online fetch is not proof of offline behavior.
 - `src/compositor.cpp` includes `<GLES2/gl2.h>` and `display.h`, and calls
   `ensure_renderer_surface` / `destroy_renderer_surface`.
 - `meson.build` builds the combined legacy executable, not a core library.
-- `mansion_extension.cpp` init/deinit callbacks have no registration logic.
+- `elsewhere_extension.cpp` init/deinit callbacks have no registration logic.
   A C++ wrapper class declared in that file is not registered with Godot.
-- `world/addons/mansion_godot/` has a `.so` and `extension.toml`, no
+- `world/addons/elsewhere_godot/` has a `.so` and `extension.toml`, no
   `.gdextension` resource. No bridge use exists in the scene script.
-- `nm -D --undefined-only world/addons/mansion_godot/libmansion_godot.so | c++filt`
+- `nm -D --undefined-only world/addons/elsewhere_godot/libelsewhere_godot.so | c++filt`
   lists unresolved `create_compositor`, `create_seat`, `create_xdg_shell`,
   `launch_app` and matching teardown functions. No runtime load pass was run.
 

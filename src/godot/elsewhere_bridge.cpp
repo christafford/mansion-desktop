@@ -1,12 +1,12 @@
 /*
- * MansionBridge — C++ implementation of the C-facing bridge.
+ * ElsewhereBridge — C++ implementation of the C-facing bridge.
  *
  * This file connects the GDExtension entry point to the Wayland
  * compositor core (compositor.cpp, xdg-shell.cpp) and the seat
  * (input.cpp). It does NOT include display.h (which pulls in GL).
  *
  * Architecture:
- *   GDExtension → mansion_adapter_* (C bridge) → compositor core → Wayland server
+ *   GDExtension → elsewhere_adapter_* (C bridge) → compositor core → Wayland server
  *
  * Ownership:
  *   - The adapter owns the Wayland display socket
@@ -16,7 +16,7 @@
  *
  * Threading:
  *   All adapter calls must come from the owning thread (the thread
- *   that called mansion_adapter_create()). This is the Godot main
+ *   that called elsewhere_adapter_create()). This is the Godot main
  *   thread. No threads are spawned by the adapter.
  */
 
@@ -37,19 +37,19 @@
 #include "xdg-shell.h"
 #include "input.h"
 #include "launch.h"
-#include "mansion_bridge.h"
+#include "elsewhere_bridge.h"
 
 /* ─── Internal adapter state ─── */
 
-struct MansionAdapter {
+struct ElsewhereAdapter {
     struct wl_display *display = nullptr;
-    struct MansionCompositor *compositor = nullptr;
-    struct MansionXdgShell *xdg_shell = nullptr;
-    struct MansionSeat *seat = nullptr;
+    struct ElsewhereCompositor *compositor = nullptr;
+    struct ElsewhereXdgShell *xdg_shell = nullptr;
+    struct ElsewhereSeat *seat = nullptr;
     struct wl_event_loop *event_loop = nullptr;
 
     /* Tracked client apps for clean shutdown */
-    std::vector<MansionApp*> apps;
+    std::vector<ElsewhereApp*> apps;
 
     /* Client serial counter */
     uint32_t next_serial = 1;
@@ -63,8 +63,8 @@ struct MansionAdapter {
 
 /* ─── Implementation ─── */
 
-void *mansion_adapter_create(const MansionAdapterConfig *config) {
-    MansionAdapter *adapter = new MansionAdapter;
+void *elsewhere_adapter_create(const ElsewhereAdapterConfig *config) {
+    ElsewhereAdapter *adapter = new ElsewhereAdapter;
 
     /* Create a private Wayland display socket */
     adapter->display = wl_display_create();
@@ -120,11 +120,11 @@ void *mansion_adapter_create(const MansionAdapterConfig *config) {
     const char *socket_name = config ? config->socket_name : nullptr;
 
     if (socket_name) {
-        snprintf(adapter->socket_name, sizeof(adapter->socket_name), "mansion-%s",
+        snprintf(adapter->socket_name, sizeof(adapter->socket_name), "elsewhere-%s",
                  socket_name);
     } else {
         snprintf(adapter->socket_name, sizeof(adapter->socket_name),
-                 "mansion-auto-%d", getpid());
+                 "elsewhere-auto-%d", getpid());
     }
 
     const char *sock = wl_display_add_socket_auto(adapter->display);
@@ -142,7 +142,7 @@ void *mansion_adapter_create(const MansionAdapterConfig *config) {
     }
 
     if (adapter->debug) {
-        fprintf(stderr, "[mansion] socket: %s\n", sock);
+        fprintf(stderr, "[elsewhere] socket: %s\n", sock);
     }
 
     /* Export WAYLAND_DISPLAY so child clients find our socket */
@@ -151,9 +151,9 @@ void *mansion_adapter_create(const MansionAdapterConfig *config) {
     return adapter;
 }
 
-void mansion_adapter_destroy(void *handle) {
+void elsewhere_adapter_destroy(void *handle) {
     if (!handle) return;
-    auto *adapter = static_cast<MansionAdapter *>(handle);
+    auto *adapter = static_cast<ElsewhereAdapter *>(handle);
 
     /* Destroy tracked client apps */
     for (auto *app : adapter->apps) {
@@ -190,33 +190,33 @@ void mansion_adapter_destroy(void *handle) {
     delete adapter;
 }
 
-int mansion_adapter_pump(void *handle) {
+int elsewhere_adapter_pump(void *handle) {
     if (!handle) return 0;
-    auto *adapter = static_cast<MansionAdapter *>(handle);
+    auto *adapter = static_cast<ElsewhereAdapter *>(handle);
 
     /* Non-blocking dispatch */
     return wl_event_loop_dispatch(adapter->event_loop, 0);
 }
 
-int mansion_adapter_flush(void *handle) {
+int elsewhere_adapter_flush(void *handle) {
     if (!handle) return -1;
-    auto *adapter = static_cast<MansionAdapter *>(handle);
+    auto *adapter = static_cast<ElsewhereAdapter *>(handle);
 
     /* Server-side: flush pending writes to all connected clients */
     wl_display_flush_clients(adapter->display);
     return 0;
 }
 
-void mansion_adapter_enumerate_surfaces(void *handle,
-                                         mansion_surface_enumerate_fn callback,
+void elsewhere_adapter_enumerate_surfaces(void *handle,
+                                         elsewhere_surface_enumerate_fn callback,
                                          void *user_data) {
     if (!handle || !callback) return;
-    auto *adapter = static_cast<MansionAdapter *>(handle);
+    auto *adapter = static_cast<ElsewhereAdapter *>(handle);
 
-    struct MansionSurface *surface;
+    struct ElsewhereSurface *surface;
     wl_list_for_each(surface, &adapter->compositor->surface_list, link) {
         surface->client_serial = adapter->next_serial;
-        MansionSurfaceInfo info;
+        ElsewhereSurfaceInfo info;
         info.width = surface->width;
         info.height = surface->height;
         info.x = surface->has_current_position ? surface->current_x : 0;
@@ -229,7 +229,7 @@ void mansion_adapter_enumerate_surfaces(void *handle,
     /* Also enumerate orphaned surfaces */
     wl_list_for_each(surface, &adapter->compositor->orphaned_surfaces, link) {
         surface->client_serial = adapter->next_serial;
-        MansionSurfaceInfo info;
+        ElsewhereSurfaceInfo info;
         info.width = surface->width;
         info.height = surface->height;
         info.x = surface->has_current_position ? surface->current_x : 0;
@@ -240,14 +240,14 @@ void mansion_adapter_enumerate_surfaces(void *handle,
     }
 }
 
-int mansion_adapter_fire_frame_callbacks(void *handle) {
+int elsewhere_adapter_fire_frame_callbacks(void *handle) {
     if (!handle) return 0;
-    auto *adapter = static_cast<MansionAdapter *>(handle);
+    auto *adapter = static_cast<ElsewhereAdapter *>(handle);
 
     int fired = 0;
 
-    struct MansionSurface *surface;
-    struct MansionSurface *next_surface;
+    struct ElsewhereSurface *surface;
+    struct ElsewhereSurface *next_surface;
     wl_list_for_each_safe(surface, next_surface,
                           &adapter->compositor->surface_list, link) {
         struct wl_resource *cb, *cb_next;
@@ -262,27 +262,27 @@ int mansion_adapter_fire_frame_callbacks(void *handle) {
     return fired;
 }
 
-int32_t mansion_adapter_launch_client(void *handle, const char *command) {
+int32_t elsewhere_adapter_launch_client(void *handle, const char *command) {
     if (!handle || !command || !command[0]) return -1;
-    auto *adapter = static_cast<MansionAdapter *>(handle);
+    auto *adapter = static_cast<ElsewhereAdapter *>(handle);
 
-    MansionApp *app = launch_app(adapter->display, adapter->socket_name, command);
+    ElsewhereApp *app = launch_app(adapter->display, adapter->socket_name, command);
     if (!app) return -1;
 
     adapter->apps.push_back(app);
     return static_cast<int32_t>(app_pid(app));
 }
 
-void mansion_adapter_set_modifiers(void *handle, uint32_t mods) {
+void elsewhere_adapter_set_modifiers(void *handle, uint32_t mods) {
     (void)handle;
     (void)mods;
     /* Modifiers are set by the seat on each key event. GDScript
      * can query the current modifier state from the seat. */
 }
 
-uint32_t mansion_adapter_get_focused_serial(void *handle) {
+uint32_t elsewhere_adapter_get_focused_serial(void *handle) {
     if (!handle) return 0;
-    auto *adapter = static_cast<MansionAdapter *>(handle);
+    auto *adapter = static_cast<ElsewhereAdapter *>(handle);
     return adapter->compositor->keyboard_focus_serial;
 }
 
@@ -292,16 +292,16 @@ uint32_t mansion_adapter_get_focused_serial(void *handle) {
  * Pixels are copied into an owned ARGB8888 buffer (0xAARRGGBB, little-endian).
  * Returns NULL if no buffer is committed or copy fails.
  */
-MansionShmSnapshot *mansion_adapter_create_snapshot(void *handle, uint32_t client_serial) {
+ElsewhereShmSnapshot *elsewhere_adapter_create_snapshot(void *handle, uint32_t client_serial) {
     if (!handle) return nullptr;
 
-    auto *adapter = static_cast<MansionAdapter *>(handle);
+    auto *adapter = static_cast<ElsewhereAdapter *>(handle);
 
     /* Find the surface by client serial */
-    struct MansionSurface *surface = compositor_surface_from_serial(adapter->compositor, client_serial);
+    struct ElsewhereSurface *surface = compositor_surface_from_serial(adapter->compositor, client_serial);
     if (!surface) {
         if (adapter->debug) {
-            fprintf(stderr, "[mansion] snapshot: no surface for serial %u\\n\", client_serial);
+            fprintf(stderr, "[elsewhere] snapshot: no surface for serial %u\\n\", client_serial);
         }
         return nullptr;
     }
@@ -309,7 +309,7 @@ MansionShmSnapshot *mansion_adapter_create_snapshot(void *handle, uint32_t clien
     /* Check if there's a committed buffer */
     if (!surface->buffer_resource || surface->buffer_destroyed) {
         if (adapter->debug) {
-            fprintf(stderr, "[mansion] snapshot: no buffer for serial %u\\n\", client_serial);
+            fprintf(stderr, "[elsewhere] snapshot: no buffer for serial %u\\n\", client_serial);
         }
         return nullptr;
     }
@@ -317,7 +317,7 @@ MansionShmSnapshot *mansion_adapter_create_snapshot(void *handle, uint32_t clien
     struct wl_shm_buffer *shm_buf = wl_shm_buffer_get(surface->buffer_resource);
     if (!shm_buf) {
         if (adapter->debug) {
-            fprintf(stderr, "[mansion] snapshot: buffer is not shm for serial %u\\n\", client_serial);
+            fprintf(stderr, "[elsewhere] snapshot: buffer is not shm for serial %u\\n\", client_serial);
         }
         return nullptr;
     }
@@ -332,13 +332,13 @@ MansionShmSnapshot *mansion_adapter_create_snapshot(void *handle, uint32_t clien
     int32_t min_stride = width * 4;  /* ARGB8888 = 4 bytes/pixel */
     if (stride < min_stride || stride % 4 != 0) {
         if (adapter->debug) {
-            fprintf(stderr, "[mansion] snapshot: invalid stride %d for width %d\\n\", stride, width);
+            fprintf(stderr, "[elsewhere] snapshot: invalid stride %d for width %d\\n\", stride, width);
         }
         return nullptr;
     }
 
     /* Allocate snapshot */
-    MansionShmSnapshot *snapshot = new MansionShmSnapshot;
+    ElsewhereShmSnapshot *snapshot = new ElsewhereShmSnapshot;
     snapshot->width = width;
     snapshot->height = height;
     snapshot->stride = stride;
@@ -393,15 +393,15 @@ MansionShmSnapshot *mansion_adapter_create_snapshot(void *handle, uint32_t clien
 }
 
 /* Destroy a snapshot and free its pixel buffer */
-void mansion_adapter_destroy_snapshot(MansionShmSnapshot *snapshot) {
+void elsewhere_adapter_destroy_snapshot(ElsewhereShmSnapshot *snapshot) {
     if (!snapshot) return;
     free(snapshot->pixels);
     delete snapshot;
 }
 
-void mansion_adapter_shutdown(void *handle) {
+void elsewhere_adapter_shutdown(void *handle) {
     if (!handle) return;
-    auto *adapter = static_cast<MansionAdapter *>(handle);
+    auto *adapter = static_cast<ElsewhereAdapter *>(handle);
 
     /* Clear seat focus state to prevent dangling references */
     if (adapter->seat) {

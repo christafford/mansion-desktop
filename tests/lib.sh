@@ -1,18 +1,18 @@
-# Shared helpers for Mansion Desktop shell tests. Source this file; do not execute it.
+# Shared helpers for Elsewhere shell tests. Source this file; do not execute it.
 #
 # Every test gets a private XDG_RUNTIME_DIR so it never touches the host session's
 # sockets, and a private socket name so tests can run in parallel.
 
 set -u
 
-MANSION="${1:?usage: test.sh <mansion-desktop binary> [test client binary]}"
+ELSEWHERE="${1:?usage: test.sh <elsewhere binary> [test client binary]}"
 CLIENT="${2:-}"
 
-WORK="$(mktemp -d "${TMPDIR:-/tmp}/mansion-test.XXXXXX")"
+WORK="$(mktemp -d "${TMPDIR:-/tmp}/elsewhere-test.XXXXXX")"
 export XDG_RUNTIME_DIR="$WORK/runtime"
 mkdir -m 700 "$XDG_RUNTIME_DIR"
 unset WAYLAND_DISPLAY DISPLAY
-SOCKET="mansion-test-$$"
+SOCKET="elsewhere-test-$$"
 COMPOSITOR_PID=""
 
 fail() {
@@ -32,10 +32,10 @@ trap cleanup EXIT
 
 # start_compositor [extra args...]  -> background headless compositor; waits until the socket is listening.
 start_compositor() {
-    "$MANSION" --headless --socket "$SOCKET" "$@" >"$WORK/compositor.out" 2>"$WORK/compositor.err" &
+    "$ELSEWHERE" --headless --socket "$SOCKET" "$@" >"$WORK/compositor.out" 2>"$WORK/compositor.err" &
     COMPOSITOR_PID=$!
     for _ in $(seq 1 100); do
-        if grep -q "^MANSION_SOCKET=$SOCKET\$" "$WORK/compositor.out" 2>/dev/null; then
+        if grep -q "^ELSEWHERE_SOCKET=$SOCKET\$" "$WORK/compositor.out" 2>/dev/null; then
             return 0
         fi
         if ! kill -0 "$COMPOSITOR_PID" 2>/dev/null; then

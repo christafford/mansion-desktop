@@ -1,12 +1,12 @@
 /*
- * MansionGDExtensionAdapter - C implementation of GDExtension adapter
+ * ElsewhereGDExtensionAdapter - C implementation of GDExtension adapter
  *
  * This file wraps the compositor-core library and provides a minimal
  * C API for the GDExtension to use. It creates a Wayland display and
  * sets up the basic compositor infrastructure.
  */
 
-#include "mansion_gdextension_adapter.h"
+#include "elsewhere_gdextension_adapter.h"
 
 #include <cstring>
 #include <cstdio>
@@ -18,27 +18,27 @@
 
 #include "compositor-core.h"
 #include "compositor-private.h"
-#include "mansion_bridge.h"
+#include "elsewhere_bridge.h"
 
 /* ─── Exported API ─── */
 
 extern "C" {
 
-MansionGDExtensionAdapter* mansion_gdextension_adapter_create(
-    const MansionGDExtensionConfig *config) {
+ElsewhereGDExtensionAdapter* elsewhere_gdextension_adapter_create(
+    const ElsewhereGDExtensionConfig *config) {
     
     if (!config) {
         fprintf(stderr, "[gdextension] config is NULL\n");
         return nullptr;
     }
 
-    MansionGDExtensionAdapter *adapter = new MansionGDExtensionAdapter();
+    ElsewhereGDExtensionAdapter *adapter = new ElsewhereGDExtensionAdapter();
     if (!adapter) {
         fprintf(stderr, "[gdextension] failed to allocate adapter\n");
         return nullptr;
     }
 
-    memset(adapter, 0, sizeof(MansionGDExtensionAdapter));
+    memset(adapter, 0, sizeof(ElsewhereGDExtensionAdapter));
     adapter->debug_logging = config->debug_logging;
 
     /* Use existing display if provided, otherwise create a new one */
@@ -118,7 +118,7 @@ MansionGDExtensionAdapter* mansion_gdextension_adapter_create(
     return adapter;
 }
 
-void mansion_gdextension_adapter_destroy(MansionGDExtensionAdapter *adapter) {
+void elsewhere_gdextension_adapter_destroy(ElsewhereGDExtensionAdapter *adapter) {
     if (!adapter) return;
 
     if (adapter->debug_logging) {
@@ -140,17 +140,17 @@ void mansion_gdextension_adapter_destroy(MansionGDExtensionAdapter *adapter) {
     delete adapter;
 }
 
-struct wl_display* mansion_gdextension_adapter_get_display(
-    MansionGDExtensionAdapter *adapter) {
+struct wl_display* elsewhere_gdextension_adapter_get_display(
+    ElsewhereGDExtensionAdapter *adapter) {
     return adapter ? adapter->display : nullptr;
 }
 
-struct MansionCompositor* mansion_gdextension_adapter_get_compositor(
-    MansionGDExtensionAdapter *adapter) {
+struct ElsewhereCompositor* elsewhere_gdextension_adapter_get_compositor(
+    ElsewhereGDExtensionAdapter *adapter) {
     return adapter ? adapter->compositor : nullptr;
 }
 
-int mansion_gdextension_adapter_pump(MansionGDExtensionAdapter *adapter) {
+int elsewhere_gdextension_adapter_pump(ElsewhereGDExtensionAdapter *adapter) {
     if (!adapter || !adapter->display) return -1;
 
     /* Only dispatch events if we own the display.
@@ -171,7 +171,7 @@ int mansion_gdextension_adapter_pump(MansionGDExtensionAdapter *adapter) {
     return 0;
 }
 
-int mansion_gdextension_adapter_flush(MansionGDExtensionAdapter *adapter) {
+int elsewhere_gdextension_adapter_flush(ElsewhereGDExtensionAdapter *adapter) {
     if (!adapter || !adapter->display) return -1;
 
     /* wl_display_flush_clients returns void */
@@ -179,8 +179,8 @@ int mansion_gdextension_adapter_flush(MansionGDExtensionAdapter *adapter) {
     return 0;
 }
 
-struct wl_resource* mansion_gdextension_adapter_create_surface(
-    MansionGDExtensionAdapter *adapter,
+struct wl_resource* elsewhere_gdextension_adapter_create_surface(
+    ElsewhereGDExtensionAdapter *adapter,
     struct wl_client *client,
     uint32_t id) {
     
@@ -191,16 +191,16 @@ struct wl_resource* mansion_gdextension_adapter_create_surface(
     return compositor_core_create_surface(adapter->compositor, client, id);
 }
 
-void mansion_gdextension_adapter_destroy_surface(
-    MansionGDExtensionAdapter *adapter,
+void elsewhere_gdextension_adapter_destroy_surface(
+    ElsewhereGDExtensionAdapter *adapter,
     struct wl_resource *surface) {
     
     if (!adapter || !surface) return;
     compositor_core_destroy_surface(surface);
 }
 
-void mansion_gdextension_adapter_set_focus(
-    MansionGDExtensionAdapter *adapter,
+void elsewhere_gdextension_adapter_set_focus(
+    ElsewhereGDExtensionAdapter *adapter,
     struct wl_resource *surface,
     uint32_t serial) {
     
@@ -208,32 +208,32 @@ void mansion_gdextension_adapter_set_focus(
     compositor_core_set_focus(adapter->compositor, surface, serial);
 }
 
-void mansion_gdextension_adapter_clear_focus(MansionGDExtensionAdapter *adapter) {
+void elsewhere_gdextension_adapter_clear_focus(ElsewhereGDExtensionAdapter *adapter) {
     if (!adapter || !adapter->compositor) return;
     compositor_core_clear_focus(adapter->compositor);
 }
 
-struct wl_resource* mansion_gdextension_adapter_get_focused_surface(
-    MansionGDExtensionAdapter *adapter) {
+struct wl_resource* elsewhere_gdextension_adapter_get_focused_surface(
+    ElsewhereGDExtensionAdapter *adapter) {
     if (!adapter || !adapter->compositor) return nullptr;
     return compositor_core_get_focused_surface(adapter->compositor);
 }
 
-uint32_t mansion_gdextension_adapter_get_focused_serial(
-    MansionGDExtensionAdapter *adapter) {
+uint32_t elsewhere_gdextension_adapter_get_focused_serial(
+    ElsewhereGDExtensionAdapter *adapter) {
     if (!adapter || !adapter->compositor) return 0;
     return compositor_core_get_focus_serial(adapter->compositor);
 }
 
 /* ─── Shm frame snapshot API ─── */
 
-MansionShmSnapshot* mansion_gdextension_adapter_create_snapshot(
-    MansionGDExtensionAdapter *adapter,
+ElsewhereShmSnapshot* elsewhere_gdextension_adapter_create_snapshot(
+    ElsewhereGDExtensionAdapter *adapter,
     uint32_t client_serial) {
     if (!adapter) return nullptr;
 
     /* Find the surface by client serial */
-    struct MansionSurface *surface = compositor_surface_from_serial(adapter->compositor, client_serial);
+    struct ElsewhereSurface *surface = compositor_surface_from_serial(adapter->compositor, client_serial);
     if (!surface) {
         return nullptr;
     }
@@ -261,7 +261,7 @@ MansionShmSnapshot* mansion_gdextension_adapter_create_snapshot(
     }
 
     /* Allocate snapshot */
-    MansionShmSnapshot *snapshot = new MansionShmSnapshot;
+    ElsewhereShmSnapshot *snapshot = new ElsewhereShmSnapshot;
     snapshot->width = width;
     snapshot->height = height;
     snapshot->stride = stride;
@@ -315,41 +315,41 @@ MansionShmSnapshot* mansion_gdextension_adapter_create_snapshot(
     return snapshot;
 }
 
-void mansion_gdextension_adapter_destroy_snapshot(MansionShmSnapshot *snapshot) {
+void elsewhere_gdextension_adapter_destroy_snapshot(ElsewhereShmSnapshot *snapshot) {
     if (!snapshot) return;
     free(snapshot->pixels);
     delete snapshot;
 }
 
-int32_t mansion_gdextension_snapshot_get_width(MansionShmSnapshot *snapshot) {
+int32_t elsewhere_gdextension_snapshot_get_width(ElsewhereShmSnapshot *snapshot) {
     return snapshot ? snapshot->width : 0;
 }
 
-int32_t mansion_gdextension_snapshot_get_height(MansionShmSnapshot *snapshot) {
+int32_t elsewhere_gdextension_snapshot_get_height(ElsewhereShmSnapshot *snapshot) {
     return snapshot ? snapshot->height : 0;
 }
 
-int32_t mansion_gdextension_snapshot_get_stride(MansionShmSnapshot *snapshot) {
+int32_t elsewhere_gdextension_snapshot_get_stride(ElsewhereShmSnapshot *snapshot) {
     return snapshot ? snapshot->stride : 0;
 }
 
-int32_t mansion_gdextension_snapshot_get_format(MansionShmSnapshot *snapshot) {
+int32_t elsewhere_gdextension_snapshot_get_format(ElsewhereShmSnapshot *snapshot) {
     return snapshot ? snapshot->format : 0;
 }
 
-uint32_t mansion_gdextension_snapshot_get_revision(MansionShmSnapshot *snapshot) {
+uint32_t elsewhere_gdextension_snapshot_get_revision(ElsewhereShmSnapshot *snapshot) {
     return snapshot ? snapshot->revision : 0;
 }
 
-uint8_t* mansion_gdextension_snapshot_get_pixels(MansionShmSnapshot *snapshot) {
+uint8_t* elsewhere_gdextension_snapshot_get_pixels(ElsewhereShmSnapshot *snapshot) {
     return snapshot ? snapshot->pixels : nullptr;
 }
 
-size_t mansion_gdextension_snapshot_get_pixels_size(MansionShmSnapshot *snapshot) {
+size_t elsewhere_gdextension_snapshot_get_pixels_size(ElsewhereShmSnapshot *snapshot) {
     return snapshot ? snapshot->pixels_size : 0;
 }
 
-int mansion_gdextension_snapshot_copy_pixels(MansionShmSnapshot *snapshot, uint8_t *out_buffer, size_t buffer_size) {
+int elsewhere_gdextension_snapshot_copy_pixels(ElsewhereShmSnapshot *snapshot, uint8_t *out_buffer, size_t buffer_size) {
     if (!snapshot || !out_buffer) {
         return -1;
     }

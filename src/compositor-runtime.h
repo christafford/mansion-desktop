@@ -7,12 +7,12 @@
 
 struct wl_display;
 struct wl_global;
-struct MansionCompositor;
-struct MansionSeat;
-struct MansionXdgShell;
-struct MansionOutput;
+struct ElsewhereCompositor;
+struct ElsewhereSeat;
+struct ElsewhereXdgShell;
+struct ElsewhereOutput;
 
-namespace mansion {
+namespace elsewhere {
 // Single-threaded server ownership. All calls and destruction belong to the
 // creating thread, driven by Godot's frame loop or the headless test harness.
 // Owns compositor/shm, xdg-shell and seat protocol state, independent of rendering.
@@ -50,13 +50,13 @@ public:
 private:
     bool fail(const std::string& operation);
     wl_display* display_ = nullptr;
-    MansionCompositor* compositor_ = nullptr;
-    MansionSeat* seat_ = nullptr;
-    MansionXdgShell* shell_ = nullptr;
-    MansionOutput* output_ = nullptr;
+    ElsewhereCompositor* compositor_ = nullptr;
+    ElsewhereSeat* seat_ = nullptr;
+    ElsewhereXdgShell* shell_ = nullptr;
+    ElsewhereOutput* output_ = nullptr;
     wl_global* subcompositor_ = nullptr;
     std::string directory_;
     std::string socket_path_;
     std::string error_;
 };
-} // namespace mansion
+} // namespace elsewhere

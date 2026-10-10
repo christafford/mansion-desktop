@@ -40,7 +40,7 @@ class DesktopApps(unittest.TestCase):
             app('Exec=/does/not/exist\n')
 
     def test_working_directory_is_preserved(self):
-        with tempfile.TemporaryDirectory(prefix='mansion desktop ') as temp:
+        with tempfile.TemporaryDirectory(prefix='elsewhere ') as temp:
             self.assertEqual(module.command(app('Exec=/usr/bin/true\nPath=' + temp + '\n'))[1], temp)
 
     def test_catalog_precedence_hidden_nodisplay_and_localization(self):
@@ -77,7 +77,7 @@ class DesktopApps(unittest.TestCase):
             receiver.write_text('import json,os,sys\nprint("actual client diagnostic",file=sys.stderr)\nfrom pathlib import Path\nPath(sys.argv[1]).write_text(json.dumps({"args":sys.argv[2:],"env":dict(os.environ),"cwd":os.getcwd()}))\n')
             marker = base / 'result.json'
             (apps / 'fixture.desktop').write_text('[Desktop Entry]\nType=Application\nName=Fixture\nExec=/usr/bin/python3 "' + str(receiver) + '" "' + str(marker) + '" "two words" %c %U\nPath=' + str(base) + '\n')
-            env = dict(os.environ, XDG_DATA_HOME=str(base), XDG_DATA_DIRS=str(base / 'empty'), DISPLAY=':test', WAYLAND_SOCKET='88', DBUS_SESSION_BUS_ADDRESS='host-bus', MANSION_TERMINAL_ARGV='["/usr/bin/false"]')
+            env = dict(os.environ, XDG_DATA_HOME=str(base), XDG_DATA_DIRS=str(base / 'empty'), DISPLAY=':test', WAYLAND_SOCKET='88', DBUS_SESSION_BUS_ADDRESS='host-bus', ELSEWHERE_TERMINAL_ARGV='["/usr/bin/false"]')
             error = base / 'error.json'
             with socket.socket(socket.AF_UNIX) as display:
                 display.bind(str(base / 'display'))
@@ -121,7 +121,7 @@ class DesktopApps(unittest.TestCase):
                 executable, argv, env = execute.call_args.args
                 self.assertTrue(executable.endswith('/weston-terminal'))
                 self.assertIn('--shell=' + str(HELPER), argv)
-                self.assertEqual(json.loads(env['MANSION_TERMINAL_ARGV']), ['/usr/bin/printf', 'two words'])
+                self.assertEqual(json.loads(env['ELSEWHERE_TERMINAL_ARGV']), ['/usr/bin/printf', 'two words'])
                 self.assertEqual(env['PS1'], '$ ')
                 self.assertNotIn('PROMPT_COMMAND', env)
                 self.assertTrue(Path(env['INPUTRC']).is_file())

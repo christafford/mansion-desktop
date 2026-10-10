@@ -62,7 +62,7 @@ not yet completed by a presentation pipeline.
 
 Final Godot output: 194 advancing frames, maximum observed pump 1,616 µs,
 zero failed assertions (`build-godot-probe/lifecycle.log`). These are narrow
-test measurements, not a product latency claim. `ldd tests/godot-binding/bin/libmansion_probe.so` lists
+test measurements, not a product latency claim. `ldd tests/godot-binding/bin/libelsewhere_probe.so` lists
 wayland-server and xkbcommon, with no EGL/GLES/wayland-client dependency.
 
 Standalone ASan + UBSan + enabled leak detection passes all 16 trials:

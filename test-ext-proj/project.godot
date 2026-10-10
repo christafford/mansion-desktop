@@ -14,4 +14,4 @@ window/size/viewport_height=800
 renderer/rendering_method="compatibility"
 
 [gdextension]
-extension_list=PackedStringArray("res://addons/mansion_godot")
+extension_list=PackedStringArray("res://addons/elsewhere_godot")

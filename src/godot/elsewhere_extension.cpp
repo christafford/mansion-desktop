@@ -1,5 +1,5 @@
 /*
- * MansionExtension — GDExtension entry point for Mansion Desktop.
+ * ElsewhereExtension — GDExtension entry point for Elsewhere.
  *
  * This file provides the GDExtension API symbols that Godot requires
  * to load and unload the extension. It uses the GDExtension C API
@@ -13,7 +13,7 @@
 
 #include <gdextension_interface.h>
 
-#include "mansion_gdextension_adapter.h"
+#include "elsewhere_gdextension_adapter.h"
 #include "compositor-core.h"
 
 #include <cstring>
@@ -42,7 +42,7 @@ static void *get_interface_function(const char *name) {
     /* Open log file for each message to ensure we see output even on crash */
     FILE *log = fopen("/tmp/gdextension_init.log", "a");
     if (log) {
-        fprintf(log, "[mansion] get_interface_function: %s (interface: %p)\n", name, (void *)gdext_get_proc_address);
+        fprintf(log, "[elsewhere] get_interface_function: %s (interface: %p)\n", name, (void *)gdext_get_proc_address);
         fflush(log);
         fclose(log);
     }
@@ -51,7 +51,7 @@ static void *get_interface_function(const char *name) {
     if (!gdext_get_proc_address) {
         log = fopen("/tmp/gdextension_init.log", "a");
         if (log) {
-            fprintf(log, "[mansion] ERROR: gdext_get_proc_address is null\n");
+            fprintf(log, "[elsewhere] ERROR: gdext_get_proc_address is null\n");
             fflush(log);
             fclose(log);
         }
@@ -63,7 +63,7 @@ static void *get_interface_function(const char *name) {
     
     log = fopen("/tmp/gdextension_init.log", "a");
     if (log) {
-        fprintf(log, "[mansion] get_interface_function: %s -> %p\n", name, result);
+        fprintf(log, "[elsewhere] get_interface_function: %s -> %p\n", name, result);
         fflush(log);
         fclose(log);
     }
@@ -103,19 +103,19 @@ static void init_interface_functions(GDExtensionInterfaceGetProcAddress p_get_pr
 
 /* Opaque handle to our adapter instance */
 typedef struct {
-    MansionGDExtensionAdapter *adapter;
+    ElsewhereGDExtensionAdapter *adapter;
     int ref_count;
-} MansionAdapterInstance;
+} ElsewhereAdapterInstance;
 
 /* GDExtensionClassCreateInstance3 - creates a new instance */
-static GDExtensionClassInstancePtr mansion_adapter_create_instance(
+static GDExtensionClassInstancePtr elsewhere_adapter_create_instance(
     void *p_class_userdata,
     GDExtensionBool p_notify_postinitialize) {
     (void)p_class_userdata;
     (void)p_notify_postinitialize;
     
     /* Allocate and initialize the instance */
-    MansionAdapterInstance *instance = (MansionAdapterInstance *)mem_alloc(sizeof(MansionAdapterInstance));
+    ElsewhereAdapterInstance *instance = (ElsewhereAdapterInstance *)mem_alloc(sizeof(ElsewhereAdapterInstance));
     if (!instance) {
         return nullptr;
     }
@@ -127,18 +127,18 @@ static GDExtensionClassInstancePtr mansion_adapter_create_instance(
 }
 
 /* GDExtensionClassFreeInstance - frees an instance */
-static void mansion_adapter_free_instance(void *p_class_userdata, GDExtensionClassInstancePtr p_instance) {
+static void elsewhere_adapter_free_instance(void *p_class_userdata, GDExtensionClassInstancePtr p_instance) {
     (void)p_class_userdata;
     
     if (!p_instance) {
         return;
     }
     
-    MansionAdapterInstance *instance = (MansionAdapterInstance *)p_instance;
+    ElsewhereAdapterInstance *instance = (ElsewhereAdapterInstance *)p_instance;
     
     /* Destroy the adapter if it exists */
     if (instance->adapter) {
-        mansion_gdextension_adapter_destroy(instance->adapter);
+        elsewhere_gdextension_adapter_destroy(instance->adapter);
         instance->adapter = nullptr;
     }
     
@@ -147,36 +147,36 @@ static void mansion_adapter_free_instance(void *p_class_userdata, GDExtensionCla
 }
 
 /* GDExtensionClassRecreateInstance - recreates an instance */
-static GDExtensionClassInstancePtr mansion_adapter_recreate_instance(
+static GDExtensionClassInstancePtr elsewhere_adapter_recreate_instance(
     void *p_class_userdata,
     GDExtensionObjectPtr p_object) {
     (void)p_class_userdata;
     (void)p_object;
     
     /* Recreate with default state */
-    return mansion_adapter_create_instance(p_class_userdata, false);
+    return elsewhere_adapter_create_instance(p_class_userdata, false);
 }
 
 /* GDExtensionClassReference - increases reference count */
-static void mansion_adapter_reference(GDExtensionClassInstancePtr p_instance) {
+static void elsewhere_adapter_reference(GDExtensionClassInstancePtr p_instance) {
     if (!p_instance) {
         return;
     }
-    MansionAdapterInstance *instance = (MansionAdapterInstance *)p_instance;
+    ElsewhereAdapterInstance *instance = (ElsewhereAdapterInstance *)p_instance;
     instance->ref_count++;
 }
 
 /* GDExtensionClassUnreference - decreases reference count */
-static void mansion_adapter_unreference(GDExtensionClassInstancePtr p_instance) {
+static void elsewhere_adapter_unreference(GDExtensionClassInstancePtr p_instance) {
     if (!p_instance) {
         return;
     }
-    MansionAdapterInstance *instance = (MansionAdapterInstance *)p_instance;
+    ElsewhereAdapterInstance *instance = (ElsewhereAdapterInstance *)p_instance;
     instance->ref_count--;
 }
 
 /* GDExtensionClassSet - sets a property value, returns GDExtensionBool */
-static GDExtensionBool mansion_adapter_set(
+static GDExtensionBool elsewhere_adapter_set(
     GDExtensionClassInstancePtr p_instance,
     GDExtensionConstStringNamePtr p_name,
     GDExtensionConstVariantPtr p_value) {
@@ -187,7 +187,7 @@ static GDExtensionBool mansion_adapter_set(
 }
 
 /* GDExtensionClassGet - gets a property value, returns GDExtensionBool */
-static GDExtensionBool mansion_adapter_get(
+static GDExtensionBool elsewhere_adapter_get(
     GDExtensionClassInstancePtr p_instance,
     GDExtensionConstStringNamePtr p_name,
     GDExtensionVariantPtr r_ret) {
@@ -198,7 +198,7 @@ static GDExtensionBool mansion_adapter_get(
 }
 
 /* GDExtensionClassGetPropertyList - returns property list, or nullptr if none */
-static const GDExtensionPropertyInfo *mansion_adapter_get_property_list(
+static const GDExtensionPropertyInfo *elsewhere_adapter_get_property_list(
     GDExtensionClassInstancePtr p_instance,
     uint32_t *r_count) {
     (void)p_instance;
@@ -207,7 +207,7 @@ static const GDExtensionPropertyInfo *mansion_adapter_get_property_list(
 }
 
 /* GDExtensionClassFreePropertyList2 - frees property list */
-static void mansion_adapter_free_property_list(
+static void elsewhere_adapter_free_property_list(
     GDExtensionClassInstancePtr p_instance,
     const GDExtensionPropertyInfo *p_list,
     uint32_t p_count) {
@@ -217,7 +217,7 @@ static void mansion_adapter_free_property_list(
 }
 
 /* GDExtensionClassPropertyCanRevert - returns GDExtensionBool */
-static GDExtensionBool mansion_adapter_property_can_revert(
+static GDExtensionBool elsewhere_adapter_property_can_revert(
     GDExtensionClassInstancePtr p_instance,
     GDExtensionConstStringNamePtr p_name) {
     (void)p_instance;
@@ -226,7 +226,7 @@ static GDExtensionBool mansion_adapter_property_can_revert(
 }
 
 /* GDExtensionClassPropertyGetRevert - returns GDExtensionBool */
-static GDExtensionBool mansion_adapter_property_get_revert(
+static GDExtensionBool elsewhere_adapter_property_get_revert(
     GDExtensionClassInstancePtr p_instance,
     GDExtensionConstStringNamePtr p_name,
     GDExtensionVariantPtr r_ret) {
@@ -237,7 +237,7 @@ static GDExtensionBool mansion_adapter_property_get_revert(
 }
 
 /* GDExtensionClassNotification2 - receives notifications */
-static void mansion_adapter_notification(
+static void elsewhere_adapter_notification(
     GDExtensionClassInstancePtr p_instance,
     int32_t p_what,
     GDExtensionBool p_reversed) {
@@ -247,7 +247,7 @@ static void mansion_adapter_notification(
 }
 
 /* GDExtensionClassToString - converts to string */
-static void mansion_adapter_to_string(
+static void elsewhere_adapter_to_string(
     GDExtensionClassInstancePtr p_instance,
     GDExtensionBool *r_is_valid,
     GDExtensionStringPtr p_out) {
@@ -256,12 +256,12 @@ static void mansion_adapter_to_string(
         *r_is_valid = true;
     }
     if (p_out) {
-        string_new_with_latin1_chars(p_out, "MansionAdapter");
+        string_new_with_latin1_chars(p_out, "ElsewhereAdapter");
     }
 }
 
 /* Method: initialize(socket_name: String, debug: bool) -> bool */
-static void mansion_adapter_initialize_call(
+static void elsewhere_adapter_initialize_call(
     void *method_userdata,
     GDExtensionClassInstancePtr p_instance,
     const GDExtensionConstVariantPtr *p_args,
@@ -285,7 +285,7 @@ static void mansion_adapter_initialize_call(
         return;
     }
     
-    MansionAdapterInstance *instance = (MansionAdapterInstance *)p_instance;
+    ElsewhereAdapterInstance *instance = (ElsewhereAdapterInstance *)p_instance;
     
     if (!instance) {
         if (r_error) {
@@ -330,13 +330,13 @@ static void mansion_adapter_initialize_call(
     GDExtensionBool debug_flag = *(GDExtensionBool *)p_args[1];
     
     /* Create config for adapter creation */
-    MansionGDExtensionConfig config;
+    ElsewhereGDExtensionConfig config;
     memset(&config, 0, sizeof(config));
     config.socket_name = socket_name_cstr;
     config.debug_logging = debug_flag == 1;
     
     /* Create the adapter */
-    instance->adapter = mansion_gdextension_adapter_create(&config);
+    instance->adapter = elsewhere_gdextension_adapter_create(&config);
     
     /* Free the socket name string */
     mem_free(socket_name_cstr);
@@ -347,7 +347,7 @@ static void mansion_adapter_initialize_call(
 }
 
 /* Method: shutdown() -> void */
-static void mansion_adapter_shutdown_call(
+static void elsewhere_adapter_shutdown_call(
     void *method_userdata,
     GDExtensionClassInstancePtr p_instance,
     const GDExtensionConstVariantPtr *p_args,
@@ -373,7 +373,7 @@ static void mansion_adapter_shutdown_call(
         return;
     }
     
-    MansionAdapterInstance *instance = (MansionAdapterInstance *)p_instance;
+    ElsewhereAdapterInstance *instance = (ElsewhereAdapterInstance *)p_instance;
     
     if (!instance) {
         if (r_error) {
@@ -384,13 +384,13 @@ static void mansion_adapter_shutdown_call(
     
     /* Shutdown the adapter */
     if (instance->adapter) {
-        mansion_gdextension_adapter_destroy(instance->adapter);
+        elsewhere_gdextension_adapter_destroy(instance->adapter);
         instance->adapter = nullptr;
     }
 }
 
 /* Method: destroy() -> void */
-static void mansion_adapter_destroy_call(
+static void elsewhere_adapter_destroy_call(
     void *method_userdata,
     GDExtensionClassInstancePtr p_instance,
     const GDExtensionConstVariantPtr *p_args,
@@ -416,7 +416,7 @@ static void mansion_adapter_destroy_call(
         return;
     }
     
-    MansionAdapterInstance *instance = (MansionAdapterInstance *)p_instance;
+    ElsewhereAdapterInstance *instance = (ElsewhereAdapterInstance *)p_instance;
     
     if (!instance) {
         if (r_error) {
@@ -427,13 +427,13 @@ static void mansion_adapter_destroy_call(
     
     /* Destroy the adapter */
     if (instance->adapter) {
-        mansion_gdextension_adapter_destroy(instance->adapter);
+        elsewhere_gdextension_adapter_destroy(instance->adapter);
         instance->adapter = nullptr;
     }
 }
 
 /* Method: pump() -> void */
-static void mansion_adapter_pump_call(
+static void elsewhere_adapter_pump_call(
     void *method_userdata,
     GDExtensionClassInstancePtr p_instance,
     const GDExtensionConstVariantPtr *p_args,
@@ -459,7 +459,7 @@ static void mansion_adapter_pump_call(
         return;
     }
     
-    MansionAdapterInstance *instance = (MansionAdapterInstance *)p_instance;
+    ElsewhereAdapterInstance *instance = (ElsewhereAdapterInstance *)p_instance;
     
     if (!instance) {
         if (r_error) {
@@ -470,12 +470,12 @@ static void mansion_adapter_pump_call(
     
     /* Pump events */
     if (instance->adapter) {
-        mansion_gdextension_adapter_pump(instance->adapter);
+        elsewhere_gdextension_adapter_pump(instance->adapter);
     }
 }
 
 /* Method: flush() -> void */
-static void mansion_adapter_flush_call(
+static void elsewhere_adapter_flush_call(
     void *method_userdata,
     GDExtensionClassInstancePtr p_instance,
     const GDExtensionConstVariantPtr *p_args,
@@ -501,7 +501,7 @@ static void mansion_adapter_flush_call(
         return;
     }
     
-    MansionAdapterInstance *instance = (MansionAdapterInstance *)p_instance;
+    ElsewhereAdapterInstance *instance = (ElsewhereAdapterInstance *)p_instance;
     
     if (!instance) {
         if (r_error) {
@@ -512,12 +512,12 @@ static void mansion_adapter_flush_call(
     
     /* Flush events */
     if (instance->adapter) {
-        mansion_gdextension_adapter_flush(instance->adapter);
+        elsewhere_gdextension_adapter_flush(instance->adapter);
     }
 }
 
 /* Method: get_focused_serial() -> int */
-static void mansion_adapter_get_focused_serial_call(
+static void elsewhere_adapter_get_focused_serial_call(
     void *method_userdata,
     GDExtensionClassInstancePtr p_instance,
     const GDExtensionConstVariantPtr *p_args,
@@ -542,7 +542,7 @@ static void mansion_adapter_get_focused_serial_call(
         return;
     }
     
-    MansionAdapterInstance *instance = (MansionAdapterInstance *)p_instance;
+    ElsewhereAdapterInstance *instance = (ElsewhereAdapterInstance *)p_instance;
     
     if (!instance) {
         if (r_error) {
@@ -557,13 +557,13 @@ static void mansion_adapter_get_focused_serial_call(
         return;
     }
     
-    uint32_t result = mansion_gdextension_adapter_get_focused_serial(instance->adapter);
+    uint32_t result = elsewhere_gdextension_adapter_get_focused_serial(instance->adapter);
     GDExtensionInt result_val = result;
     memcpy(r_return, &result_val, sizeof(GDExtensionInt));
 }
 
 /* Method: set_compositor(display_ptr: uint64, compositor_ptr: uint64) -> bool */
-static void mansion_adapter_set_compositor_call(
+static void elsewhere_adapter_set_compositor_call(
     void *method_userdata,
     GDExtensionClassInstancePtr p_instance,
     const GDExtensionConstVariantPtr *p_args,
@@ -587,7 +587,7 @@ static void mansion_adapter_set_compositor_call(
         return;
     }
     
-    MansionAdapterInstance *instance = (MansionAdapterInstance *)p_instance;
+    ElsewhereAdapterInstance *instance = (ElsewhereAdapterInstance *)p_instance;
     
     if (!instance) {
         if (r_error) {
@@ -616,7 +616,7 @@ static void mansion_adapter_set_compositor_call(
     if (instance->adapter) {
         /* Cast uint64_t back to pointers */
         instance->adapter->display = (struct wl_display*)(uintptr_t)display_ptr;
-        instance->adapter->compositor = (struct MansionCompositor*)(uintptr_t)compositor_ptr;
+        instance->adapter->compositor = (struct ElsewhereCompositor*)(uintptr_t)compositor_ptr;
         
         /* Re-initialize the event loop with the new display */
         instance->adapter->event_loop = wl_display_get_event_loop(instance->adapter->display);
@@ -632,7 +632,7 @@ static void mansion_adapter_set_compositor_call(
 /* ─── Shm frame snapshot methods (P21-T12) ─── */
 
 /* Method: create_snapshot(client_serial: int) -> uint64 (snapshot pointer) */
-static void mansion_adapter_create_snapshot_call(
+static void elsewhere_adapter_create_snapshot_call(
     void *method_userdata,
     GDExtensionClassInstancePtr p_instance,
     const GDExtensionConstVariantPtr *p_args,
@@ -655,7 +655,7 @@ static void mansion_adapter_create_snapshot_call(
         return;
     }
     
-    MansionAdapterInstance *instance = (MansionAdapterInstance *)p_instance;
+    ElsewhereAdapterInstance *instance = (ElsewhereAdapterInstance *)p_instance;
     
     if (!instance || !instance->adapter) {
         if (r_error) {
@@ -677,7 +677,7 @@ static void mansion_adapter_create_snapshot_call(
     
     uint32_t client_serial = (uint32_t)client_serial_int;
     
-    MansionShmSnapshot *snapshot = mansion_gdextension_adapter_create_snapshot(
+    ElsewhereShmSnapshot *snapshot = elsewhere_gdextension_adapter_create_snapshot(
         instance->adapter, client_serial);
     
     /* Store the snapshot pointer as a uint64 in the return value */
@@ -686,7 +686,7 @@ static void mansion_adapter_create_snapshot_call(
 }
 
 /* Method: snapshot_destroy(snapshot_ptr: uint64) -> void */
-static void mansion_adapter_snapshot_destroy_call(
+static void elsewhere_adapter_snapshot_destroy_call(
     void *method_userdata,
     GDExtensionClassInstancePtr p_instance,
     const GDExtensionConstVariantPtr *p_args,
@@ -721,14 +721,14 @@ static void mansion_adapter_snapshot_destroy_call(
     GDExtensionInt snapshot_ptr_int = 0;
     memcpy(&snapshot_ptr_int, p_args[0], sizeof(GDExtensionInt));
     
-    MansionShmSnapshot *snapshot = (MansionShmSnapshot *)(uintptr_t)snapshot_ptr_int;
+    ElsewhereShmSnapshot *snapshot = (ElsewhereShmSnapshot *)(uintptr_t)snapshot_ptr_int;
     if (snapshot) {
-        mansion_gdextension_adapter_destroy_snapshot(snapshot);
+        elsewhere_gdextension_adapter_destroy_snapshot(snapshot);
     }
 }
 
 /* Method: snapshot_get_width(snapshot_ptr: uint64) -> int */
-static void mansion_adapter_snapshot_get_width_call(
+static void elsewhere_adapter_snapshot_get_width_call(
     void *method_userdata,
     GDExtensionClassInstancePtr p_instance,
     const GDExtensionConstVariantPtr *p_args,
@@ -763,14 +763,14 @@ static void mansion_adapter_snapshot_get_width_call(
     GDExtensionInt snapshot_ptr_int = 0;
     memcpy(&snapshot_ptr_int, p_args[0], sizeof(GDExtensionInt));
     
-    MansionShmSnapshot *snapshot = (MansionShmSnapshot *)(uintptr_t)snapshot_ptr_int;
-    int32_t width = snapshot ? mansion_gdextension_snapshot_get_width(snapshot) : 0;
+    ElsewhereShmSnapshot *snapshot = (ElsewhereShmSnapshot *)(uintptr_t)snapshot_ptr_int;
+    int32_t width = snapshot ? elsewhere_gdextension_snapshot_get_width(snapshot) : 0;
     GDExtensionInt width_val = width;
     memcpy(r_return, &width_val, sizeof(GDExtensionInt));
 }
 
 /* Method: snapshot_get_height(snapshot_ptr: uint64) -> int */
-static void mansion_adapter_snapshot_get_height_call(
+static void elsewhere_adapter_snapshot_get_height_call(
     void *method_userdata,
     GDExtensionClassInstancePtr p_instance,
     const GDExtensionConstVariantPtr *p_args,
@@ -805,14 +805,14 @@ static void mansion_adapter_snapshot_get_height_call(
     GDExtensionInt snapshot_ptr_int = 0;
     memcpy(&snapshot_ptr_int, p_args[0], sizeof(GDExtensionInt));
     
-    MansionShmSnapshot *snapshot = (MansionShmSnapshot *)(uintptr_t)snapshot_ptr_int;
-    int32_t height = snapshot ? mansion_gdextension_snapshot_get_height(snapshot) : 0;
+    ElsewhereShmSnapshot *snapshot = (ElsewhereShmSnapshot *)(uintptr_t)snapshot_ptr_int;
+    int32_t height = snapshot ? elsewhere_gdextension_snapshot_get_height(snapshot) : 0;
     GDExtensionInt height_val = height;
     memcpy(r_return, &height_val, sizeof(GDExtensionInt));
 }
 
 /* Method: snapshot_get_stride(snapshot_ptr: uint64) -> int */
-static void mansion_adapter_snapshot_get_stride_call(
+static void elsewhere_adapter_snapshot_get_stride_call(
     void *method_userdata,
     GDExtensionClassInstancePtr p_instance,
     const GDExtensionConstVariantPtr *p_args,
@@ -847,14 +847,14 @@ static void mansion_adapter_snapshot_get_stride_call(
     GDExtensionInt snapshot_ptr_int = 0;
     memcpy(&snapshot_ptr_int, p_args[0], sizeof(GDExtensionInt));
     
-    MansionShmSnapshot *snapshot = (MansionShmSnapshot *)(uintptr_t)snapshot_ptr_int;
-    int32_t stride = snapshot ? mansion_gdextension_snapshot_get_stride(snapshot) : 0;
+    ElsewhereShmSnapshot *snapshot = (ElsewhereShmSnapshot *)(uintptr_t)snapshot_ptr_int;
+    int32_t stride = snapshot ? elsewhere_gdextension_snapshot_get_stride(snapshot) : 0;
     GDExtensionInt stride_val = stride;
     memcpy(r_return, &stride_val, sizeof(GDExtensionInt));
 }
 
 /* Method: snapshot_get_format(snapshot_ptr: uint64) -> int */
-static void mansion_adapter_snapshot_get_format_call(
+static void elsewhere_adapter_snapshot_get_format_call(
     void *method_userdata,
     GDExtensionClassInstancePtr p_instance,
     const GDExtensionConstVariantPtr *p_args,
@@ -889,14 +889,14 @@ static void mansion_adapter_snapshot_get_format_call(
     GDExtensionInt snapshot_ptr_int = 0;
     memcpy(&snapshot_ptr_int, p_args[0], sizeof(GDExtensionInt));
     
-    MansionShmSnapshot *snapshot = (MansionShmSnapshot *)(uintptr_t)snapshot_ptr_int;
-    int32_t format = snapshot ? mansion_gdextension_snapshot_get_format(snapshot) : 0;
+    ElsewhereShmSnapshot *snapshot = (ElsewhereShmSnapshot *)(uintptr_t)snapshot_ptr_int;
+    int32_t format = snapshot ? elsewhere_gdextension_snapshot_get_format(snapshot) : 0;
     GDExtensionInt format_val = format;
     memcpy(r_return, &format_val, sizeof(GDExtensionInt));
 }
 
 /* Method: snapshot_get_revision(snapshot_ptr: uint64) -> int */
-static void mansion_adapter_snapshot_get_revision_call(
+static void elsewhere_adapter_snapshot_get_revision_call(
     void *method_userdata,
     GDExtensionClassInstancePtr p_instance,
     const GDExtensionConstVariantPtr *p_args,
@@ -931,14 +931,14 @@ static void mansion_adapter_snapshot_get_revision_call(
     GDExtensionInt snapshot_ptr_int = 0;
     memcpy(&snapshot_ptr_int, p_args[0], sizeof(GDExtensionInt));
     
-    MansionShmSnapshot *snapshot = (MansionShmSnapshot *)(uintptr_t)snapshot_ptr_int;
-    uint32_t revision = snapshot ? mansion_gdextension_snapshot_get_revision(snapshot) : 0;
+    ElsewhereShmSnapshot *snapshot = (ElsewhereShmSnapshot *)(uintptr_t)snapshot_ptr_int;
+    uint32_t revision = snapshot ? elsewhere_gdextension_snapshot_get_revision(snapshot) : 0;
     GDExtensionInt revision_val = revision;
     memcpy(r_return, &revision_val, sizeof(GDExtensionInt));
 }
 
 /* Method: snapshot_get_pixels(snapshot_ptr: uint64) -> uint64 (pixels pointer) */
-static void mansion_adapter_snapshot_get_pixels_call(
+static void elsewhere_adapter_snapshot_get_pixels_call(
     void *method_userdata,
     GDExtensionClassInstancePtr p_instance,
     const GDExtensionConstVariantPtr *p_args,
@@ -973,14 +973,14 @@ static void mansion_adapter_snapshot_get_pixels_call(
     GDExtensionInt snapshot_ptr_int = 0;
     memcpy(&snapshot_ptr_int, p_args[0], sizeof(GDExtensionInt));
     
-    MansionShmSnapshot *snapshot = (MansionShmSnapshot *)(uintptr_t)snapshot_ptr_int;
-    uint8_t *pixels = snapshot ? mansion_gdextension_snapshot_get_pixels(snapshot) : nullptr;
+    ElsewhereShmSnapshot *snapshot = (ElsewhereShmSnapshot *)(uintptr_t)snapshot_ptr_int;
+    uint8_t *pixels = snapshot ? elsewhere_gdextension_snapshot_get_pixels(snapshot) : nullptr;
     GDExtensionInt pixels_val = (GDExtensionInt)(uintptr_t)pixels;
     memcpy(r_return, &pixels_val, sizeof(GDExtensionInt));
 }
 
 /* Method: snapshot_get_pixels_size(snapshot_ptr: uint64) -> int */
-static void mansion_adapter_snapshot_get_pixels_size_call(
+static void elsewhere_adapter_snapshot_get_pixels_size_call(
     void *method_userdata,
     GDExtensionClassInstancePtr p_instance,
     const GDExtensionConstVariantPtr *p_args,
@@ -1015,15 +1015,15 @@ static void mansion_adapter_snapshot_get_pixels_size_call(
     GDExtensionInt snapshot_ptr_int = 0;
     memcpy(&snapshot_ptr_int, p_args[0], sizeof(GDExtensionInt));
     
-    MansionShmSnapshot *snapshot = (MansionShmSnapshot *)(uintptr_t)snapshot_ptr_int;
-    size_t pixels_size = snapshot ? mansion_gdextension_snapshot_get_pixels_size(snapshot) : 0;
+    ElsewhereShmSnapshot *snapshot = (ElsewhereShmSnapshot *)(uintptr_t)snapshot_ptr_int;
+    size_t pixels_size = snapshot ? elsewhere_gdextension_snapshot_get_pixels_size(snapshot) : 0;
     GDExtensionInt pixels_size_val = (GDExtensionInt)pixels_size;
     memcpy(r_return, &pixels_size_val, sizeof(GDExtensionInt));
 }
 
 /* Class registration data */
-static void mansion_register_class(GDExtensionClassLibraryPtr p_library, FILE *init_log) {
-    static const char class_name[] = "MansionAdapter";
+static void elsewhere_register_class(GDExtensionClassLibraryPtr p_library, FILE *init_log) {
+    static const char class_name[] = "ElsewhereAdapter";
     static const char parent_class[] = "RefCounted";
     
     /* Create StringName for class name and parent class name */
@@ -1040,7 +1040,7 @@ static void mansion_register_class(GDExtensionClassLibraryPtr p_library, FILE *i
     parent_name_sn = parent_name_sn_storage;
     
     /* Setup GDExtensionClassCreationInfo6 */
-    if (init_log) fprintf(init_log, "[mansion] Setting up class info\n");
+    if (init_log) fprintf(init_log, "[elsewhere] Setting up class info\n");
     fflush(init_log);
     
     GDExtensionClassCreationInfo6 class_info = {0};
@@ -1050,36 +1050,36 @@ static void mansion_register_class(GDExtensionClassLibraryPtr p_library, FILE *i
     class_info.is_runtime = true;
     class_info.icon_path = nullptr;
     class_info.class_userdata = nullptr;
-    class_info.set_func = mansion_adapter_set;
-    class_info.get_func = mansion_adapter_get;
-    class_info.get_property_list_func = mansion_adapter_get_property_list;
-    class_info.free_property_list_func = mansion_adapter_free_property_list;
-    class_info.property_can_revert_func = mansion_adapter_property_can_revert;
-    class_info.property_get_revert_func = mansion_adapter_property_get_revert;
+    class_info.set_func = elsewhere_adapter_set;
+    class_info.get_func = elsewhere_adapter_get;
+    class_info.get_property_list_func = elsewhere_adapter_get_property_list;
+    class_info.free_property_list_func = elsewhere_adapter_free_property_list;
+    class_info.property_can_revert_func = elsewhere_adapter_property_can_revert;
+    class_info.property_get_revert_func = elsewhere_adapter_property_get_revert;
     class_info.validate_property_func = nullptr;
-    class_info.notification_func = mansion_adapter_notification;
-    class_info.to_string_func = mansion_adapter_to_string;
-    class_info.reference_func = mansion_adapter_reference;
-    class_info.unreference_func = mansion_adapter_unreference;
-    class_info.create_instance_func = mansion_adapter_create_instance;
-    class_info.free_instance_func = mansion_adapter_free_instance;
-    class_info.recreate_instance_func = mansion_adapter_recreate_instance;
+    class_info.notification_func = elsewhere_adapter_notification;
+    class_info.to_string_func = elsewhere_adapter_to_string;
+    class_info.reference_func = elsewhere_adapter_reference;
+    class_info.unreference_func = elsewhere_adapter_unreference;
+    class_info.create_instance_func = elsewhere_adapter_create_instance;
+    class_info.free_instance_func = elsewhere_adapter_free_instance;
+    class_info.recreate_instance_func = elsewhere_adapter_recreate_instance;
     class_info.get_virtual_func = nullptr;
     class_info.get_virtual_call_data_func = nullptr;
     class_info.call_virtual_with_data_func = nullptr;
     
-    if (init_log) fprintf(init_log, "[mansion] Class info set up\n");
+    if (init_log) fprintf(init_log, "[elsewhere] Class info set up\n");
     fflush(init_log);
     
     /* Register the class */
     if (classdb_register_extension_class6) {
-        if (init_log) fprintf(init_log, "[mansion] Calling classdb_register_extension_class6\n");
+        if (init_log) fprintf(init_log, "[elsewhere] Calling classdb_register_extension_class6\n");
         fflush(init_log);
         classdb_register_extension_class6(p_library, class_name_sn, parent_name_sn, &class_info);
-        if (init_log) fprintf(init_log, "[mansion] classdb_register_extension_class6 returned\n");
+        if (init_log) fprintf(init_log, "[elsewhere] classdb_register_extension_class6 returned\n");
         fflush(init_log);
     } else {
-        if (init_log) fprintf(init_log, "[mansion] classdb_register_extension_class6 is null\n");
+        if (init_log) fprintf(init_log, "[elsewhere] classdb_register_extension_class6 is null\n");
         fflush(init_log);
     }
     
@@ -1103,7 +1103,7 @@ static void mansion_register_class(GDExtensionClassLibraryPtr p_library, FILE *i
     GDExtensionStringNamePtr method_name_sn = method_name_sn_storage;
     method_info.name = method_name_sn;
     method_info.method_userdata = nullptr;
-    method_info.call_func = mansion_adapter_initialize_call;
+    method_info.call_func = elsewhere_adapter_initialize_call;
     method_info.ptrcall_func = nullptr;
     
     if (classdb_register_extension_class_method) {
@@ -1119,7 +1119,7 @@ static void mansion_register_class(GDExtensionClassLibraryPtr p_library, FILE *i
     string_name_new_with_latin1_chars(&method_name_sn_storage, "shutdown", false);
     method_info.name = method_name_sn;
     method_info.method_userdata = nullptr;
-    method_info.call_func = mansion_adapter_shutdown_call;
+    method_info.call_func = elsewhere_adapter_shutdown_call;
     method_info.ptrcall_func = nullptr;
     
     if (classdb_register_extension_class_method) {
@@ -1135,7 +1135,7 @@ static void mansion_register_class(GDExtensionClassLibraryPtr p_library, FILE *i
     string_name_new_with_latin1_chars(&method_name_sn_storage, "destroy", false);
     method_info.name = method_name_sn;
     method_info.method_userdata = nullptr;
-    method_info.call_func = mansion_adapter_destroy_call;
+    method_info.call_func = elsewhere_adapter_destroy_call;
     method_info.ptrcall_func = nullptr;
     
     if (classdb_register_extension_class_method) {
@@ -1153,7 +1153,7 @@ static void mansion_register_class(GDExtensionClassLibraryPtr p_library, FILE *i
     string_name_new_with_latin1_chars(&method_name_sn_storage, "pump", false);
     method_info.name = method_name_sn;
     method_info.method_userdata = nullptr;
-    method_info.call_func = mansion_adapter_pump_call;
+    method_info.call_func = elsewhere_adapter_pump_call;
     method_info.ptrcall_func = nullptr;
     
     if (classdb_register_extension_class_method) {
@@ -1171,7 +1171,7 @@ static void mansion_register_class(GDExtensionClassLibraryPtr p_library, FILE *i
     string_name_new_with_latin1_chars(&method_name_sn_storage, "flush", false);
     method_info.name = method_name_sn;
     method_info.method_userdata = nullptr;
-    method_info.call_func = mansion_adapter_flush_call;
+    method_info.call_func = elsewhere_adapter_flush_call;
     method_info.ptrcall_func = nullptr;
     
     if (classdb_register_extension_class_method) {
@@ -1189,7 +1189,7 @@ static void mansion_register_class(GDExtensionClassLibraryPtr p_library, FILE *i
     string_name_new_with_latin1_chars(&method_name_sn_storage, "get_focused_serial", false);
     method_info.name = method_name_sn;
     method_info.method_userdata = nullptr;
-    method_info.call_func = mansion_adapter_get_focused_serial_call;
+    method_info.call_func = elsewhere_adapter_get_focused_serial_call;
     method_info.ptrcall_func = nullptr;
     
     if (classdb_register_extension_class_method) {
@@ -1207,7 +1207,7 @@ static void mansion_register_class(GDExtensionClassLibraryPtr p_library, FILE *i
     string_name_new_with_latin1_chars(&method_name_sn_storage, "set_compositor", false);
     method_info.name = method_name_sn;
     method_info.method_userdata = nullptr;
-    method_info.call_func = mansion_adapter_set_compositor_call;
+    method_info.call_func = elsewhere_adapter_set_compositor_call;
     method_info.ptrcall_func = nullptr;
     
     if (classdb_register_extension_class_method) {
@@ -1225,7 +1225,7 @@ static void mansion_register_class(GDExtensionClassLibraryPtr p_library, FILE *i
     string_name_new_with_latin1_chars(&method_name_sn_storage, "create_snapshot", false);
     method_info.name = method_name_sn;
     method_info.method_userdata = nullptr;
-    method_info.call_func = mansion_adapter_create_snapshot_call;
+    method_info.call_func = elsewhere_adapter_create_snapshot_call;
     method_info.ptrcall_func = nullptr;
     
     if (classdb_register_extension_class_method) {
@@ -1241,7 +1241,7 @@ static void mansion_register_class(GDExtensionClassLibraryPtr p_library, FILE *i
     string_name_new_with_latin1_chars(&method_name_sn_storage, "snapshot_destroy", false);
     method_info.name = method_name_sn;
     method_info.method_userdata = nullptr;
-    method_info.call_func = mansion_adapter_snapshot_destroy_call;
+    method_info.call_func = elsewhere_adapter_snapshot_destroy_call;
     method_info.ptrcall_func = nullptr;
     
     if (classdb_register_extension_class_method) {
@@ -1259,7 +1259,7 @@ static void mansion_register_class(GDExtensionClassLibraryPtr p_library, FILE *i
     string_name_new_with_latin1_chars(&method_name_sn_storage, "snapshot_get_width", false);
     method_info.name = method_name_sn;
     method_info.method_userdata = nullptr;
-    method_info.call_func = mansion_adapter_snapshot_get_width_call;
+    method_info.call_func = elsewhere_adapter_snapshot_get_width_call;
     method_info.ptrcall_func = nullptr;
     
     if (classdb_register_extension_class_method) {
@@ -1277,7 +1277,7 @@ static void mansion_register_class(GDExtensionClassLibraryPtr p_library, FILE *i
     string_name_new_with_latin1_chars(&method_name_sn_storage, "snapshot_get_height", false);
     method_info.name = method_name_sn;
     method_info.method_userdata = nullptr;
-    method_info.call_func = mansion_adapter_snapshot_get_height_call;
+    method_info.call_func = elsewhere_adapter_snapshot_get_height_call;
     method_info.ptrcall_func = nullptr;
     
     if (classdb_register_extension_class_method) {
@@ -1295,7 +1295,7 @@ static void mansion_register_class(GDExtensionClassLibraryPtr p_library, FILE *i
     string_name_new_with_latin1_chars(&method_name_sn_storage, "snapshot_get_stride", false);
     method_info.name = method_name_sn;
     method_info.method_userdata = nullptr;
-    method_info.call_func = mansion_adapter_snapshot_get_stride_call;
+    method_info.call_func = elsewhere_adapter_snapshot_get_stride_call;
     method_info.ptrcall_func = nullptr;
     
     if (classdb_register_extension_class_method) {
@@ -1313,7 +1313,7 @@ static void mansion_register_class(GDExtensionClassLibraryPtr p_library, FILE *i
     string_name_new_with_latin1_chars(&method_name_sn_storage, "snapshot_get_format", false);
     method_info.name = method_name_sn;
     method_info.method_userdata = nullptr;
-    method_info.call_func = mansion_adapter_snapshot_get_format_call;
+    method_info.call_func = elsewhere_adapter_snapshot_get_format_call;
     method_info.ptrcall_func = nullptr;
     
     if (classdb_register_extension_class_method) {
@@ -1331,7 +1331,7 @@ static void mansion_register_class(GDExtensionClassLibraryPtr p_library, FILE *i
     string_name_new_with_latin1_chars(&method_name_sn_storage, "snapshot_get_revision", false);
     method_info.name = method_name_sn;
     method_info.method_userdata = nullptr;
-    method_info.call_func = mansion_adapter_snapshot_get_revision_call;
+    method_info.call_func = elsewhere_adapter_snapshot_get_revision_call;
     method_info.ptrcall_func = nullptr;
     
     if (classdb_register_extension_class_method) {
@@ -1349,7 +1349,7 @@ static void mansion_register_class(GDExtensionClassLibraryPtr p_library, FILE *i
     string_name_new_with_latin1_chars(&method_name_sn_storage, "snapshot_get_pixels", false);
     method_info.name = method_name_sn;
     method_info.method_userdata = nullptr;
-    method_info.call_func = mansion_adapter_snapshot_get_pixels_call;
+    method_info.call_func = elsewhere_adapter_snapshot_get_pixels_call;
     method_info.ptrcall_func = nullptr;
     
     if (classdb_register_extension_class_method) {
@@ -1367,7 +1367,7 @@ static void mansion_register_class(GDExtensionClassLibraryPtr p_library, FILE *i
     string_name_new_with_latin1_chars(&method_name_sn_storage, "snapshot_get_pixels_size", false);
     method_info.name = method_name_sn;
     method_info.method_userdata = nullptr;
-    method_info.call_func = mansion_adapter_snapshot_get_pixels_size_call;
+    method_info.call_func = elsewhere_adapter_snapshot_get_pixels_size_call;
     method_info.ptrcall_func = nullptr;
     
     if (classdb_register_extension_class_method) {
@@ -1376,38 +1376,38 @@ static void mansion_register_class(GDExtensionClassLibraryPtr p_library, FILE *i
 }
 
 /* Module initialization - this is the actual GDExtension entry point */
-static GDExtensionBool mansion_extension_init(
+static GDExtensionBool elsewhere_extension_init(
     GDExtensionInterfaceGetProcAddress p_get_proc_address,
     GDExtensionClassLibraryPtr p_library,
     GDExtensionInitialization *r_initialization) {
     
     FILE *init_log = fopen("/tmp/gdextension_init.log", "a");
     if (init_log) {
-        fprintf(init_log, "[mansion] Initialization started\n");
+        fprintf(init_log, "[elsewhere] Initialization started\n");
         fflush(init_log);
     }
     
     /* Initialize interface function pointers */
-    if (init_log) fprintf(init_log, "[mansion] Initializing interface functions\n");
+    if (init_log) fprintf(init_log, "[elsewhere] Initializing interface functions\n");
     init_interface_functions(p_get_proc_address);
     
     if (init_log) {
-        fprintf(init_log, "[mansion] classdb_register_extension_class6: %p\n", classdb_register_extension_class6);
+        fprintf(init_log, "[elsewhere] classdb_register_extension_class6: %p\n", classdb_register_extension_class6);
         fflush(init_log);
     }
     
-    if (init_log) fprintf(init_log, "[mansion] Registering class\n");
+    if (init_log) fprintf(init_log, "[elsewhere] Registering class\n");
     fflush(init_log);
     
     /* Register our class */
-    mansion_register_class(p_library, init_log);
+    elsewhere_register_class(p_library, init_log);
     
     if (init_log) {
-        fprintf(init_log, "[mansion] Class registered\n");
+        fprintf(init_log, "[elsewhere] Class registered\n");
         fflush(init_log);
     }
     
-    if (init_log) fprintf(init_log, "[mansion] Setting initialization level\n");
+    if (init_log) fprintf(init_log, "[elsewhere] Setting initialization level\n");
     /* Set initialization level */
     r_initialization->minimum_initialization_level = GDEXTENSION_INITIALIZATION_CORE;
     r_initialization->userdata = nullptr;
@@ -1415,7 +1415,7 @@ static GDExtensionBool mansion_extension_init(
     r_initialization->deinitialize = nullptr;
     
     if (init_log) {
-        fprintf(init_log, "[mansion] Initialization complete\n");
+        fprintf(init_log, "[elsewhere] Initialization complete\n");
         fflush(init_log);
         fclose(init_log);
     }
@@ -1434,13 +1434,13 @@ GDExtensionBool __attribute__((visibility("default"))) GDExtensionInit(
     /* Log the entry point call with all parameters */
     FILE *log = fopen("/tmp/gdextension_init.log", "a");
     if (log) {
-        fprintf(log, "[mansion] GDExtensionInit called (p_get_proc_address: %p, p_library: %p, r_initialization: %p)\n", 
+        fprintf(log, "[elsewhere] GDExtensionInit called (p_get_proc_address: %p, p_library: %p, r_initialization: %p)\n",
                 (void *)p_get_proc_address, (void *)p_library, (void *)r_initialization);
         fflush(log);
         fclose(log);
     }
     
-    return mansion_extension_init(p_get_proc_address, p_library, r_initialization);
+    return elsewhere_extension_init(p_get_proc_address, p_library, r_initialization);
 }
 
 /* Mark GDExtensionExtensionDestroy with default visibility even when -fvisibility=hidden is used */

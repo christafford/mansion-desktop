@@ -1,6 +1,0 @@
-[configuration]
-entry_symbol = "mansion_probe_init"
-compatibility_minimum = "4.7"
-[libraries]
-linux.debug.x86_64 = "res://addons/mansion_runtime/libmansion_runtime.so"
-linux.release.x86_64 = "res://addons/mansion_runtime/libmansion_runtime.so"

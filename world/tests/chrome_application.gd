@@ -41,7 +41,7 @@ func run() -> void:
 	DirAccess.make_dir_recursive_absolute(output_dir)
 	for name in ["port.txt", "page.json"]:
 		if FileAccess.file_exists(output_dir.path_join(name)): DirAccess.remove_absolute(output_dir.path_join(name))
-	OS.set_environment("MANSION_BROWSER_PROFILE_DIR", output_dir.path_join("profile"))
+	OS.set_environment("ELSEWHERE_BROWSER_PROFILE_DIR", output_dir.path_join("profile"))
 	fixture_pid = OS.create_process("/usr/bin/python3", PackedStringArray([ProjectSettings.globalize_path("res://../tests/browser_fixture.py"), output_dir]))
 	study = load("res://scenes/main.tscn").instantiate()
 	root.add_child(study)
@@ -70,8 +70,8 @@ func run() -> void:
 	await capture("address-bar.png")
 	await tap(KEY_ENTER)
 	await wait_page("value", "")
-	await type_text("Mansion browser 42!")
-	await wait_page("value", "Mansion browser 42!")
+	await type_text("Elsewhere browser 42!")
+	await wait_page("value", "Elsewhere browser 42!")
 	check(page_state().get("trusted", false), "Text did not come from browser input events")
 	await settle()
 	# Locate the page's unique flat button color in actual client pixels, then

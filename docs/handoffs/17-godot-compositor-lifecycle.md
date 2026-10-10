@@ -12,7 +12,7 @@ renderer. This is a protocol/lifetime gate, not a terminal or pixel-rendering ga
 `CompositorRuntime` owns the server display, wl_compositor/shm globals and one
 private mode-0700 directory/socket. It accepts an absolute parent directory,
 uses an absolute Wayland socket name, and never changes host environment variables.
-`MansionCompositorSession` exposes start/pump/stop, socket path, error reporting
+`ElsewhereCompositorSession` exposes start/pump/stop, socket path, error reporting
 and counts to Godot. All calls and destruction belong to the owning main thread.
 
 The pump calls `wl_event_loop_dispatch(server_loop, 0)` and flushes server
@@ -23,7 +23,7 @@ A failed or double start returns an error rather than replacing a live server.
 The existing partial core had concrete lifecycle defects. This change makes the
 surface destroy request actually destroy its resource; unlinks buffer listeners
 before freeing surfaces; gives frame callbacks a list-removal destructor; fixes
-surface iteration to use MansionSurface links; initializes allocated state and
+surface iteration to use ElsewhereSurface links; initializes allocated state and
 honors the client's bound protocol version. This core frees dead surface state
 instead of keeping invalid Wayland resources in a renderer-style orphan cache.
 The legacy compositor/renderer implementation is unchanged.

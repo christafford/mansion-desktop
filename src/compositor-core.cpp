@@ -21,7 +21,7 @@ static void frame_callback_destroyed(struct wl_resource* resource) {
 }
 
 static void surface_destroy_callback(struct wl_resource* resource) {
-    auto* surface = static_cast<MansionSurface*>(wl_resource_get_user_data(resource));
+    auto* surface = static_cast<ElsewhereSurface*>(wl_resource_get_user_data(resource));
     if (!surface) return;
     surface_tree_destroyed(surface);
     wl_list_remove(&surface->link);
@@ -48,7 +48,7 @@ static void surface_destroy(struct wl_client* client, struct wl_resource* resour
 
 /* Buffer destroy listener — fires when the client destroys the wl_buffer proxy. */
 static void buffer_destroy_notify(struct wl_listener* listener, void* data) {
-    MansionSurface* surface = wl_container_of(listener, surface, buffer_destroy_listener);
+    ElsewhereSurface* surface = wl_container_of(listener, surface, buffer_destroy_listener);
     wl_list_remove(&listener->link);
     wl_list_init(&listener->link);
     if (surface->pending_buffer_resource == data) {
@@ -62,7 +62,7 @@ static void buffer_destroy_notify(struct wl_listener* listener, void* data) {
 static void surface_attach(struct wl_client* client, struct wl_resource* resource,
                            struct wl_resource* buffer_resource, int32_t x, int32_t y) {
     (void)client; (void)x; (void)y;
-    auto* surface = static_cast<MansionSurface*>(wl_resource_get_user_data(resource));
+    auto* surface = static_cast<ElsewhereSurface*>(wl_resource_get_user_data(resource));
 
     wl_list_remove(&surface->buffer_destroy_listener.link);
     wl_list_init(&surface->buffer_destroy_listener.link);
@@ -80,15 +80,15 @@ static void surface_attach(struct wl_client* client, struct wl_resource* resourc
 static void surface_damage(struct wl_client*, struct wl_resource* resource,
                            int32_t, int32_t, int32_t width, int32_t height) {
     // Full-frame copies deliberately subsume damage, without rectangle overflow.
-    auto* surface = static_cast<MansionSurface*>(wl_resource_get_user_data(resource));
+    auto* surface = static_cast<ElsewhereSurface*>(wl_resource_get_user_data(resource));
     if (width > 0 && height > 0) surface->damage_count = 1;
 }
 
-static bool copy_frame(MansionSurface* surface, mansion::FrameSnapshot& frame) {
+static bool copy_frame(ElsewhereSurface* surface, elsewhere::FrameSnapshot& frame) {
     auto* buffer = wl_shm_buffer_get(surface->pending_buffer_resource);
     if (!buffer) {
         wl_client_post_implementation_error(wl_resource_get_client(surface->resource),
-                               "Mansion frame bridge requires wl_shm buffers");
+                               "Elsewhere frame bridge requires wl_shm buffers");
         return false;
     }
     const int width = wl_shm_buffer_get_width(buffer), height = wl_shm_buffer_get_height(buffer);
@@ -96,7 +96,7 @@ static bool copy_frame(MansionSurface* surface, mansion::FrameSnapshot& frame) {
     const uint32_t format = wl_shm_buffer_get_format(buffer);
     if (format != WL_SHM_FORMAT_ARGB8888 && format != WL_SHM_FORMAT_XRGB8888) {
         wl_client_post_implementation_error(wl_resource_get_client(surface->resource),
-                               "Mansion frame bridge supports only ARGB8888/XRGB8888");
+                               "Elsewhere frame bridge supports only ARGB8888/XRGB8888");
         return false;
     }
     // Bounds cover multiplication, the client stride and allocation. The total
@@ -139,14 +139,14 @@ static bool copy_frame(MansionSurface* surface, mansion::FrameSnapshot& frame) {
 }
 
 static void surface_commit(struct wl_client* client, struct wl_resource* resource) {
-    auto* surface = static_cast<MansionSurface*>(wl_resource_get_user_data(resource));
+    auto* surface = static_cast<ElsewhereSurface*>(wl_resource_get_user_data(resource));
     auto& state = *surface->core_frame;
     if (surface->xdg_surface && !xdg_shell_on_surface_commit(surface->xdg_surface)) return;
     const bool metadata_changed = state.scale != state.pending_scale || state.transform != state.pending_transform;
     if (state.pending_attach || (metadata_changed && state.frame)) {
         try {
-            auto next = state.pending_attach ? std::make_shared<mansion::FrameSnapshot>()
-                                             : std::make_shared<mansion::FrameSnapshot>(*state.frame);
+            auto next = state.pending_attach ? std::make_shared<elsewhere::FrameSnapshot>()
+                                             : std::make_shared<elsewhere::FrameSnapshot>(*state.frame);
             if (state.pending_attach && surface->pending_buffer_resource && !copy_frame(surface, *next)) return;
             next->scale = state.pending_scale; next->transform = state.pending_transform;
             const bool rotated = next->transform & 1;
@@ -199,7 +199,7 @@ static void surface_commit(struct wl_client* client, struct wl_resource* resourc
 static void surface_frame(struct wl_client* client, struct wl_resource* resource,
                           uint32_t callback_id) {
     (void)client;
-    auto* surface = static_cast<MansionSurface*>(wl_resource_get_user_data(resource));
+    auto* surface = static_cast<ElsewhereSurface*>(wl_resource_get_user_data(resource));
 
     auto* cb = wl_resource_create(client, &wl_callback_interface, 1, callback_id);
     if (!cb) {
@@ -217,7 +217,7 @@ static void surface_set_opaque_region(struct wl_client* client, struct wl_resour
 
 static void surface_set_input_region(struct wl_client* client, struct wl_resource* resource,
                                       struct wl_resource* region) {
-    auto* surface = static_cast<MansionSurface*>(wl_resource_get_user_data(resource));
+    auto* surface = static_cast<ElsewhereSurface*>(wl_resource_get_user_data(resource));
     try {
         surface->core_frame->pending_input = region
             ? InputRegion(*static_cast<std::vector<InputRectangle>*>(wl_resource_get_user_data(region))) : std::nullopt;
@@ -231,7 +231,7 @@ static void surface_set_buffer_transform(struct wl_client* client, struct wl_res
         wl_resource_post_error(resource, WL_SURFACE_ERROR_INVALID_TRANSFORM, "invalid buffer transform");
         return;
     }
-    auto* surface = static_cast<MansionSurface*>(wl_resource_get_user_data(resource));
+    auto* surface = static_cast<ElsewhereSurface*>(wl_resource_get_user_data(resource));
     surface->core_frame->pending_transform = transform;
 }
 
@@ -242,7 +242,7 @@ static void surface_set_buffer_scale(struct wl_client* client, struct wl_resourc
         wl_resource_post_error(resource, WL_SURFACE_ERROR_INVALID_SCALE, "invalid buffer scale");
         return;
     }
-    auto* surface = static_cast<MansionSurface*>(wl_resource_get_user_data(resource));
+    auto* surface = static_cast<ElsewhereSurface*>(wl_resource_get_user_data(resource));
     surface->core_frame->pending_scale = scale;
 }
 
@@ -292,7 +292,7 @@ static const struct wl_region_interface region_impl = {
 
 /* ---------- compositor ---------- */
 
-static bool initialize_frame_state(MansionSurface* surface, wl_client* client) {
+static bool initialize_frame_state(ElsewhereSurface* surface, wl_client* client) {
     static std::atomic<int64_t> next_handle{1};
     surface->core_frame = new (std::nothrow) CoreFrameState;
     if (!surface->core_frame) { wl_client_post_no_memory(client); return false; }
@@ -313,9 +313,9 @@ static bool initialize_frame_state(MansionSurface* surface, wl_client* client) {
 
 static void compositor_create_surface(struct wl_client* client, struct wl_resource* compositor_resource,
                                        uint32_t id) {
-    auto* compositor = static_cast<MansionCompositor*>(wl_resource_get_user_data(compositor_resource));
+    auto* compositor = static_cast<ElsewhereCompositor*>(wl_resource_get_user_data(compositor_resource));
 
-    auto* surface = new (std::nothrow) MansionSurface{};
+    auto* surface = new (std::nothrow) ElsewhereSurface{};
     if (!surface) {
         wl_client_post_no_memory(client);
         return;
@@ -359,7 +359,7 @@ static void compositor_create_surface(struct wl_client* client, struct wl_resour
 
 static void compositor_create_region(struct wl_client* client, struct wl_resource* compositor_resource,
                                        uint32_t id) {
-    auto* compositor = static_cast<MansionCompositor*>(wl_resource_get_user_data(compositor_resource));
+    auto* compositor = static_cast<ElsewhereCompositor*>(wl_resource_get_user_data(compositor_resource));
     (void)compositor;
 
     auto* region = wl_resource_create(client, &wl_region_interface, 1, id);
@@ -384,7 +384,7 @@ static const struct wl_compositor_interface compositor_impl = {
 };
 
 static void compositor_bind(struct wl_client* client, void* data, uint32_t version, uint32_t id) {
-    auto* compositor = static_cast<MansionCompositor*>(data);
+    auto* compositor = static_cast<ElsewhereCompositor*>(data);
     auto* resource = wl_resource_create(client, &wl_compositor_interface, std::min(version, 4u), id);
     if (!resource) {
         wl_client_post_no_memory(client);
@@ -395,9 +395,9 @@ static void compositor_bind(struct wl_client* client, void* data, uint32_t versi
 
 /* ---------- Core API implementation ---------- */
 
-struct MansionCompositor* compositor_core_create(struct wl_display* display) {
+struct ElsewhereCompositor* compositor_core_create(struct wl_display* display) {
     if (!display) return nullptr;
-    auto* compositor = new (std::nothrow) MansionCompositor{};
+    auto* compositor = new (std::nothrow) ElsewhereCompositor{};
     if (!compositor) return nullptr;
     wl_list_init(&compositor->surface_list);
     wl_list_init(&compositor->orphaned_surfaces);
@@ -417,11 +417,11 @@ struct MansionCompositor* compositor_core_create(struct wl_display* display) {
     return compositor;
 }
 
-void compositor_core_destroy(struct MansionCompositor* compositor) {
+void compositor_core_destroy(struct ElsewhereCompositor* compositor) {
     if (!compositor) return;
     wl_global_destroy(compositor->global);
 
-    struct MansionSurface *surface, *next;
+    struct ElsewhereSurface *surface, *next;
     wl_list_for_each_safe(surface, next, &compositor->surface_list, link) {
         wl_resource_destroy(surface->resource);
     }
@@ -435,37 +435,37 @@ void compositor_core_destroy(struct MansionCompositor* compositor) {
     delete compositor;
 }
 
-struct wl_display* compositor_core_get_display(struct MansionCompositor* compositor) {
+struct wl_display* compositor_core_get_display(struct ElsewhereCompositor* compositor) {
     if (!compositor) return nullptr;
     return wl_global_get_display(compositor->global);
 }
 
-struct wl_list* compositor_core_get_surface_list(struct MansionCompositor* compositor) {
+struct wl_list* compositor_core_get_surface_list(struct ElsewhereCompositor* compositor) {
     if (!compositor) return nullptr;
     return &compositor->surface_list;
 }
 
-struct wl_list* compositor_core_get_toplevel_list(struct MansionCompositor* compositor) {
+struct wl_list* compositor_core_get_toplevel_list(struct ElsewhereCompositor* compositor) {
     if (!compositor) return nullptr;
     return &compositor->toplevel_list;
 }
 
-int compositor_core_get_toplevel_count(struct MansionCompositor* compositor) {
+int compositor_core_get_toplevel_count(struct ElsewhereCompositor* compositor) {
     if (!compositor) return 0;
     return compositor->toplevel_count;
 }
 
-struct wl_resource* compositor_core_get_focused_surface(struct MansionCompositor* compositor) {
+struct wl_resource* compositor_core_get_focused_surface(struct ElsewhereCompositor* compositor) {
     if (!compositor) return nullptr;
     return compositor->focused_surface_resource;
 }
 
-uint32_t compositor_core_get_focus_serial(struct MansionCompositor* compositor) {
+uint32_t compositor_core_get_focus_serial(struct ElsewhereCompositor* compositor) {
     if (!compositor) return 0;
     return compositor->keyboard_focus_serial;
 }
 
-void compositor_core_set_focus(struct MansionCompositor* compositor,
+void compositor_core_set_focus(struct ElsewhereCompositor* compositor,
                                struct wl_resource* surface,
                                uint32_t serial) {
     if (!compositor) return;
@@ -473,29 +473,29 @@ void compositor_core_set_focus(struct MansionCompositor* compositor,
     compositor->keyboard_focus_serial = serial;
 }
 
-void compositor_core_clear_focus(struct MansionCompositor* compositor) {
+void compositor_core_clear_focus(struct ElsewhereCompositor* compositor) {
     if (!compositor) return;
     compositor->focused_surface_resource = nullptr;
     compositor->keyboard_focus_serial = 0;
 }
 
-void compositor_core_connect_seat(struct MansionCompositor* compositor,
-                                   struct MansionSeat* seat) {
+void compositor_core_connect_seat(struct ElsewhereCompositor* compositor,
+                                   struct ElsewhereSeat* seat) {
     if (!compositor) return;
     compositor->seat = seat;
 }
 
 struct wl_resource* compositor_core_surface_first(struct wl_list* surface_list) {
     if (!surface_list || wl_list_empty(surface_list)) return nullptr;
-    MansionSurface* surface = wl_container_of(surface_list->next, surface, link);
+    ElsewhereSurface* surface = wl_container_of(surface_list->next, surface, link);
     return surface->resource;
 }
 
 struct wl_resource* compositor_core_surface_next(struct wl_resource* resource) {
     if (!resource) return nullptr;
-    auto* surface = static_cast<MansionSurface*>(wl_resource_get_user_data(resource));
+    auto* surface = static_cast<ElsewhereSurface*>(wl_resource_get_user_data(resource));
     if (!surface || surface->link.next == &surface->compositor->surface_list) return nullptr;
-    MansionSurface* next = wl_container_of(surface->link.next, next, link);
+    ElsewhereSurface* next = wl_container_of(surface->link.next, next, link);
     return next->resource;
 }
 
@@ -508,10 +508,10 @@ void compositor_core_surface_set_user_data(struct wl_resource* resource,
     wl_resource_set_user_data(resource, user_data);
 }
 
-struct MansionSurface* compositor_surface_from_serial(struct MansionCompositor* compositor, uint32_t serial) {
+struct ElsewhereSurface* compositor_surface_from_serial(struct ElsewhereCompositor* compositor, uint32_t serial) {
     if (!compositor) return nullptr;
 
-    struct MansionSurface *surface, *next;
+    struct ElsewhereSurface *surface, *next;
     wl_list_for_each_safe(surface, next, &compositor->surface_list, link) {
         if (surface->client_serial == serial) {
             return surface;
@@ -528,12 +528,12 @@ struct MansionSurface* compositor_surface_from_serial(struct MansionCompositor* 
     return nullptr;
 }
 
-struct wl_resource* compositor_core_create_surface(struct MansionCompositor* compositor,
+struct wl_resource* compositor_core_create_surface(struct ElsewhereCompositor* compositor,
                                                    struct wl_client* client,
                                                    uint32_t id) {
     if (!compositor || !client) return nullptr;
 
-    auto* surface = new (std::nothrow) MansionSurface{};
+    auto* surface = new (std::nothrow) ElsewhereSurface{};
     if (!surface) {
         wl_client_post_no_memory(client);
         return nullptr;
@@ -582,17 +582,17 @@ void compositor_core_destroy_surface(struct wl_resource* surface_resource) {
     wl_resource_destroy(surface_resource);
 }
 
-int compositor_core_surface_list_empty(struct MansionCompositor* compositor) {
+int compositor_core_surface_list_empty(struct ElsewhereCompositor* compositor) {
     if (!compositor) return 1;
     return wl_list_empty(&compositor->surface_list);
 }
 
-int compositor_core_orphaned_surfaces_empty(struct MansionCompositor* compositor) {
+int compositor_core_orphaned_surfaces_empty(struct ElsewhereCompositor* compositor) {
     if (!compositor) return 1;
     return wl_list_empty(&compositor->orphaned_surfaces);
 }
 
-int compositor_core_toplevel_list_empty(struct MansionCompositor* compositor) {
+int compositor_core_toplevel_list_empty(struct ElsewhereCompositor* compositor) {
     if (!compositor) return 1;
     return wl_list_empty(&compositor->toplevel_list);
 }
@@ -600,18 +600,18 @@ int compositor_core_toplevel_list_empty(struct MansionCompositor* compositor) {
 void compositor_core_surface_set_commit_callback(struct wl_resource* surface_resource,
                                                   surface_commit_callback callback,
                                                   void* user_data) {
-    auto* surface = static_cast<MansionSurface*>(wl_resource_get_user_data(surface_resource));
+    auto* surface = static_cast<ElsewhereSurface*>(wl_resource_get_user_data(surface_resource));
     if (surface) {
         surface->commit_callback = callback;
         surface->commit_callback_user_data = user_data;
     }
 }
 
-void compositor_core_complete_frames(MansionCompositor* compositor) {
+void compositor_core_complete_frames(ElsewhereCompositor* compositor) {
     if (!compositor) return;
     const auto now = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now().time_since_epoch()).count();
-    MansionSurface* surface;
+    ElsewhereSurface* surface;
     wl_list_for_each(surface, &compositor->surface_list, link) {
         auto& callbacks = surface->core_frame->committed_callbacks;
         while (!wl_list_empty(&callbacks)) {

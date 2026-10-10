@@ -1,20 +1,20 @@
-# Test script to verify GDExtension MansionAdapter is working
+# Test script to verify GDExtension ElsewhereAdapter is working
 extends Node
 
 func _ready() -> void:
-	print("Testing GDExtension MansionAdapter...")
+	print("Testing GDExtension ElsewhereAdapter...")
 	
 	# Try to instantiate the GDExtension class directly
-	var adapter = ClassDB.instantiate_class("MansionAdapter")
+	var adapter = ClassDB.instantiate_class("ElsewhereAdapter")
 	
 	if adapter == null:
-		print("ERROR: Failed to create MansionAdapter instance!")
+		print("ERROR: Failed to create ElsewhereAdapter instance!")
 		return
 	
-	print("SUCCESS: MansionAdapter instance created!")
+	print("SUCCESS: ElsewhereAdapter instance created!")
 	
 	# Test initialize
-	var result = adapter.initialize("mansion-compositor", true)
+	var result = adapter.initialize("elsewhere-compositor", true)
 	print("Initialize result: %s" % result)
 	
 	if result:

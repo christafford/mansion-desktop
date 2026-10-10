@@ -1,13 +1,13 @@
 #!/bin/bash
-# Build the Mansion GDExtension adapter
+# Build the Elsewhere GDExtension adapter
 #
 # This script compiles the GDExtension shared library.
 # Requires:
 #   - Godot C++ bindings built at tools/godot-cpp/build/
-#   - Mansion core compiled (meson build)
+#   - Elsewhere core compiled (meson build)
 #
 # Usage:
-#   tools/build-mansion-extension.sh [build_dir]
+#   tools/build-elsewhere-extension.sh [build_dir]
 #
 # The GDExtension is a standalone .so loaded by Godot at runtime.
 # No libgodot.so is needed at build time — symbols resolve via
@@ -20,7 +20,7 @@ BUILD_DIR="${1:-${REPO_ROOT}/build-godot-ext}"
 
 GODOT_CPP="${REPO_ROOT}/tools/godot-cpp"
 GODOT_CPP_BUILD="${GODOT_CPP}/build"
-MANSION_BUILD="${REPO_ROOT}/build"
+ELSEWHERE_BUILD="${REPO_ROOT}/build"
 
 # ─── Check prerequisites ───
 
@@ -33,10 +33,10 @@ if [ ! -f "${GODOT_CPP_BUILD}/bin/libgodot-cpp.linux.template_debug.x86_64.a" ];
     exit 1
 fi
 
-if [ ! -f "${MANSION_BUILD}/mansion-desktop" ]; then
-    echo "ERROR: Mansion core not built. Run:"
-    echo "  meson setup ${MANSION_BUILD}"
-    echo "  meson compile -C ${MANSION_BUILD}"
+if [ ! -f "${ELSEWHERE_BUILD}/elsewhere" ]; then
+    echo "ERROR: Elsewhere core not built. Run:"
+    echo "  meson setup ${ELSEWHERE_BUILD}"
+    echo "  meson compile -C ${ELSEWHERE_BUILD}"
     exit 1
 fi
 
@@ -62,22 +62,22 @@ CXXFLAGS="-I${REPO_ROOT}/src \
           -DUNIX_ENABLED \
           -DTHREADS_ENABLED"
 
-echo "=== Compiling mansion_bridge.cpp ==="
+echo "=== Compiling elsewhere_bridge.cpp ==="
 g++ ${CXXFLAGS} -c \
-    -o "${BUILD_DIR}/mansion_bridge.o" \
-    "${REPO_ROOT}/src/godot/mansion_bridge.cpp" \
-    && echo "  OK: mansion_bridge.o"
+    -o "${BUILD_DIR}/elsewhere_bridge.o" \
+    "${REPO_ROOT}/src/godot/elsewhere_bridge.cpp" \
+    && echo "  OK: elsewhere_bridge.o"
 
-echo "=== Compiling mansion_extension.cpp ==="
+echo "=== Compiling elsewhere_extension.cpp ==="
 g++ ${CXXFLAGS} -c \
-    -o "${BUILD_DIR}/mansion_extension.o" \
-    "${REPO_ROOT}/src/godot/mansion_extension.cpp" \
-    && echo "  OK: mansion_extension.o"
+    -o "${BUILD_DIR}/elsewhere_extension.o" \
+    "${REPO_ROOT}/src/godot/elsewhere_extension.cpp" \
+    && echo "  OK: elsewhere_extension.o"
 
 echo "=== Linking GDExtension shared library ==="
-g++ -shared -o "${BUILD_DIR}/libmansion_godot.so" \
-    "${BUILD_DIR}/mansion_bridge.o" \
-    "${BUILD_DIR}/mansion_extension.o" \
+g++ -shared -o "${BUILD_DIR}/libelsewhere_godot.so" \
+    "${BUILD_DIR}/elsewhere_bridge.o" \
+    "${BUILD_DIR}/elsewhere_extension.o" \
     -L"${GODOT_CPP_BUILD}/bin" \
     -lgodot-cpp.linux.template_debug.x86_64 \
     -lwayland-server \
@@ -87,14 +87,14 @@ g++ -shared -o "${BUILD_DIR}/libmansion_godot.so" \
     -lxkbcommon \
     -ldl \
     -Wl,-rpath,'$ORIGIN' \
-    && echo "  OK: libmansion_godot.so"
+    && echo "  OK: libelsewhere_godot.so"
 
 echo ""
 echo "=== Build complete ==="
-echo "Extension: ${BUILD_DIR}/libmansion_godot.so"
+echo "Extension: ${BUILD_DIR}/libelsewhere_godot.so"
 echo ""
 echo "To use in Godot:"
-echo "  1. Copy libmansion_godot.so to your project's bin/ directory"
+echo "  1. Copy libelsewhere_godot.so to your project's bin/ directory"
 echo "  2. Ensure extension.toml is alongside it"
 echo "  3. Enable the extension in Project Settings > General > Extensions"
 echo ""

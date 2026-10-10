@@ -17,7 +17,7 @@ static std::string read(const std::string& path) {
     std::ifstream stream(path); return {std::istreambuf_iterator<char>(stream), {}};
 }
 static void mark(const std::string& path) { std::ofstream stream(path); check(bool(stream), "marker creation"); }
-static void until(mansion::CompositorRuntime& runtime, const std::function<bool()>& predicate) {
+static void until(elsewhere::CompositorRuntime& runtime, const std::function<bool()>& predicate) {
     auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
     while (!predicate()) {
         check(runtime.pump(), runtime.last_error().c_str());
@@ -25,10 +25,10 @@ static void until(mansion::CompositorRuntime& runtime, const std::function<bool(
         usleep(1000);
     }
 }
-static void wait_file(mansion::CompositorRuntime& runtime, const std::string& path) {
+static void wait_file(elsewhere::CompositorRuntime& runtime, const std::string& path) {
     until(runtime, [&] { return access(path.c_str(), F_OK) == 0; });
 }
-static void wait_event(mansion::CompositorRuntime& runtime, const std::string& path, const std::string& event) {
+static void wait_event(elsewhere::CompositorRuntime& runtime, const std::string& path, const std::string& event) {
     until(runtime, [&] { return read(path).find(event) != std::string::npos; });
 }
 static pid_t spawn(const char* fixture, const std::string& socket, const std::string& base) {
@@ -36,13 +36,13 @@ static pid_t spawn(const char* fixture, const std::string& socket, const std::st
     if (!child) { execl(fixture, fixture, socket.c_str(), base.c_str(), nullptr); _exit(127); }
     return child;
 }
-static void step(mansion::CompositorRuntime& r, const std::string& base, int n) {
+static void step(elsewhere::CompositorRuntime& r, const std::string& base, int n) {
     mark(base + "." + std::to_string(n)); wait_file(r, base + "." + std::to_string(n) + "-ok");
 }
 int main(int argc,char** argv) {
     check(argc==2,"fixture executable");alarm(30);
-    char directory[]="/tmp/mansion-resize-XXXXXX";check(mkdtemp(directory),"directory");
-    mansion::CompositorRuntime r;
+    char directory[]="/tmp/elsewhere-resize-XXXXXX";check(mkdtemp(directory),"directory");
+    elsewhere::CompositorRuntime r;
     check(!r.request_resize(1,100,100) && !r.window_state(1),"stopped server");
     check(r.start(directory),"start");
     const std::string a=std::string(directory)+"/a",b=std::string(directory)+"/b";

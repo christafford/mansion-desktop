@@ -72,7 +72,7 @@ hash verification, atomic downloads, retry/backoff, cache management. All 22
 primary assets cached (2.8 GB).
 
 **P21-T11 (GDExtension adapter): blocked.** Code written, extension .so built and
-deployed to world/addons/mansion_godot/, all 13 symbols exported, Godot editor
+deployed to world/addons/elsewhere_godot/, all 13 symbols exported, Godot editor
 build complete (1.07 GB), project loads cleanly (zero errors); blocked on display
 server to register extension via Project Settings > General > Extensions (Godot
 4.x stores extension list in user://project.godot, not in project's
@@ -122,7 +122,7 @@ multiwindow code must be audited before reuse, not credited from a task title.
 ## Historical recovery report from the supplied archive
 
 **P4-T11 completed 2026-09-29.** Implemented xdg-shell handshake and metadata
-validation: title/app_id/geometry tracking in `MansionXdgToplevel`/`MansionXdgSurface`,
+validation: title/app_id/geometry tracking in `ElsewhereXdgToplevel`/`ElsewhereXdgSurface`,
 configure/ack serial validation with `XDG_SURFACE_ERROR_INVALID_SERIAL` error
 for future serials, added `--xdg-test` mode to test client for metadata
 verification, and dedicated xdg-shell protocol test. Verified version
@@ -164,7 +164,7 @@ checkout that predated the 2026-09-28 implementation commits
 
 - `meson compile -C build && meson test -C build --print-errorlogs` on the
   merged tree: 25/25 tests pass (source unchanged by the merge; container
-  `mansion-dev`). This is a regression run, not new capability evidence.
+  `elsewhere-dev`). This is a regression run, not new capability evidence.
 - The X11 host window no longer exists in source. Statements about X11 in
   ARCHITECTURE.md, ACCEPTANCE.md and DEVELOPMENT.md were corrected; older
   handoffs keep their historical wording. `meson.build` still declares
@@ -256,8 +256,8 @@ Full reconciliation completed. Handoff at
     evdev FD globals and live camera state globals properly defined.
   - `main.cpp`: replaced `input_process_x11(display)` with
     `input_process_wayland_client(display)`.
-  - `meson.build`: removed x11 from `mansion_exe` deps; added wayland_client;
-    added xdg_shell_client_h to mansion_exe sources.
+  - `meson.build`: removed x11 from `elsewhere_exe` deps; added wayland_client;
+    added xdg_shell_client_h to elsewhere_exe sources.
   - **Build and tests:** all 25/25 tests pass (reported 2026-09-28).
 
 - **Wayland seat input for host window (P5-T02 follow-up).** Added keyboard and
@@ -274,7 +274,7 @@ Full reconciliation completed. Handoff at
   - `input.cpp/h`: added `input_wayland_key()` and
     `input_wayland_pointer_motion()` to update live camera state variables.
   - `meson.build`: generated relative-pointer protocol header + code added
-    to mansion_exe.
+    to elsewhere_exe.
   - a615f18 then added a `wl_seat.capabilities` handler and fixed listener
     crashes; runtime effect not observed.
   - **Not verified:** flickering is "terrible" (worse than X11) and no mouse or
@@ -320,8 +320,8 @@ Full reconciliation completed. Handoff at
 
 - **P21-T10 Compositor core extraction.** GL/EGL dependency removed from the
   protocol core: `compositor-private.h` no longer includes `<GLES2/gl2.h>` and
-  `MansionSurface` no longer carries a `gl_texture` field. A new header
-  `renderer-surface.h` defines `MansionRendererSurface` for GPU resources,
+  `ElsewhereSurface` no longer carries a `gl_texture` field. A new header
+  `renderer-surface.h` defines `ElsewhereRendererSurface` for GPU resources,
   entirely in the presentation layer. Accessor functions
   (`get_renderer_surface`, `ensure_renderer_surface`, `set_renderer_surface_texture`,
   `destroy_renderer_surface`) bridge the layers via a static `unordered_map`
@@ -330,23 +330,23 @@ Full reconciliation completed. Handoff at
 
 - **P21-T11 GDExtension adapter — partially verified (2026-10-01, this session).**
   Code written, compiles cleanly, and .so built and deployed (98 KB, 13 symbols):
-  - `src/godot/mansion_bridge.h` — C-facing bridge API header (no GL/EGL includes)
-  - `src/godot/mansion_bridge.cpp` — C++ implementation connecting GDExtension to
+  - `src/godot/elsewhere_bridge.h` — C-facing bridge API header (no GL/EGL includes)
+  - `src/godot/elsewhere_bridge.cpp` — C++ implementation connecting GDExtension to
     compositor core (compositor, seat, xdg-shell, launch). No threads spawned; all
     calls from owning thread. Nonblocking `wl_event_loop_dispatch(display, 0)`.
-  - `src/godot/mansion_extension.cpp` — GDExtension entry point using raw
+  - `src/godot/elsewhere_extension.cpp` — GDExtension entry point using raw
     `gdextension_interface.h` (no godot-cpp dependency for compilation). Exports
     `godot_gdnative_init`, `godot_gdnative_exit`, `godot_extension_get_library_symbol`.
   - `src/godot/CMakeLists.txt` — build configuration for GDExtension
   - `src/godot/extension.toml` — Godot extension manifest
-  - `tools/build-mansion-extension.sh` — build script (standalone .so, no libgodot.so)
-  - `world/addons/mansion_godot/` — deployed extension (libmansion_godot.so + extension.toml)
+  - `tools/build-elsewhere-extension.sh` — build script (standalone .so, no libgodot.so)
+  - `world/addons/elsewhere_godot/` — deployed extension (libelsewhere_godot.so + extension.toml)
   - `world/project.godot` — updated with `[gdextension]` section for extension registration
   - `world/scenes/main.tscn` — fixed StandardMaterial3D emissive_enabled → emission_enabled
-  Compilation: `mansion_bridge.cpp` compiles against mansion core headers
+  Compilation: `elsewhere_bridge.cpp` compiles against elsewhere core headers
   (compositor.h, compositor-private.h, xdg-shell.h, input.h, launch.h) with
-  zero warnings. `mansion_extension.cpp` compiles against GDExtension interface
-  with zero warnings. Extension built: `build-godot-ext/libmansion_godot.so`
+  zero warnings. `elsewhere_extension.cpp` compiles against GDExtension interface
+  with zero warnings. Extension built: `build-godot-ext/libelsewhere_godot.so`
   (98 KB, 13 symbols verified via `nm -D`). Godot editor build complete
   (1.07 GB `godot.linuxbsd.editor.dev.x86_64`). Project loads cleanly in
   editor and `--path` modes with zero errors. **Blocker:** Godot 4.x stores
@@ -356,13 +356,13 @@ Full reconciliation completed. Handoff at
   server available. No regressions: 28/28 pass in `build` and `build-asan`
   (zero sanitizer errors).
 
-- **P4-T08 Resource and list lifetimes.** `MansionXdgShell` gains
+- **P4-T08 Resource and list lifetimes.** `ElsewhereXdgShell` gains
   `toplevel_list` and `xdg_surface_list` tracking lists;
-  `MansionXdgSurface` gains `shell` back-pointer, `xdg_surface_link` and
-  `toplevel_link` (for `MansionXdgToplevel`). Surfaces and toplevels are
+  `ElsewhereXdgSurface` gains `shell` back-pointer, `xdg_surface_link` and
+  `toplevel_link` (for `ElsewhereXdgToplevel`). Surfaces and toplevels are
   registered in these lists at construction and freed in `destroy_xdg_shell`
   (fixes leak on compositor shutdown and client disconnect). Orphaned
-  `MansionSurface` entries are capped at 10 via age-based eviction with GL
+  `ElsewhereSurface` entries are capped at 10 via age-based eviction with GL
   texture deletion. Fixed two pre-existing leaks: `on_client_destroyed` now
   deletes the listener after removal, and the SIGCHLD event source is stored
   and removed in the cleanup path. Bug fix:
@@ -372,7 +372,7 @@ Full reconciliation completed. Handoff at
   UndefinedBehaviorSanitizer, zero leaks, zero sanitizer errors).
   (2026-09-29, this session)
 
-- **P4-T09 Pending/current surface state.** `MansionSurface` gains
+- **P4-T09 Pending/current surface state.** `ElsewhereSurface` gains
   `pending_buffer_resource`, `pending_x`/`pending_y`, `pending_damage` bounding
   box. `surface_attach` stores pending state; `surface_commit` promotes pending
   to current (preserving current buffer until promoted). SHM stride validation
@@ -388,8 +388,8 @@ Full reconciliation completed. Handoff at
   (2026-09-29, this session)
 
 - **Historical nested P5-T01 Window registry (superseded task text; revised
-  P5-T01 remains open).** `MansionCompositor` gains `toplevel_list` and
-  `toplevel_count`. `MansionXdgSurface` gains `toplevel_link`. Registration
+  P5-T01 remains open).** `ElsewhereCompositor` gains `toplevel_list` and
+  `toplevel_count`. `ElsewhereXdgSurface` gains `toplevel_link`. Registration
   occurs after `xdg_toplevel` creation; unregistration on both `xdg_surface`
   and `wl_surface` destroy. A crash was fixed: during client disconnect the
   wl_surface is destroyed before the xdg_surface, so `on_wl_surface_destroyed`
@@ -453,11 +453,11 @@ Full reconciliation completed. Handoff at
   That approval is superseded by Decision 05; Project 5 is multiple windows,
   not multiple rooms. The 24-test pass is a historical report.
 
-- `smoke-headless` (P1-T01): `mansion-desktop --headless --socket NAME
-  --exit-after-ms N` starts without a display, prints `MANSION_SOCKET=NAME`,
+- `smoke-headless` (P1-T01): `elsewhere --headless --socket NAME
+  --exit-after-ms N` starts without a display, prints `ELSEWHERE_SOCKET=NAME`,
   creates the socket and lock file in `$XDG_RUNTIME_DIR`, exits 0 on its own,
   removes both files, and opens no input devices.
-- `client-globals` (P1-T02, P1-T03): `mansion-test-client` connects and sees
+- `client-globals` (P1-T02, P1-T03): `elsewhere-test-client` connects and sees
   `wl_compositor`, `wl_shm`, `wl_seat`, `xdg_wm_base`; the compositor survives
   the client disconnecting and exits 0 on SIGTERM. The seat now supports
   multiple `get_keyboard`/`get_pointer` binds per seat (P1-T06-A).
@@ -520,7 +520,7 @@ Full reconciliation completed. Handoff at
   (R←G, G←B, B←R, A←A) to compensate for `[B,R,G,A]` internal storage.
   `meson test -C build render-panel` passes; all 10 tests pass on
   both `build` and `build-asan`.
-- **P2-T03 Live updates.** `MansionSurface` gains a `needs_upload` flag set on
+- **P2-T03 Live updates.** `ElsewhereSurface` gains a `needs_upload` flag set on
   buffer commit and cleared after texture upload in `render_panel()`. Only
   surfaces with pending uploads re-upload (damage tracking). Frame callbacks
   continue flowing on every render tick. Added `--commit-color RRGGBB` to the
@@ -553,7 +553,7 @@ Full reconciliation completed. Handoff at
   `meson test -C build render-egl` passes. All 13 tests pass on `build`.
 - **P2-T07 Frame timing.** Compositor gains `--stats` flag. `render()` tracks
   wall-clock time via `std::chrono::steady_clock` and accumulates
-  `MansionRenderer::bytes_uploaded` (set at each `glTexImage2D` call as
+  `ElsewhereRenderer::bytes_uploaded` (set at each `glTexImage2D` call as
   `w × h × 4`). Every 60 frames the accumulated averages are printed to stderr
   as `fps` and `KiB uploaded`, then counters reset. `meson test -C build`
   passes unchanged. Measured numbers in `docs/handoffs/02.md`.
@@ -570,9 +570,9 @@ Full reconciliation completed. Handoff at
 - **P3-T02 Reserved shortcut.** Configurable `--world-key` (default `F12`=88)
   returns to world mode from Application mode. `exit_application_mode()` sends
   `key` release for all pressed keys, empty modifiers, keyboard `leave`, and
-  pointer `leave`. `MansionSeat::pressed_keys` tracks currently-pressed keycodes.
+  pointer `leave`. `ElsewhereSeat::pressed_keys` tracks currently-pressed keycodes.
   `meson test -C build mode-exit` passes (key 42 released, kbd_leave observed).
-- **P3-T03 Host focus loss.** `MansionSeat::stored_mode_when_focus_lost` saves
+- **P3-T03 Host focus loss.** `ElsewhereSeat::stored_mode_when_focus_lost` saves
   current mode on `focus lost`/X11 `FocusOut` (also calls exit_application_mode).
   `focus gained`/X11 `FocusIn` re-enters Application mode if stored mode matches.
   `meson test -C build focus-loss` passes.
@@ -624,7 +624,7 @@ about later work in another checkout. `weston-terminal` is not installed in the 
   is logged. Exit status from `--launch` errors is still only logged (not
   propagated) (P1-T08 partial).
 
-## Environment facts (development container `mansion-dev`, Arch Linux)
+## Environment facts (development container `elsewhere-dev`, Arch Linux)
 
 - meson 1.x, ninja 1.13, g++ (C++20), wayland 1.26, wayland-protocols 1.49,
   wayland-egl, libxkbcommon 1.13.2, mesa 26.2, libx11 1.8.13 (still required by
@@ -644,9 +644,9 @@ about later work in another checkout. `weston-terminal` is not installed in the 
 meson setup build --buildtype=debug   # first time
 meson compile -C build
 meson test -C build --print-errorlogs
-./build/mansion-desktop --help
-./build/mansion-desktop --headless --exit-after-ms 1000
-./build/mansion-desktop --launch weston-terminal        # needs a host WAYLAND_DISPLAY and weston; unverified
+./build/elsewhere --help
+./build/elsewhere --headless --exit-after-ms 1000
+./build/elsewhere --launch weston-terminal        # needs a host WAYLAND_DISPLAY and weston; unverified
 ```
 
 ## Files

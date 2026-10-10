@@ -21,7 +21,7 @@
 #include "input.h"
 #include "launch.h"
 #include "xdg-shell.h"
-#include "godot/mansion_gdextension_adapter.h"
+#include "godot/elsewhere_gdextension_adapter.h"
 
 /* Client Wayland display — events from the real compositor must be
  * dispatched from the event loop so input and configure events are
@@ -31,16 +31,16 @@ static struct wl_event_source* g_client_display_source = nullptr;
 
 /* GDExtension adapter — used for room-camera mode to pump Wayland
  * events and render compositor surfaces in Godot.
- * The actual struct is defined in mansion_gdextension_adapter.h. */
-struct MansionGDExtensionAdapter;
+ * The actual struct is defined in elsewhere_gdextension_adapter.h. */
+struct ElsewhereGDExtensionAdapter;
 
 namespace {
 
-static struct MansionGDExtensionAdapter* g_gdextension_adapter = nullptr;
+static struct ElsewhereGDExtensionAdapter* g_gdextension_adapter = nullptr;
 
 struct Options {
     std::vector<std::string> launch;
-    std::string socket;      // empty: mansion-<pid>
+    std::string socket;      // empty: elsewhere-<pid>
     bool headless = false;   // no host window, no EGL, no host input
     long exit_after_ms = -1; // <0: run until a signal arrives
     std::string screenshot;  // if set, write a PPM screenshot after the loop
@@ -56,10 +56,10 @@ struct Options {
 
 void print_help() {
     std::cout <<
-        "Usage: mansion-desktop [options]\n"
+        "Usage: elsewhere [options]\n"
         "  --launch CMD         launch a Wayland client on the private socket (repeatable)\n"
         "  --launch=CMD         same as above\n"
-        "  --socket NAME        Wayland socket name (default: mansion-<pid>)\n"
+        "  --socket NAME        Wayland socket name (default: elsewhere-<pid>)\n"
         "  --headless           no host window or input; for automated tests\n"
         "  --flat               2D rendering (disable 3D perspective panel, P2-T02)\n"
         "  --camera X,Y,Z,YAW,PITCH  camera position + orientation for 3D panel (P2-T02)\n"
@@ -71,7 +71,7 @@ void print_help() {
         "  --tab-key N          evdev keycode for tab (default: 23=Tab, P5-T02)\n"
         "  --room-camera        use room-mode camera (inside a 3D room, P4-T01)\n"
         "  -h, --help           show this help\n"
-        "The socket name is printed to stdout as MANSION_SOCKET=<name>.\n";
+        "The socket name is printed to stdout as ELSEWHERE_SOCKET=<name>.\n";
 }
 
 // Returns true when parsing succeeded. `--flag=value` and `--flag value` are both accepted.
@@ -327,7 +327,7 @@ int main(int argc, char** argv) {
 
     // Never reuse the host compositor's socket name: this process is nested inside it.
     const std::string socket_name =
-        opts.socket.empty() ? "mansion-" + std::to_string(getpid()) : opts.socket;
+        opts.socket.empty() ? "elsewhere-" + std::to_string(getpid()) : opts.socket;
 
     if (!getenv("XDG_RUNTIME_DIR")) {
         std::cerr << "XDG_RUNTIME_DIR is not set; libwayland cannot create a socket" << std::endl;
@@ -349,11 +349,11 @@ int main(int argc, char** argv) {
     wl_list_init(&client_created_listener.link);
     wl_display_add_client_created_listener(wl_display, &client_created_listener);
 
-    MansionCompositor* compositor = nullptr;
-    MansionDisplay* display = nullptr;
-    MansionXdgShell* xdg_shell = nullptr;
-    MansionSeat* seat = nullptr;
-    std::vector<MansionApp*> apps;
+    ElsewhereCompositor* compositor = nullptr;
+    ElsewhereDisplay* display = nullptr;
+    ElsewhereXdgShell* xdg_shell = nullptr;
+    ElsewhereSeat* seat = nullptr;
+    std::vector<ElsewhereApp*> apps;
     int status = 1;
     bool input_started = false;
 
@@ -374,7 +374,7 @@ int main(int argc, char** argv) {
         }
         /* Cleanup GDExtension adapter if initialized */
         if (g_gdextension_adapter) {
-            mansion_gdextension_adapter_destroy(g_gdextension_adapter);
+            elsewhere_gdextension_adapter_destroy(g_gdextension_adapter);
             g_gdextension_adapter = nullptr;
         }
         if (input_started) input_destroy();
@@ -396,13 +396,13 @@ int main(int argc, char** argv) {
     /* Initialize GDExtension adapter for room-camera mode if requested.
      * The adapter uses the existing compositor and display. */
     if (opts.room_camera) {
-        MansionGDExtensionConfig adapter_config = {0};
+        ElsewhereGDExtensionConfig adapter_config = {0};
         adapter_config.display = wl_display;
         adapter_config.compositor = compositor;
         adapter_config.socket_name = nullptr;
         adapter_config.debug_logging = 0;
 
-        g_gdextension_adapter = mansion_gdextension_adapter_create(&adapter_config);
+        g_gdextension_adapter = elsewhere_gdextension_adapter_create(&adapter_config);
         if (g_gdextension_adapter) {
             std::cerr << "[GDExtension] Adapter initialized for room-camera mode" << std::endl;
         } else {
@@ -546,8 +546,8 @@ int main(int argc, char** argv) {
     // Scripts and test harnesses read this line to find the socket.
     // Print it only after the main loop begins so clients know the
     // compositor is actively dispatching — not just listening.
-    std::cout << "MANSION_SOCKET=" << socket_name << std::endl;
-    std::cerr << "Mansion Desktop running on socket: " << socket_name
+    std::cout << "ELSEWHERE_SOCKET=" << socket_name << std::endl;
+    std::cerr << "Elsewhere running on socket: " << socket_name
               << (opts.headless ? " (headless)" : "")
               << (opts.screenshot.empty() ? "" : " [screenshot: " + opts.screenshot + "]")
               << std::endl;
@@ -585,8 +585,8 @@ int main(int argc, char** argv) {
          * This is only needed in room-camera mode where the GDExtension
          * adapter is managing the event loop. */
         if (g_gdextension_adapter) {
-            mansion_gdextension_adapter_pump(g_gdextension_adapter);
-            mansion_gdextension_adapter_flush(g_gdextension_adapter);
+            elsewhere_gdextension_adapter_pump(g_gdextension_adapter);
+            elsewhere_gdextension_adapter_flush(g_gdextension_adapter);
         }
 
         if (g_client_display && wl_display_get_error(g_client_display)) {
@@ -659,7 +659,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    std::cerr << "Mansion Desktop exiting (frames: " << frame_count << ")" << std::endl;
+    std::cerr << "Elsewhere exiting (frames: " << frame_count << ")" << std::endl;
     cleanup();
     return status;
 }

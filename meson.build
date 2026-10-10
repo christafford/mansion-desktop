@@ -1,4 +1,4 @@
-project('mansion-desktop', ['cpp', 'c'],
+project('elsewhere', ['cpp', 'c'],
     version: '0.1',
     default_options: ['warning_level=2', 'debug=true', 'cpp_std=c++20', 'c_std=c11'])
 
@@ -72,8 +72,8 @@ godot_include = include_directories('tools/godot-4.7.2-stable/core/extension')
 
 # GDExtension source files - use compositor-core API, not old bridge
 gdextension_sources = files(
-    'src/godot/mansion_extension.cpp',
-    'src/godot/mansion_gdextension_adapter.cpp',
+    'src/godot/elsewhere_extension.cpp',
+    'src/godot/elsewhere_gdextension_adapter.cpp',
 )
 
 # GDExtension shared library
@@ -84,7 +84,7 @@ gdextension_sources = files(
 # Note: wayland-client is needed for wl_display_dispatch_pending used in pump()
 # Note: -fvisibility=hidden hides symbols by default, so we need explicit visibility
 # for exported functions. GDExtensionInit must be visible.
-mansion_gdextension = shared_library('mansion_godot',
+elsewhere_gdextension = shared_library('elsewhere_godot',
     gdextension_sources,
     cpp_args: cpp_args + ['-fPIC', '-std=c++17', '-fvisibility=hidden'],
     include_directories: [include_directories('src'), godot_cpp_include, godot_include],
@@ -93,19 +93,19 @@ mansion_gdextension = shared_library('mansion_godot',
     install: false,
 )
 
-mansion_exe = executable('mansion-desktop',
+elsewhere_exe = executable('elsewhere',
     sources_display, xdg_shell_server_h, xdg_shell_code, xdg_shell_client_h,
     relative_ptr_client_h, relative_ptr_code,
     cpp_args: cpp_args,
     dependencies: [wayland_server, wayland_client, wayland_egl, egl, glesv2, xkbcommon],
     include_directories: include_directories('.'),
-    link_with: [compositor_core_lib, compositor_protocol_lib, mansion_gdextension],
+    link_with: [compositor_core_lib, compositor_protocol_lib, elsewhere_gdextension],
     install: true,
 )
 
 # Test client and headless tests (tests/README.md)
-test_client = executable('mansion-test-client',
-    files('tests/mansion-test-client.c'), xdg_shell_client_h, xdg_shell_code,
+test_client = executable('elsewhere-test-client',
+    files('tests/elsewhere-test-client.c'), xdg_shell_client_h, xdg_shell_code,
     c_args: ['-Wall', '-Wextra'],
     dependencies: [wayland_client, egl, glesv2],
 )
@@ -121,72 +121,72 @@ test_env.set('ASAN_OPTIONS', 'detect_leaks=0:halt_on_error=1:abort_on_error=1:pr
 test_env.set('MSAN_OPTIONS', 'detect_leaks=0:halt_on_error=1:abort_on_error=1:print_summary=1:print_stacktrace=1')
 
 test('smoke-headless', find_program('tests/smoke_headless.sh'),
-    args: [mansion_exe, test_client], env: test_env, suite: 'p1', timeout: 30)
+    args: [elsewhere_exe, test_client], env: test_env, suite: 'p1', timeout: 30)
 test('client-globals', find_program('tests/client_globals.sh'),
-    args: [mansion_exe, test_client], env: test_env, suite: 'p1', timeout: 30)
+    args: [elsewhere_exe, test_client], env: test_env, suite: 'p1', timeout: 30)
 test('client-toplevel', find_program('tests/client_toplevel.sh'),
-    args: [mansion_exe, test_client], env: test_env, suite: 'p1', timeout: 30)
+    args: [elsewhere_exe, test_client], env: test_env, suite: 'p1', timeout: 30)
 test('client-frame', find_program('tests/client_frame.sh'),
-    args: [mansion_exe, test_client], env: test_env, suite: 'p1', timeout: 30)
+    args: [elsewhere_exe, test_client], env: test_env, suite: 'p1', timeout: 30)
 test('render-shm', find_program('tests/render_shm.sh'),
-    args: [mansion_exe, test_client], env: test_env, suite: 'p1', timeout: 30)
+    args: [elsewhere_exe, test_client], env: test_env, suite: 'p1', timeout: 30)
 test('render-mixed', find_program('tests/render_mixed.sh'),
-    args: [mansion_exe, test_client], env: test_env, suite: 'p1', timeout: 30)
+    args: [elsewhere_exe, test_client], env: test_env, suite: 'p1', timeout: 30)
 test('input-routing', find_program('tests/input_routing.sh'),
-    args: [mansion_exe, test_client], env: test_env, suite: 'p1', timeout: 30)
+    args: [elsewhere_exe, test_client], env: test_env, suite: 'p1', timeout: 30)
 test('launch-client', find_program('tests/launch_client.sh'),
-    args: [mansion_exe, test_client], env: test_env, suite: 'p1', timeout: 30)
+    args: [elsewhere_exe, test_client], env: test_env, suite: 'p1', timeout: 30)
 test('lifecycle', find_program('tests/lifecycle.sh'),
-    args: [mansion_exe, test_client], env: test_env, suite: 'p1', timeout: 30)
+    args: [elsewhere_exe, test_client], env: test_env, suite: 'p1', timeout: 30)
 
 test('render-panel', find_program('tests/render_panel.sh'),
-    args: [mansion_exe, test_client], env: test_env, suite: 'p2', timeout: 30)
+    args: [elsewhere_exe, test_client], env: test_env, suite: 'p2', timeout: 30)
 test('render-update', find_program('tests/render-update.sh'),
-    args: [mansion_exe, test_client], env: test_env, suite: 'p2', timeout: 45)
+    args: [elsewhere_exe, test_client], env: test_env, suite: 'p2', timeout: 45)
 test('p4-surface-state', find_program('tests/p4_surface_state.sh'),
-    args: [mansion_exe, test_client], env: test_env, suite: 'p4', timeout: 60)
+    args: [elsewhere_exe, test_client], env: test_env, suite: 'p4', timeout: 60)
 test('xdg-shell', find_program('tests/xdg_shell.sh'),
-    args: [mansion_exe, test_client], env: test_env, suite: 'p4', timeout: 30)
+    args: [elsewhere_exe, test_client], env: test_env, suite: 'p4', timeout: 30)
 test('render-lifecycle', find_program('tests/render_lifecycle.sh'),
-    args: [mansion_exe, test_client], env: test_env, suite: 'p2', timeout: 45)
+    args: [elsewhere_exe, test_client], env: test_env, suite: 'p2', timeout: 45)
 
 test('render-egl', find_program('tests/render_egl.sh'),
-    args: [mansion_exe, test_client], env: test_env, suite: 'p2', timeout: 45)
+    args: [elsewhere_exe, test_client], env: test_env, suite: 'p2', timeout: 45)
 
 test('camera-move', find_program('tests/camera-move.sh'),
-    args: [mansion_exe, test_client], env: test_env, suite: 'p2', timeout: 60)
+    args: [elsewhere_exe, test_client], env: test_env, suite: 'p2', timeout: 60)
 
 test('mode-routing', find_program('tests/mode_routing.sh'),
-    args: [mansion_exe, test_client], env: test_env, suite: 'p3', timeout: 30)
+    args: [elsewhere_exe, test_client], env: test_env, suite: 'p3', timeout: 30)
 
 test('mode-exit', find_program('tests/mode_exit.sh'),
-    args: [mansion_exe, test_client], env: test_env, suite: 'p3', timeout: 30)
+    args: [elsewhere_exe, test_client], env: test_env, suite: 'p3', timeout: 30)
 
 test('focus-loss', find_program('tests/focus_loss.sh'),
-    args: [mansion_exe, test_client], env: test_env, suite: 'p3', timeout: 30)
+    args: [elsewhere_exe, test_client], env: test_env, suite: 'p3', timeout: 30)
 
 test('present-fullsize', find_program('tests/present_fullsize.sh'),
-    args: [mansion_exe, test_client], env: test_env, suite: 'p3', timeout: 30)
+    args: [elsewhere_exe, test_client], env: test_env, suite: 'p3', timeout: 30)
 
 test('select-panel', find_program('tests/select_panel.sh'),
-    args: [mansion_exe, test_client], env: test_env, suite: 'p3', timeout: 30)
+    args: [elsewhere_exe, test_client], env: test_env, suite: 'p3', timeout: 30)
 
 test('app-exit', find_program('tests/app_exit.sh'),
-    args: [mansion_exe, test_client], env: test_env, suite: 'p3', timeout: 45)
+    args: [elsewhere_exe, test_client], env: test_env, suite: 'p3', timeout: 45)
 
 test('room-render', find_program('tests/room_render.sh'),
-    args: [mansion_exe, test_client], env: test_env, suite: 'p4', timeout: 30)
+    args: [elsewhere_exe, test_client], env: test_env, suite: 'p4', timeout: 30)
 test('room-collision', find_program('tests/room_collision.sh'),
-    args: [mansion_exe, test_client], env: test_env, suite: 'p4', timeout: 45)
+    args: [elsewhere_exe, test_client], env: test_env, suite: 'p4', timeout: 45)
 
 test('teleport', find_program('tests/teleport.sh'),
-    args: [mansion_exe, test_client], env: test_env, suite: 'p4', timeout: 45)
+    args: [elsewhere_exe, test_client], env: test_env, suite: 'p4', timeout: 45)
 
 test('milestone1', find_program('tests/milestone1.sh'),
-    args: [mansion_exe, test_client], env: test_env, suite: 'p4', timeout: 60)
+    args: [elsewhere_exe, test_client], env: test_env, suite: 'p4', timeout: 60)
 
 test('focus-cycle', find_program('tests/focus_cycle.sh'),
-    args: [mansion_exe, test_client], env: test_env, suite: 'p5', timeout: 30)
+    args: [elsewhere_exe, test_client], env: test_env, suite: 'p5', timeout: 30)
 
 # P2-T01: header-only math module unit test
 math_test = executable('test_math',

@@ -25,7 +25,7 @@ run_pair() {
     COMPOSITOR_PID=""
 
     # Start compositor.
-    "$MANSION" --headless --socket "$SOCKET" \
+    "$ELSEWHERE" --headless --socket "$SOCKET" \
         --camera 0,0,10,0,0 \
         --exit-after-ms "$_compositor_args" \
         --screenshot "$_screenshot" \
@@ -34,7 +34,7 @@ run_pair() {
 
     # Wait for compositor socket to appear.
     for _ in $(seq 1 100); do
-        if grep -q "^MANSION_SOCKET=$_socket\$" "$WORK/compositor.out" 2>/dev/null; then
+        if grep -q "^ELSEWHERE_SOCKET=$_socket\$" "$WORK/compositor.out" 2>/dev/null; then
             break
         fi
         if ! kill -0 "$COMPOSITOR_PID" 2>/dev/null; then

@@ -7,8 +7,8 @@
 
 #include "renderer-surface.h"
 
-struct MansionCompositor;
-struct MansionRenderer;
+struct ElsewhereCompositor;
+struct ElsewhereRenderer;
 
 // Camera configuration (P2-T02)
 struct Camera {
@@ -26,8 +26,8 @@ struct Panel {
     float nx = 0, ny = 0, nz = -1; // normal (facing camera by default)
 };
 
-struct MansionDisplay {
-    struct MansionCompositor* compositor;
+struct ElsewhereDisplay {
+    struct ElsewhereCompositor* compositor;
     struct wl_display* wl_display;
     EGLDisplay egl_display;
     EGLContext egl_context;
@@ -36,7 +36,7 @@ struct MansionDisplay {
     int egl_config_count;
     int window_width;
     int window_height;
-    struct MansionRenderer* renderer;
+    struct ElsewhereRenderer* renderer;
 
     /* Wayland client connection for the host window (P5: native presentation).
      * Uses surfaceless Mesa + EGL PBuffer + wl_shm buffer export. */
@@ -73,27 +73,27 @@ struct MansionDisplay {
     float teleport_yaw = 0, teleport_pitch = 0;
 };
 
-struct MansionDisplay* create_display(struct MansionCompositor* compositor, struct wl_display* wl_display);
+struct ElsewhereDisplay* create_display(struct ElsewhereCompositor* compositor, struct wl_display* wl_display);
 /* Headless: tries EGL surfaceless Mesa for offscreen rendering; falls back to no
  * renderer if EGL is unavailable. Frame callbacks always fire. */
-struct MansionDisplay* create_display_headless(struct MansionCompositor* compositor, struct wl_display* wl_display);
-void destroy_display(struct MansionDisplay* display);
-void display_resize(struct MansionDisplay* display);
-void swap_buffers(struct MansionDisplay* display);
-void render(struct MansionDisplay* display);
-struct MansionRenderer* get_renderer(struct MansionDisplay* display);
-EGLContext get_egl_context(struct MansionDisplay* display);
-bool init_renderer(struct MansionDisplay* display);
-void destroy_renderer(struct MansionDisplay* display);
-void render_surface(struct MansionDisplay* display, struct wl_resource* surface, int32_t x, int32_t y);
+struct ElsewhereDisplay* create_display_headless(struct ElsewhereCompositor* compositor, struct wl_display* wl_display);
+void destroy_display(struct ElsewhereDisplay* display);
+void display_resize(struct ElsewhereDisplay* display);
+void swap_buffers(struct ElsewhereDisplay* display);
+void render(struct ElsewhereDisplay* display);
+struct ElsewhereRenderer* get_renderer(struct ElsewhereDisplay* display);
+EGLContext get_egl_context(struct ElsewhereDisplay* display);
+bool init_renderer(struct ElsewhereDisplay* display);
+void destroy_renderer(struct ElsewhereDisplay* display);
+void render_surface(struct ElsewhereDisplay* display, struct wl_resource* surface, int32_t x, int32_t y);
 /* Render one final frame and write the framebuffer as a binary PPM (P6) file.
  * Returns false if EGL/renderer is unavailable. */
-bool take_screenshot(struct MansionDisplay* display, const char* path);
+bool take_screenshot(struct ElsewhereDisplay* display, const char* path);
 /* P4-T01: log camera position to stderr (for test verification). */
-void log_camera_position(struct MansionDisplay* display);
+void log_camera_position(struct ElsewhereDisplay* display);
 
 /* P4-T02: teleport camera to stored viewpoint facing the monitor. */
-void input_teleport(struct MansionDisplay* display);
+void input_teleport(struct ElsewhereDisplay* display);
 
 /* ─── Renderer surface accessors (P21-T10: separate protocol from presentation) ───
  *
@@ -112,14 +112,14 @@ void input_teleport(struct MansionDisplay* display);
  * set_renderer_surface_texture() stores a GL texture ID on the
  * renderer surface (called after texture upload completes).
  */
-struct MansionRendererSurface* get_renderer_surface(
-    struct MansionSurface* surface);
-struct MansionRendererSurface* ensure_renderer_surface(
-    struct MansionSurface* surface);
+struct ElsewhereRendererSurface* get_renderer_surface(
+    struct ElsewhereSurface* surface);
+struct ElsewhereRendererSurface* ensure_renderer_surface(
+    struct ElsewhereSurface* surface);
 void set_renderer_surface_texture(
-    struct MansionSurface* surface, GLuint texture);
+    struct ElsewhereSurface* surface, GLuint texture);
 
 /* destroy_renderer_surface() frees the GL texture and removes the
  * mapping for a surface that is being destroyed (orphaned).
  * Only called from compositor.cpp during surface destruction. */
-void destroy_renderer_surface(struct MansionSurface* surface);
+void destroy_renderer_surface(struct ElsewhereSurface* surface);

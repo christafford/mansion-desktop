@@ -8,7 +8,7 @@ const ROOMS := [
 	{"id": "garden", "open_side": 1, "title": "LIBRARY & WINTER GARDEN", "subtitle": "A place for growing ideas", "origin": Vector3(1.4, 0, 11), "yaw": PI / 2, "width": 3.8, "depth": 12.8, "color": "afbda0"},
 	{"id": "gallery", "open_side": -1, "entrance": false, "title": "04  THE CABINET GALLERY", "subtitle": "Look • compare • imagine", "origin": Vector3(-1.4, 0, 13), "yaw": -PI / 2, "width": 3.8, "depth": 12.8, "color": "74444c"},
 	{"id": "workshop", "title": "05  THE INVENTOR'S ROOM", "subtitle": "Build • test • rethink", "origin": Vector3(1.4, 0, 15), "yaw": PI / 2, "width": 3.8, "depth": 6.4, "color": "4e6171"},
-	{"id": "foyer", "title": "THE GRAND FOYER", "subtitle": "The mansion awaits", "origin": Vector3(0, 0, 18.5), "yaw": 0.0, "width": 20.0, "depth": 24.0, "height": 13.0, "color": "b5ae98"}
+	{"id": "foyer", "title": "THE GRAND FOYER", "subtitle": "The elsewhere awaits", "origin": Vector3(0, 0, 18.5), "yaw": 0.0, "width": 20.0, "depth": 24.0, "height": 13.0, "color": "b5ae98"}
 ]
 static var volumes: Array[AABB] = []
 var study: Node3D
@@ -51,9 +51,9 @@ func _ready() -> void:
 	for spec in ROOMS:
 		var room := Node3D.new()
 		room.name = spec.id
-		room.set_meta("room_id", "mansion." + spec.id)
+		room.set_meta("room_id", "elsewhere." + spec.id)
 		room.set_meta("depth", spec.depth)
-		room.add_to_group("mansion_rooms")
+		room.add_to_group("elsewhere_rooms")
 		add_child(room)
 		room.position = spec.origin
 		room.rotation.y = spec.yaw
@@ -160,7 +160,7 @@ func shell(room: Node3D, spec: Dictionary) -> void:
 	var floor_mat = study.material(Color("ad9271"), "res://assets/textures/walnut_veneer_4k_jpg.jpg", 4)
 	if spec.id in ["garden", "gallery"]:
 		floor_mat = ShaderMaterial.new()
-		floor_mat.shader = preload("res://scripts/mansion_stone.gdshader")
+		floor_mat.shader = preload("res://scripts/elsewhere_stone.gdshader")
 		floor_mat.set_shader_parameter("checker", spec.id == "garden")
 		floor_mat.set_shader_parameter("base_color", Color("aea88c") if spec.id == "garden" else Color("393d45"))
 	part(room, "Floor", Vector3(w, 0.16, d + 0.2), Vector3(0, -0.08, d / 2), floor_mat, true)

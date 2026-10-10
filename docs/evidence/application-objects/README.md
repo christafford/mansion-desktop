@@ -17,6 +17,6 @@ study arrival camera: player spawn `(2.4, 0.05, 3.1)`, yaw `0.38`, pitch `-0.08`
 Reproduce with the graphical `world/tests/application_objects.gd` test. Text is
 a world preview; ordinary typing uses the existing full-size application view.
 These are agent-inspected renders and injected input, not a human or physical
-input/latency trial. Session placement is not saved across Mansion restarts.
+input/latency trial. Session placement is not saved across Elsewhere restarts.
 See [handoff 26](../../handoffs/26-application-objects.md) for test commands,
 regression limits and the known pre-existing navigation failure.

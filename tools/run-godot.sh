@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Mansion Desktop — Run the Godot world frontend.
+# Elsewhere — Run the Godot world frontend.
 # Launch the study. The legacy C++ executable remains a separate frontend.
 #
 # Usage:

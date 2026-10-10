@@ -32,18 +32,18 @@
  * A global pointer so compositor.cpp can access the current display to
  * create renderer surfaces during surface creation.  Set in create_display
  * and cleared in destroy_display. */
-static struct MansionDisplay* g_current_display = nullptr;
+static struct ElsewhereDisplay* g_current_display = nullptr;
 
 /* Renderer-surface mapping: protocol surface resource pointer ->
  * renderer-surface.  Key is the raw wl_resource* cast to a size_t. */
-static std::unordered_map<size_t, MansionRendererSurface>& surface_renderer_map() {
-    static std::unordered_map<size_t, MansionRendererSurface> map;
+static std::unordered_map<size_t, ElsewhereRendererSurface>& surface_renderer_map() {
+    static std::unordered_map<size_t, ElsewhereRendererSurface> map;
     return map;
 }
 
-/* ─── MansionRenderer definition ───────────────────────────────────────────── */
+/* ─── ElsewhereRenderer definition ───────────────────────────────────────────── */
 
-struct MansionRenderer {
+struct ElsewhereRenderer {
     GLuint program;
     GLint pos_attrib;
     GLint tex_attrib;
@@ -90,7 +90,7 @@ static const EGLint context_attr[] = {
 static GLuint create_shader(GLenum type, const char* source);
 static GLuint create_program(const char* vertex_shader_source,
                              const char* fragment_shader_source);
-static void render_application_fullscreen(struct MansionDisplay* display);
+static void render_application_fullscreen(struct ElsewhereDisplay* display);
 
 /* ─── Shader / program helpers ──────────────────────────────────────────────── */
 
@@ -172,7 +172,7 @@ struct host_window_state {
     bool configured;
     bool pointer_inside = false;
     double pointer_x = 0, pointer_y = 0;
-    struct MansionDisplay *display;     /* back-pointer for size sync */
+    struct ElsewhereDisplay *display;     /* back-pointer for size sync */
 };
 
 /* ─── wl_registry global ───────────────────────────────────────────────────── */
@@ -290,7 +290,7 @@ static void toplevel_configure(void *data, struct xdg_toplevel *toplevel,
     hws->width  = width;
     hws->height = height;
 
-    /* Sync the MansionDisplay dimensions so the renderer uses the
+    /* Sync the ElsewhereDisplay dimensions so the renderer uses the
      * compositor-reported size instead of the startup default. */
     if (hws->display) {
         hws->display->window_width  = width;
@@ -532,7 +532,7 @@ static void seat_capabilities(void *data, struct wl_seat *seat,
  * for frame presentation to the compositor.
  */
 
-bool setup_wayland_client_window(struct MansionDisplay* display)
+bool setup_wayland_client_window(struct ElsewhereDisplay* display)
 {
     /* Connect to the Wayland compositor (reads WAYLAND_DISPLAY env var). */
     struct wl_display *wl_client = wl_display_connect(nullptr);
@@ -582,15 +582,15 @@ bool setup_wayland_client_window(struct MansionDisplay* display)
     wl_proxy_add_listener((struct wl_proxy *)hws->toplevel,
                           (void (**)(void))&toplevel_listener, hws);
 
-    xdg_toplevel_set_title(hws->toplevel, "Mansion Desktop");
-    xdg_toplevel_set_app_id(hws->toplevel, "mansion-desktop");
+    xdg_toplevel_set_title(hws->toplevel, "Elsewhere");
+    xdg_toplevel_set_app_id(hws->toplevel, "elsewhere");
 
     /* Commit the surface so the compositor schedules a configure. */
-    fprintf(stderr, "[mansion] wl_surface_commit (size %dx%d)\n",
+    fprintf(stderr, "[elsewhere] wl_surface_commit (size %dx%d)\n",
             display->window_width, display->window_height);
     wl_surface_commit(hws->surface);
     wl_display_roundtrip(wl_client);
-    fprintf(stderr, "[mansion] roundtrip done, configured=%d, size=%dx%d\n",
+    fprintf(stderr, "[elsewhere] roundtrip done, configured=%d, size=%dx%d\n",
             hws->configured, hws->width, hws->height);
 
     /* The configure callback will fill in width/height.
@@ -607,7 +607,7 @@ bool setup_wayland_client_window(struct MansionDisplay* display)
     return true;
 }
 
-void destroy_wayland_client_window(struct MansionDisplay* display)
+void destroy_wayland_client_window(struct ElsewhereDisplay* display)
 {
     if (!display) return;
 
@@ -641,7 +641,7 @@ void destroy_wayland_client_window(struct MansionDisplay* display)
  * test client uses and is known to work reliably.
  */
 
-static bool create_egl_for_wayland(struct MansionDisplay* display)
+static bool create_egl_for_wayland(struct ElsewhereDisplay* display)
 {
     if (!display->wl_client_display) return false;
 
@@ -668,7 +668,7 @@ static bool create_egl_for_wayland(struct MansionDisplay* display)
         eglTerminate(egl_dpy);
         return false;
     }
-    fprintf(stderr, "[mansion] EGL (surfaceless): v%d.%d\n", egl_major, egl_minor);
+    fprintf(stderr, "[elsewhere] EGL (surfaceless): v%d.%d\n", egl_major, egl_minor);
 
     /* PBuffer requires EGL_PBUFFER_BIT in the config. */
     EGLint pbuffer_config_attr[] = {
@@ -716,7 +716,7 @@ static bool create_egl_for_wayland(struct MansionDisplay* display)
         eglTerminate(egl_dpy);
         return false;
     }
-    fprintf(stderr, "[mansion] EGL: pbuffer surface created (%dx%d)\n",
+    fprintf(stderr, "[elsewhere] EGL: pbuffer surface created (%dx%d)\n",
             display->window_width, display->window_height);
 
     if (eglMakeCurrent(egl_dpy, egl_surf, egl_surf, egl_ctx) == EGL_FALSE) {
@@ -727,7 +727,7 @@ static bool create_egl_for_wayland(struct MansionDisplay* display)
         eglTerminate(egl_dpy);
         return false;
     }
-    fprintf(stderr, "[mansion] EGL: make current OK\n");
+    fprintf(stderr, "[elsewhere] EGL: make current OK\n");
 
     /* Enable vsync. */
     eglSwapInterval(egl_dpy, 1);
@@ -744,29 +744,29 @@ static bool create_egl_for_wayland(struct MansionDisplay* display)
 
 /* ─── create_egl_and_window (Wayland version) ─────────────────────────────── */
 
-bool create_egl_and_window(struct MansionDisplay* mansion_display)
+bool create_egl_and_window(struct ElsewhereDisplay* elsewhere_display)
 {
     /* Set up the Wayland client window (reconnect path). */
-    if (!setup_wayland_client_window(mansion_display)) {
+    if (!setup_wayland_client_window(elsewhere_display)) {
         return false;
     }
 
-    if (!create_egl_for_wayland(mansion_display)) {
-        destroy_wayland_client_window(mansion_display);
+    if (!create_egl_for_wayland(elsewhere_display)) {
+        destroy_wayland_client_window(elsewhere_display);
         return false;
     }
 
     /* Reinitialize the renderer (shaders, etc.) on the new EGL context. */
-    if (!init_renderer(mansion_display)) {
+    if (!init_renderer(elsewhere_display)) {
         std::cerr << "Reconnect: Failed to reinitialize renderer" << std::endl;
-        eglMakeCurrent(mansion_display->egl_display, EGL_NO_SURFACE,
+        eglMakeCurrent(elsewhere_display->egl_display, EGL_NO_SURFACE,
                        EGL_NO_SURFACE, EGL_NO_CONTEXT);
-        eglDestroySurface(mansion_display->egl_display,
-                          mansion_display->egl_surface);
-        eglDestroyContext(mansion_display->egl_display,
-                          mansion_display->egl_context);
-        eglTerminate(mansion_display->egl_display);
-        destroy_wayland_client_window(mansion_display);
+        eglDestroySurface(elsewhere_display->egl_display,
+                          elsewhere_display->egl_surface);
+        eglDestroyContext(elsewhere_display->egl_display,
+                          elsewhere_display->egl_context);
+        eglTerminate(elsewhere_display->egl_display);
+        destroy_wayland_client_window(elsewhere_display);
         return false;
     }
 
@@ -775,53 +775,53 @@ bool create_egl_and_window(struct MansionDisplay* mansion_display)
 
 /* ─── create_display (Wayland client path) ─────────────────────────────────── */
 
-struct MansionDisplay* create_display(struct MansionCompositor* compositor,
+struct ElsewhereDisplay* create_display(struct ElsewhereCompositor* compositor,
                                        struct wl_display* wl_display)
 {
-    auto* mansion_display = new MansionDisplay;
-    mansion_display->compositor = compositor;
-    mansion_display->wl_display = wl_display;
-    mansion_display->egl_config_count = 0;
-    mansion_display->window_width = 1024;
-    mansion_display->window_height = 768;
-    mansion_display->renderer = nullptr;
-    mansion_display->egl_display = EGL_NO_DISPLAY;
-    mansion_display->egl_context = EGL_NO_CONTEXT;
-    mansion_display->egl_surface = EGLSurface(nullptr);
-    mansion_display->wl_client_display = nullptr;
-    mansion_display->wl_surface = nullptr;
+    auto* elsewhere_display = new ElsewhereDisplay;
+    elsewhere_display->compositor = compositor;
+    elsewhere_display->wl_display = wl_display;
+    elsewhere_display->egl_config_count = 0;
+    elsewhere_display->window_width = 1024;
+    elsewhere_display->window_height = 768;
+    elsewhere_display->renderer = nullptr;
+    elsewhere_display->egl_display = EGL_NO_DISPLAY;
+    elsewhere_display->egl_context = EGL_NO_CONTEXT;
+    elsewhere_display->egl_surface = EGLSurface(nullptr);
+    elsewhere_display->wl_client_display = nullptr;
+    elsewhere_display->wl_surface = nullptr;
 
-    g_current_display = mansion_display;
+    g_current_display = elsewhere_display;
 
     /* Create the host window using native Wayland client + EGL. */
-    if (!create_egl_and_window(mansion_display)) {
+    if (!create_egl_and_window(elsewhere_display)) {
         std::cerr << "Warning: Failed to create Wayland window + EGL, running headless"
                   << std::endl;
-        delete mansion_display;
+        delete elsewhere_display;
         return nullptr;
     }
 
-    return mansion_display;
+    return elsewhere_display;
 }
 
 /* ─── create_display_headless (unchanged) ──────────────────────────────────── */
 
-struct MansionDisplay* create_display_headless(struct MansionCompositor* compositor,
+struct ElsewhereDisplay* create_display_headless(struct ElsewhereCompositor* compositor,
                                                 struct wl_display* wl_display)
 {
-    auto* mansion_display = new MansionDisplay;
-    mansion_display->compositor = compositor;
-    mansion_display->wl_display = wl_display;
-    mansion_display->egl_display = EGL_NO_DISPLAY;
-    mansion_display->egl_context = EGL_NO_CONTEXT;
-    mansion_display->egl_surface = EGL_NO_SURFACE;
-    mansion_display->egl_config = nullptr;
-    mansion_display->egl_config_count = 0;
-    mansion_display->window_width = 1024;
-    mansion_display->window_height = 768;
-    mansion_display->renderer = nullptr;
+    auto* elsewhere_display = new ElsewhereDisplay;
+    elsewhere_display->compositor = compositor;
+    elsewhere_display->wl_display = wl_display;
+    elsewhere_display->egl_display = EGL_NO_DISPLAY;
+    elsewhere_display->egl_context = EGL_NO_CONTEXT;
+    elsewhere_display->egl_surface = EGL_NO_SURFACE;
+    elsewhere_display->egl_config = nullptr;
+    elsewhere_display->egl_config_count = 0;
+    elsewhere_display->window_width = 1024;
+    elsewhere_display->window_height = 768;
+    elsewhere_display->renderer = nullptr;
 
-    g_current_display = mansion_display;
+    g_current_display = elsewhere_display;
 
     /* Try to set up EGL with surfaceless Mesa for offscreen rendering.
      * If EGL is unavailable, keep running without a renderer and still
@@ -838,20 +838,20 @@ struct MansionDisplay* create_display_headless(struct MansionCompositor* composi
         egl_dpy = eglGetPlatformDisplay(EGL_PLATFORM_SURFACELESS_MESA, nullptr, nullptr);
         if (egl_dpy == EGL_NO_DISPLAY) {
             std::cerr << "Headless EGL: surfaceless Mesa not available" << std::endl;
-            return mansion_display;
+            return elsewhere_display;
         }
     } else {
         egl_dpy = eglGetDisplay(EGL_DEFAULT_DISPLAY);
         if (egl_dpy == EGL_NO_DISPLAY) {
             std::cerr << "Headless EGL: cannot get display" << std::endl;
-            return mansion_display;
+            return elsewhere_display;
         }
     }
 
     if (!eglInitialize(egl_dpy, &egl_major, &egl_minor)) {
         std::cerr << "Headless EGL: init failed" << std::endl;
         if (has_surfaceless) eglTerminate(egl_dpy);
-        return mansion_display;
+        return elsewhere_display;
     }
 
     /* Surfaceless Mesa requires EGL_PBUFFER_BIT in the config attributes. */
@@ -866,21 +866,21 @@ struct MansionDisplay* create_display_headless(struct MansionCompositor* composi
         EGL_NONE
     };
 
-    if (!eglChooseConfig(egl_dpy, headless_config_attr, &mansion_display->egl_config, 1, &num_configs) || num_configs == 0) {
+    if (!eglChooseConfig(egl_dpy, headless_config_attr, &elsewhere_display->egl_config, 1, &num_configs) || num_configs == 0) {
         std::cerr << "Headless EGL: no config" << std::endl;
         eglTerminate(egl_dpy);
-        return mansion_display;
+        return elsewhere_display;
     }
 
-    mansion_display->egl_display = egl_dpy;
+    elsewhere_display->egl_display = egl_dpy;
 
-    mansion_display->egl_context = eglCreateContext(egl_dpy,
-                                                     mansion_display->egl_config,
+    elsewhere_display->egl_context = eglCreateContext(egl_dpy,
+                                                     elsewhere_display->egl_config,
                                                      EGL_NO_CONTEXT, context_attr);
-    if (mansion_display->egl_context == EGL_NO_CONTEXT) {
+    if (elsewhere_display->egl_context == EGL_NO_CONTEXT) {
         std::cerr << "Headless EGL: context creation failed" << std::endl;
         eglTerminate(egl_dpy);
-        return mansion_display;
+        return elsewhere_display;
     }
 
     EGLint pbuffer_attr[] = {
@@ -889,43 +889,43 @@ struct MansionDisplay* create_display_headless(struct MansionCompositor* composi
         EGL_NONE
     };
 
-    EGLSurface egl_surf = eglCreatePbufferSurface(egl_dpy, mansion_display->egl_config, pbuffer_attr);
+    EGLSurface egl_surf = eglCreatePbufferSurface(egl_dpy, elsewhere_display->egl_config, pbuffer_attr);
     if (egl_surf == EGL_NO_SURFACE) {
         std::cerr << "Headless EGL: pbuffer creation failed" << std::endl;
-        eglDestroyContext(egl_dpy, mansion_display->egl_context);
+        eglDestroyContext(egl_dpy, elsewhere_display->egl_context);
         eglTerminate(egl_dpy);
-        return mansion_display;
+        return elsewhere_display;
     }
 
-    mansion_display->egl_surface = egl_surf;
+    elsewhere_display->egl_surface = egl_surf;
 
-    if (eglMakeCurrent(egl_dpy, egl_surf, egl_surf, mansion_display->egl_context) == EGL_FALSE) {
+    if (eglMakeCurrent(egl_dpy, egl_surf, egl_surf, elsewhere_display->egl_context) == EGL_FALSE) {
         std::cerr << "Headless EGL: make current failed" << std::endl;
         eglDestroySurface(egl_dpy, egl_surf);
-        eglDestroyContext(egl_dpy, mansion_display->egl_context);
+        eglDestroyContext(egl_dpy, elsewhere_display->egl_context);
         eglTerminate(egl_dpy);
-        return mansion_display;
+        return elsewhere_display;
     }
 
     /* Enable vsync to prevent buffer swap tearing. */
     eglSwapInterval(egl_dpy, 1);
 
-    glViewport(0, 0, mansion_display->window_width, mansion_display->window_height);
+    glViewport(0, 0, elsewhere_display->window_width, elsewhere_display->window_height);
 
-    if (!init_renderer(mansion_display)) {
+    if (!init_renderer(elsewhere_display)) {
         std::cerr << "Headless EGL: renderer init failed" << std::endl;
         eglDestroySurface(egl_dpy, egl_surf);
-        eglDestroyContext(egl_dpy, mansion_display->egl_context);
+        eglDestroyContext(egl_dpy, elsewhere_display->egl_context);
         eglTerminate(egl_dpy);
-        return mansion_display;
+        return elsewhere_display;
     }
 
-    return mansion_display;
+    return elsewhere_display;
 }
 
 /* ─── Resize (Wayland version) ─────────────────────────────────────────────── */
 
-void display_resize(struct MansionDisplay* display) {
+void display_resize(struct ElsewhereDisplay* display) {
     if (!display || !display->renderer) return;
     glViewport(0, 0, display->window_width, display->window_height);
     if (display->renderer->viewport_uniform >= 0) {
@@ -946,7 +946,7 @@ void display_resize(struct MansionDisplay* display) {
 
 /* ─── destroy_display (Wayland version) ────────────────────────────────────── */
 
-void destroy_display(struct MansionDisplay* display) {
+void destroy_display(struct ElsewhereDisplay* display) {
     if (!display) return;
 
     destroy_renderer(display);
@@ -975,15 +975,15 @@ void destroy_display(struct MansionDisplay* display) {
     delete display;
 }
 
-struct MansionRenderer* get_renderer(struct MansionDisplay* display) {
+struct ElsewhereRenderer* get_renderer(struct ElsewhereDisplay* display) {
     return display ? display->renderer : nullptr;
 }
 
-EGLContext get_egl_context(struct MansionDisplay* display) {
+EGLContext get_egl_context(struct ElsewhereDisplay* display) {
     return display ? display->egl_context : EGL_NO_CONTEXT;
 }
 
-bool init_renderer(struct MansionDisplay* display) {
+bool init_renderer(struct ElsewhereDisplay* display) {
     static const char* vertex_shader_source =
         "precision mediump float;\n"
         "uniform vec2 viewport;\n"
@@ -1009,7 +1009,7 @@ bool init_renderer(struct MansionDisplay* display) {
         "        gl_FragColor = color;\n"
         "}\n";
 
-    auto* renderer = new MansionRenderer();
+    auto* renderer = new ElsewhereRenderer();
     renderer->program = create_program(vertex_shader_source, fragment_shader_source);
     if (!renderer->program) {
         delete renderer;
@@ -1063,7 +1063,7 @@ bool init_renderer(struct MansionDisplay* display) {
     return true;
 }
 
-void destroy_renderer(struct MansionDisplay* display) {
+void destroy_renderer(struct ElsewhereDisplay* display) {
     if (!display || !display->renderer) return;
 
     glUseProgram(0);
@@ -1074,14 +1074,14 @@ void destroy_renderer(struct MansionDisplay* display) {
     display->renderer = nullptr;
 }
 
-void render_surface(struct MansionDisplay* display, struct wl_resource* surface, int32_t x, int32_t y);
-void render_surface_from_data(struct MansionDisplay* display, struct MansionSurface* surface_data,
+void render_surface(struct ElsewhereDisplay* display, struct wl_resource* surface, int32_t x, int32_t y);
+void render_surface_from_data(struct ElsewhereDisplay* display, struct ElsewhereSurface* surface_data,
                               int32_t x, int32_t y);
 
-static void fire_frame_callbacks(struct MansionCompositor* compositor) {
+static void fire_frame_callbacks(struct ElsewhereCompositor* compositor) {
     static uint32_t tick = 0;
     ++tick;
-    struct MansionSurface *surface, *next;
+    struct ElsewhereSurface *surface, *next;
     wl_list_for_each_safe(surface, next, &compositor->surface_list, link) {
         struct wl_resource *cb, *cb_next;
         wl_list_for_each_safe(cb, cb_next, &surface->frame_callback_list, link) {
@@ -1094,7 +1094,7 @@ static void fire_frame_callbacks(struct MansionCompositor* compositor) {
 
 // ── P2-T02: 3D panel rendering ─────────────────────────────────────────────
 
-static void render_panel(struct MansionDisplay* display) {
+static void render_panel(struct ElsewhereDisplay* display) {
     auto* renderer = display->renderer;
     auto* compositor = display->compositor;
     if (!renderer || !compositor || !renderer->program_3d) return;
@@ -1103,13 +1103,13 @@ static void render_panel(struct MansionDisplay* display) {
      * Prefer the focused surface; fall back to any surface with a
      * buffer or texture in surface_list, then orphaned_surfaces
      * (client may have disconnected but surface still valid). */
-    struct MansionSurface* target = nullptr;
+    struct ElsewhereSurface* target = nullptr;
     if (compositor->focused_surface_resource) {
         target = compositor_surface_from_resource(
             compositor->focused_surface_resource);
     }
     if (!target) {
-        struct MansionSurface *s;
+        struct ElsewhereSurface *s;
         wl_list_for_each(s, &compositor->surface_list, link) {
             if (get_renderer_surface(s)->gl_texture || s->buffer_resource) {
                 target = s;
@@ -1118,7 +1118,7 @@ static void render_panel(struct MansionDisplay* display) {
         }
     }
     if (!target) {
-        struct MansionSurface *s;
+        struct ElsewhereSurface *s;
         wl_list_for_each_reverse(s, &compositor->orphaned_surfaces, link) {
             if (get_renderer_surface(s)->gl_texture || s->buffer_resource) {
                 target = s;
@@ -1263,11 +1263,11 @@ static void render_panel(struct MansionDisplay* display) {
     release_buffer();
 }
 
-void render(struct MansionDisplay* display) {
+void render(struct ElsewhereDisplay* display) {
     if (!display) return;
 
     /* P2-T07: track frame timing when --stats is enabled. */
-    fprintf(stderr, "[mansion] render frame (size %dx%d, flat=%d, room=%d)\n",
+    fprintf(stderr, "[elsewhere] render frame (size %dx%d, flat=%d, room=%d)\n",
             display->window_width, display->window_height,
             display->flat_mode, display->room_mode);
     auto frame_start = std::chrono::steady_clock::now();
@@ -1282,14 +1282,14 @@ void render(struct MansionDisplay* display) {
 
     if (display->flat_mode) {
         // P2-T02: 2D rendering path (backwards compatible).
-        struct MansionSurface *surface;
+        struct ElsewhereSurface *surface;
         wl_list_for_each_reverse(surface, &display->compositor->surface_list, link) {
             render_surface(display, surface->resource, 0, 0);
         }
         {
             /* Render orphaned surfaces oldest-first so the newest
              * (last-connected) surface is drawn last and sits on top. */
-            struct MansionSurface *surface;
+            struct ElsewhereSurface *surface;
             wl_list_for_each(surface, &display->compositor->orphaned_surfaces, link) {
                 render_surface_from_data(display, surface, 0, 0);
             }
@@ -1414,7 +1414,7 @@ void render(struct MansionDisplay* display) {
 #endif
 }
 
-void render_surface(struct MansionDisplay* display, struct wl_resource* surface, int32_t x, int32_t y) {
+void render_surface(struct ElsewhereDisplay* display, struct wl_resource* surface, int32_t x, int32_t y) {
     auto* surface_data = compositor_surface_from_resource(surface);
 
     if (!surface_data) {
@@ -1546,7 +1546,7 @@ void render_surface(struct MansionDisplay* display, struct wl_resource* surface,
 }
 
 /* Render the focused surface fullscreen (P3-T04). */
-static void render_application_fullscreen(struct MansionDisplay* display) {
+static void render_application_fullscreen(struct ElsewhereDisplay* display) {
     auto* renderer = display->renderer;
     if (!renderer) return;
 
@@ -1655,7 +1655,7 @@ static void render_application_fullscreen(struct MansionDisplay* display) {
     }
 }
 
-void render_surface_from_data(struct MansionDisplay* display, struct MansionSurface* surface_data,
+void render_surface_from_data(struct ElsewhereDisplay* display, struct ElsewhereSurface* surface_data,
                               int32_t x, int32_t y) {
     if (!surface_data) return;
 
@@ -1729,7 +1729,7 @@ static void copy_host_pixels(const uint8_t* rgba, uint32_t* pixels, int w, int h
     }
 }
 
-static struct wl_buffer* create_shm_buffer(struct MansionDisplay* display,
+static struct wl_buffer* create_shm_buffer(struct ElsewhereDisplay* display,
                                             struct wl_shm* shm)
 {
     if (!shm) return nullptr;
@@ -1740,7 +1740,7 @@ static struct wl_buffer* create_shm_buffer(struct MansionDisplay* display,
     int32_t size = stride * h;
 
     /* Create an anonymous memory file. */
-    int fd = memfd_create("mansion-shm", 0);
+    int fd = memfd_create("elsewhere-shm", 0);
     if (fd < 0) {
         std::cerr << "shm: memfd_create failed" << std::endl;
         return nullptr;
@@ -1789,7 +1789,7 @@ static struct wl_buffer* create_shm_buffer(struct MansionDisplay* display,
     return buffer;
 }
 
-void swap_buffers(struct MansionDisplay* display) {
+void swap_buffers(struct ElsewhereDisplay* display) {
     if (!display || !display->wl_surface) return;
 
     /* Get wl_shm from the host_window_state. */
@@ -1816,7 +1816,7 @@ void swap_buffers(struct MansionDisplay* display) {
     }
 }
 
-bool take_screenshot(struct MansionDisplay* display, const char* path) {
+bool take_screenshot(struct ElsewhereDisplay* display, const char* path) {
     if (!display || !display->renderer) {
         return false;
     }
@@ -1860,14 +1860,14 @@ bool take_screenshot(struct MansionDisplay* display, const char* path) {
 }
 
 /* P4-T01: log camera position to stderr (for test verification). */
-void log_camera_position(struct MansionDisplay* display) {
+void log_camera_position(struct ElsewhereDisplay* display) {
     if (!display) return;
     auto* cam = &display->camera;
     std::cerr << "camera_pos " << cam->x << " " << cam->y << " " << cam->z << std::endl;
 }
 
 /* P4-T02: teleport camera to stored viewpoint facing the monitor. */
-void input_teleport(struct MansionDisplay* display) {
+void input_teleport(struct ElsewhereDisplay* display) {
     if (!display) return;
     display->camera.x    = display->teleport_x;
     display->camera.y    = display->teleport_y;
@@ -1878,7 +1878,7 @@ void input_teleport(struct MansionDisplay* display) {
 
 /* ─── Renderer surface accessors (P21-T10) ─────────────────────────────────── */
 
-struct MansionRendererSurface* get_renderer_surface(struct MansionSurface* surface) {
+struct ElsewhereRendererSurface* get_renderer_surface(struct ElsewhereSurface* surface) {
     if (!surface) return nullptr;
     size_t key = reinterpret_cast<size_t>(surface->resource);
     auto& map = surface_renderer_map();
@@ -1886,15 +1886,15 @@ struct MansionRendererSurface* get_renderer_surface(struct MansionSurface* surfa
     return it != map.end() ? &it->second : nullptr;
 }
 
-struct MansionRendererSurface* ensure_renderer_surface(struct MansionSurface* surface) {
+struct ElsewhereRendererSurface* ensure_renderer_surface(struct ElsewhereSurface* surface) {
     if (!surface || !g_current_display) return nullptr;
     size_t key = reinterpret_cast<size_t>(surface->resource);
     auto& map = surface_renderer_map();
-    auto [it, inserted] = map.emplace(key, MansionRendererSurface{});
+    auto [it, inserted] = map.emplace(key, ElsewhereRendererSurface{});
     return &it->second;
 }
 
-void set_renderer_surface_texture(struct MansionSurface* surface, GLuint texture) {
+void set_renderer_surface_texture(struct ElsewhereSurface* surface, GLuint texture) {
     if (!surface) return;
     size_t key = reinterpret_cast<size_t>(surface->resource);
     auto& map = surface_renderer_map();
@@ -1908,7 +1908,7 @@ void set_renderer_surface_texture(struct MansionSurface* surface, GLuint texture
 }
 
 /* Delete the GL texture for an orphaned surface (called from destructor). */
-void destroy_renderer_surface(struct MansionSurface* surface) {
+void destroy_renderer_surface(struct ElsewhereSurface* surface) {
     if (!surface) return;
     size_t key = reinterpret_cast<size_t>(surface->resource);
     auto& map = surface_renderer_map();

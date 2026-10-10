@@ -1,21 +1,21 @@
-# MansionAdapter - GDScript helper for the GDExtension C library
+# ElsewhereAdapter - GDScript helper for the GDExtension C library
 # Provides a convenient interface for initializing and using the GDExtension
-# MansionAdapter class which gives access to the Wayland compositor core.
+# ElsewhereAdapter class which gives access to the Wayland compositor core.
 #
 # Usage:
-#   var adapter = MansionAdapter.new()
-#   adapter.initialize("mansion-compositor")
+#   var adapter = ElsewhereAdapter.new()
+#   adapter.initialize("elsewhere-compositor")
 #   adapter.pump()  # Process events
 #   adapter.flush()  # Flush events to clients
 #   adapter.destroy()
 
-class_name MansionAdapterHelper extends RefCounted
+class_name ElsewhereAdapterHelper extends RefCounted
 
 ## Private socket name for the Wayland display
-const DEFAULT_SOCKET_NAME = "mansion-compositor"
+const DEFAULT_SOCKET_NAME = "elsewhere-compositor"
 
 ## The GDExtension adapter instance (created by the C library)
-## This will hold the actual GDExtension MansionAdapter instance
+## This will hold the actual GDExtension ElsewhereAdapter instance
 var _adapter_instance: RefCounted
 
 ## Flag to track if adapter is initialized
@@ -32,33 +32,33 @@ var _debug_logging: bool = false
 ## Returns true if initialization succeeded
 func initialize(socket_name: String = DEFAULT_SOCKET_NAME, debug: bool = false) -> bool:
 	if _initialized:
-		push_warning("MansionAdapterHelper: Already initialized")
+		push_warning("ElsewhereAdapterHelper: Already initialized")
 		return true
 	
 	if _destroyed:
-		push_error("MansionAdapterHelper: Cannot initialize after destroy()")
+		push_error("ElsewhereAdapterHelper: Cannot initialize after destroy()")
 		return false
 	
 	_debug_logging = debug
 	
-	# Create an instance of the GDExtension MansionAdapter class
-	# The GDExtension class is registered with the name "MansionAdapter"
+	# Create an instance of the GDExtension ElsewhereAdapter class
+	# The GDExtension class is registered with the name "ElsewhereAdapter"
 	# We create it via ClassDB
-	_adapter_instance = ClassDB.instantiate_class("MansionAdapter")
+	_adapter_instance = ClassDB.instantiate_class("ElsewhereAdapter")
 	
 	if not _adapter_instance:
-		push_error("MansionAdapterHelper: Failed to create GDExtension MansionAdapter instance")
+		push_error("ElsewhereAdapterHelper: Failed to create GDExtension ElsewhereAdapter instance")
 		return false
 	
 	if _debug_logging:
-		print("[MansionAdapterHelper] GDExtension MansionAdapter instance created")
+		print("[ElsewhereAdapterHelper] GDExtension ElsewhereAdapter instance created")
 	
 	# Initialize the adapter via GDExtension
-	# The GDExtension MansionAdapter has an initialize() method
+	# The GDExtension ElsewhereAdapter has an initialize() method
 	var init_result = _adapter_instance.initialize(socket_name, debug)
 	
 	if not init_result:
-		push_error("MansionAdapterHelper: GDExtension MansionAdapter initialize() failed")
+		push_error("ElsewhereAdapterHelper: GDExtension ElsewhereAdapter initialize() failed")
 		ClassDB.unref(_adapter_instance)
 		_adapter_instance = null
 		return false
@@ -79,7 +79,7 @@ func destroy() -> void:
 	
 	if _initialized and _adapter_instance:
 		if _debug_logging:
-			print("[MansionAdapterHelper] Destroying adapter")
+			print("[ElsewhereAdapterHelper] Destroying adapter")
 		
 		# Call destroy via GDExtension
 		_adapter_instance.destroy()
@@ -118,7 +118,7 @@ func get_focused_serial() -> int:
 
 ## String representation
 func _to_string() -> String:
-	return "MansionAdapterHelper(initialized=%s, destroyed=%s)" % [_initialized, _destroyed]
+	return "ElsewhereAdapterHelper(initialized=%s, destroyed=%s)" % [_initialized, _destroyed]
 
 
 ## ─── Shm frame snapshot API (P21-T12) ───────────────────────────────────
@@ -173,4 +173,4 @@ func create_snapshot(client_serial: int) -> Dictionary:
 ## Debug output (if enabled)
 func _debug_print(message: String) -> void:
 	if _debug_logging:
-		print("[MansionAdapterHelper] %s" % message)
+		print("[ElsewhereAdapterHelper] %s" % message)

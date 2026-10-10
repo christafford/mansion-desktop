@@ -36,8 +36,8 @@ redrawing hidden rooms' shadow maps from the far end of the foyer. Directional
 sun settings remain unchanged. See Godot's
 [Light3D settings](https://docs.godotengine.org/en/stable/classes/class_light3d.html).
 These changes retain visible geometry and nearby shadows.
-The old `mansion.observatory` destination is intentionally replaced by the stable
-`mansion.foyer` world ID; live application identities remain independent. Session
+The old `elsewhere.observatory` destination is intentionally replaced by the stable
+`elsewhere.foyer` world ID; live application identities remain independent. Session
 placements are not restored across restarts.
 
 ## Verification
@@ -49,13 +49,13 @@ Compatibility/OpenGL 4.6, Mesa 26.2.4, AMD Custom GPU 0405, private GPU Weston
 [upper gallery](../evidence/t64/upper-gallery.png),
 [return view](../evidence/t64/return.png). These are rendered game views, not
 concept art. The gallery application capture and ground-floor terminal views
-remain in `.tools/grand-foyer-test` and `.tools/mansion-rooms-test`.
+remain in `.tools/grand-foyer-test` and `.tools/elsewhere-rooms-test`.
 
 The full study script passed all 20 Godot trials and 7 Python tests in one run
-(`.tools/t64/full-check.log`, `/tmp/mansion-study-check.81lJuR`). After final
+(`.tools/t64/full-check.log`, `/tmp/elsewhere-study-check.81lJuR`). After final
 light-distance/shadow-face tuning, import/runtime/native-helper validation
-passed again (`.tools/t64/final-import.log`, `/tmp/mansion-godot-check.1kFwOV`),
-as did `study_details`, `hallway`, `mansion_rooms`, `grand_foyer`, and `screen_color`
+passed again (`.tools/t64/final-import.log`, `/tmp/elsewhere-godot-check.1kFwOV`),
+as did `study_details`, `hallway`, `elsewhere_rooms`, `grand_foyer`, and `screen_color`
 (`.tools/t64/final-check.log`, `final-*.log`). The final continuous stair
 underside then passed a further complete foyer trial (`.tools/t64/stair-final-run.log`);
 `final-grand_foyer.log` contains that latest result. No C++ source changed; no Meson

@@ -18,6 +18,17 @@ the dependent useful-workspace features; P21-T33 prepares final owner review.
 
 ## Project 21: Godot and Poly Haven workspace
 
+- [x] **P21-T67 Rename the project to elsewhere.** Owner request 2026-10-09.
+  Rename project text, source identifiers, targets, scripts, addon/resource paths,
+  environment variables and repository links consistently. Preserve Godot UIDs
+  and existing world identity values unrelated to the project name.
+  **Acceptance:** no previous project name in maintained source or filenames;
+  Meson build/tests, Godot import/runtime and affected bridge/study checks,
+  Python tests, documentation links and task-parser checks pass under the new
+  name. Update the local origin to the relocated repository without pushing.
+  Completed 2026-10-09; [handoff 38](handoffs/38-elsewhere-rename.md) records
+  fresh builds, all regression checks and real Chrome verification.
+
 Current priority, authorized by [Decision 06](decisions/06-godot-poly-haven.md).
 Implement these tasks; another planning-only pass does not satisfy them. Visual
 tasks T01–T09 and core tasks T10–T18 progress independently from T00. Choose the
@@ -476,7 +487,7 @@ Do not launch another broad overnight range before the new boundaries pass.
   host/isolated-run evidence in [handoff 32](handoffs/32-oil-lit-hallway.md).
 
 - [x] **P21-T61 Furnish six explorable rooms beyond the gallery.**
-  **Depends:** P21-T60. Owner request 2026-10-08: distinct mansion destinations
+  **Depends:** P21-T60. Owner request 2026-10-08: distinct elsewhere destinations
   with places for application instances. Add approach-opening doors, library,
   atlas room, winter garden, cabinet gallery, inventor's room and observatory.
   **Acceptance:** actual walking and carrying through all six entrances, solid
@@ -511,7 +522,7 @@ Do not launch another broad overnight range before the new boundaries pass.
   [handoff 35](handoffs/35-merged-exploration-wings.md).
 
 - [x] **P21-T64 Build the grand foyer and central spiral staircase.**
-  **Depends:** P21-T63. Replace the observatory with a large, tall mansion foyer;
+  **Depends:** P21-T63. Replace the observatory with a large, tall elsewhere foyer;
   authored stone architecture, dramatic lighting, central spiral stair and upper
   gallery. Keep this a self-contained destination without additional rooms.
   **Acceptance:** inspected entrance/stair/gallery renders and measured frame
@@ -541,7 +552,7 @@ Do not launch another broad overnight range before the new boundaries pass.
   1. Fix `tools/run-godot.sh` to use the tested `--path` CLI and clearly distinguish run/editor/import modes. Fix `tools/validate-godot-project.sh` to preserve nonzero exit status, use a per-run log, select the correct project and detect script/runtime errors. Test it against an intentionally invalid temporary project; it must fail.
   2. Inspect `world/project.godot`, `world/scenes/main.tscn` and `world/scripts/game_world.gd`: correct material resource types and zero-scale floor transform; resolve duplicate autoload/class/controller ownership; resolve camera after nodes exist; fix right-button release and mouse-motion API usage if the engine reports errors. Do not assume the draft script is working.
   3. Run import/script checks, then a real Godot window with a safe visible camera, floor/walls and enough light to see geometry. Capture and inspect the image; exercise movement, mouse release and close. This task permits temporary blockout geometry only.
-  4. Record the exact working Godot launch command in STATUS.md. State that `build/mansion-desktop --room-camera` still runs the legacy renderer.
+  4. Record the exact working Godot launch command in STATUS.md. State that `build/elsewhere --room-camera` still runs the legacy renderer.
 
   **Acceptance:** validator rejects invalid input and accepts the repaired project; an actual Godot render is inspected; basic scene controls/close work. No bridge, real assets or application-mode claims yet. Do not defer this task's capture to T09.
 
@@ -648,7 +659,7 @@ Do not launch another broad overnight range before the new boundaries pass.
   **Depends:** P21-T01, P21-T10.
   **Do:**
 
-  1. Use the compatible bindings from T00 and core library from T10. Replace the draft build/link path; reject unresolved Mansion symbols at link time. The existing `.so` is not proof of loadability.
+  1. Use the compatible bindings from T00 and core library from T10. Replace the draft build/link path; reject unresolved Elsewhere symbols at link time. The existing `.so` is not proof of loadability.
   2. Create a real `.gdextension` resource with `[configuration]` entry symbol and `[libraries]` platform paths. Register a callable class/methods during extension initialization. Empty init callbacks and `extension.toml` do not satisfy this.
   3. Add a Godot smoke scene/script that instantiates the class, starts the compositor, calls a nonblocking pump on its owning thread and shuts it down. Verify the actual private socket path and fixture connection; do not guess socket names from a log string.
   4. Exercise load/unload/repeated start/stop, callback cleanup and socket removal. Fix all load/link/script errors; no second blocking event loop.
@@ -747,7 +758,7 @@ Do not launch another broad overnight range before the new boundaries pass.
 
 - [ ] **P21-T24 Build one connected secondary room and a working door.**
   **Depends:** P21-T19, P21-T21.
-  **Acceptance:** Extend the coherent asset family to one furnished adjacent room. Implement door collision/open/close and stable room IDs; test navigation, placement persistence and passage. Capture/inspect both sides. Do not grow a huge empty mansion.
+  **Acceptance:** Extend the coherent asset family to one furnished adjacent room. Implement door collision/open/close and stable room IDs; test navigation, placement persistence and passage. Capture/inspect both sides. Do not grow a huge empty elsewhere.
 
 - [ ] **P21-T25 Implement door-aware navigation.**
   **Depends:** P21-T24.
@@ -840,13 +851,13 @@ Recorded decisions that constrain these tasks: [decisions/01-stack.md](decisions
 
 Goal (from the roadmap): a native Wayland terminal displays in 2D inside the
 host window, accepts typing and pointer input, resizes, and can close without
-killing Mansion. Automated tests use `tests/mansion-test-client`; the terminal
+killing Elsewhere. Automated tests use `tests/elsewhere-test-client`; the terminal
 itself is the human acceptance step.
 
 - [x] **P1-T01 Headless harness and socket handling.** Add CLI options
   `--headless` (no X11 window, no EGL required, no host input), `--socket NAME`,
-  `--exit-after-ms N`. Default socket name `mansion-<pid>`; never inherit the
-  host `WAYLAND_DISPLAY`. Print `MANSION_SOCKET=<name>` on stdout once the
+  `--exit-after-ms N`. Default socket name `elsewhere-<pid>`; never inherit the
+  host `WAYLAND_DISPLAY`. Print `ELSEWHERE_SOCKET=<name>` on stdout once the
   socket is listening. Remove the socket and lock file on exit. Fix the
   dangling `c_str()` pointer in `main.cpp`. Add `tests/smoke_headless.sh` and a
   `meson test` entry.
@@ -854,7 +865,7 @@ itself is the human acceptance step.
   starts headless, the socket appears in `$XDG_RUNTIME_DIR`, the process exits 0
   after the timeout, and the socket file is gone.
 
-- [x] **P1-T02 Test client: globals.** Add `tests/mansion-test-client.c` (C,
+- [x] **P1-T02 Test client: globals.** Add `tests/elsewhere-test-client.c` (C,
   `wayland-client`) built by Meson. `--socket NAME` connects; it prints one line
   `global <interface> <version>` per advertised global and exits 0. Add
   `tests/client_globals.sh` that starts the compositor headless and asserts
@@ -919,7 +930,7 @@ itself is the human acceptance step.
   client receives nothing while the first is focused. (2026-09-27)
 
 - [x] **P1-T06-A Multi-seat objects (lists).** Replace the single `keyboard`
-  and `pointer` resources in `MansionSeat` with wl_lists of per-client
+  and `pointer` resources in `ElsewhereSeat` with wl_lists of per-client
   resources. `get_keyboard`/`get_pointer` create new resources; destroy
   listeners clean them up. No `WL_SEAT_ERROR_MISSING_CAPABILITY` error for
   repeated binds.
@@ -980,7 +991,7 @@ itself is the human acceptance step.
   with the client pid from `wl_client_get_credentials` (use
   `wl_display_add_client_created_listener`).
   **Acceptance:** `meson test -C build launch-client` passes: the compositor
-  launches `tests/mansion-test-client --toplevel --buffer 64x64 --exit-after-ms 300`
+  launches `tests/elsewhere-test-client --toplevel --buffer 64x64 --exit-after-ms 300`
   headless, logs its connection and exit, and exits 0 itself. (2026-09-26)
 
 - [x] **P1-T09 Lifecycle robustness.** (2026-09-26) `surface_destroy_callback` fires
@@ -995,10 +1006,10 @@ itself is the human acceptance step.
   `meson test -C build-asan` reports no sanitizer errors.
 
 - [ ] **P1-T10 (human) Terminal smoke test.** Install `weston` (provides
-  `weston-terminal`). Run `./build/mansion-desktop --launch weston-terminal`
+  `weston-terminal`). Run `./build/elsewhere --launch weston-terminal`
   from a host session with `DISPLAY` set. Type, click, resize the host window,
-  close the terminal from its own UI, confirm Mansion keeps running, quit
-  Mansion, confirm the host desktop is fine. Record the result and
+  close the terminal from its own UI, confirm Elsewhere keeps running, quit
+  Elsewhere, confirm the host desktop is fine. Record the result and
   versions in `docs/STATUS.md` under "Verified by a person". Write the
   procedure in `docs/ACCEPTANCE.md` (autonomous sessions write the procedure;
   a person performs it).
@@ -1292,7 +1303,7 @@ authorize a rewrite. If blocked, continue only independent eligible work.
   eglGetProcAddress. Compare EGL Wayland binding and linux-dmabuf import,
   including advertised protocol, formats/modifiers, ownership and synchronization.
   Record Mesa/driver/GPU, errors and copy points; keep wl_shm functioning.
-  **Acceptance:** a real accelerated Wayland client submits a buffer that Mansion
+  **Acceptance:** a real accelerated Wayland client submits a buffer that Elsewhere
   directly imports and displays, or Decision 03 documents an exact reproducible
   blocker and the changes needed. Report research completion separately from
   P2-T05 feature completion. PBuffer/readback/shm remains a fallback experiment.
@@ -1318,7 +1329,7 @@ authorize a rewrite. If blocked, continue only independent eligible work.
 
 - [ ] **P4-T16 Prepare a reproducible real-terminal trial.**
   Prerequisites: P4-T10, P4-T11, P4-T12, P4-T15.
-  Launch an installed native Wayland terminal via Mansion's launcher on a usable
+  Launch an installed native Wayland terminal via Elsewhere's launcher on a usable
   host backend; log its connection/mapping and updates. Fix the smallest blocking
   protocol/host issue; record missing packages for a person to install. Publish
   exact flat and room commands and diagnostics in ACCEPTANCE.md. Log assertions
@@ -1330,7 +1341,7 @@ authorize a rewrite. If blocked, continue only independent eligible work.
 - [ ] **P4-T17 (human) Foundation desktop demonstration.**
   Prerequisites: P4-T16. Follow ACCEPTANCE.md in flat and room modes: readable
   text, typing, pointer selection, scrolling, resize, repeated enter/return,
-  host focus loss, terminal close/reopen, and safe Mansion exit. Record actual
+  host focus loss, terminal close/reopen, and safe Elsewhere exit. Record actual
   screenshots, application/backend versions, observations and limitations.
   **Acceptance:** a person's recorded successful checks with date and source
   revision. The same evidence may also satisfy P1-T10 and P4-T04 if it covers
@@ -1429,7 +1440,7 @@ expansion task, then work the resulting list.
   Historical 2026-09-28 expansion (superseded, kept as evidence): the earlier
   nested sub-tasks "P5-T01 Window registry" and "P5-T02 Alt+Tab focus cycling"
   were implemented in bb8cd9d (`toplevel_list`/`toplevel_count` in
-  `MansionCompositor`, `xdg_shell_cycle_focus()`, `--tab-key`, input-script
+  `ElsewhereCompositor`, `xdg_shell_cycle_focus()`, `--tab-key`, input-script
   `tab`/`shift_tab`) and are covered only by the synthetic `focus-cycle` test;
   the `toplevel-registry` test named in that old acceptance was never added.
   This partial code is the "partial registry code" the revised P5-T01 must

@@ -21,7 +21,7 @@ cmake --build "$BUILD" --parallel 2
 PROBE_PROJECT=$(mktemp -d "$BUILD/project.XXXXXX")
 mkdir -p "$PROBE_PROJECT/bin"
 cp "$PROJECT/project.godot" "$PROJECT/probe.gdextension" "$PROJECT/smoke.gd" "$PROJECT/lifecycle.gd" "$PROJECT/frames.gd" "$PROBE_PROJECT/"
-cp "$PROJECT/bin/libmansion_probe.so" "$PROBE_PROJECT/bin/"
+cp "$PROJECT/bin/libelsewhere_probe.so" "$PROBE_PROJECT/bin/"
 PROJECT="$PROBE_PROJECT"
 run() {
     local label=$1
@@ -43,7 +43,7 @@ for attempt in 1 2 3; do
     rg -q '^BINDING_SMOKE_OK:' "$BUILD/smoke-$attempt.log"
 done
 "$BUILD/runtime-lifecycle" "$BUILD/runtime-client"
-RUNTIME_BASE=$(mktemp -d /tmp/mansion-godot.XXXXXX)
+RUNTIME_BASE=$(mktemp -d /tmp/elsewhere-godot.XXXXXX)
 # Remove only the owned empty root; the runtime must clean its own sockets.
 trap 'rmdir "$RUNTIME_BASE"' EXIT
 run lifecycle --max-fps 120 --script res://lifecycle.gd -- "$BUILD/runtime-client" "$RUNTIME_BASE"

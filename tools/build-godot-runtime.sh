@@ -6,8 +6,8 @@ BUILD="$ROOT/build-godot-probe"
 if [[ ! -f "$BUILD/CMakeCache.txt" ]]; then
     cmake -S "$ROOT/tests/godot-binding" -B "$BUILD" -DCMAKE_BUILD_TYPE=Debug
 fi
-cmake --build "$BUILD" --target mansion_probe --parallel 2
-DEST="$ROOT/world/addons/mansion_runtime/libmansion_runtime.so"
+cmake --build "$BUILD" --target elsewhere_probe --parallel 2
+DEST="$ROOT/world/addons/elsewhere_runtime/libelsewhere_runtime.so"
 # Atomic replacement leaves already-running Godot processes' mapping intact.
-cp "$ROOT/tests/godot-binding/bin/libmansion_probe.so" "$DEST.tmp"
+cp "$ROOT/tests/godot-binding/bin/libelsewhere_probe.so" "$DEST.tmp"
 mv "$DEST.tmp" "$DEST"

@@ -15,7 +15,7 @@ static const std::vector<uint8_t> argb = {255,0,0,255, 0,255,0,255, 0,0,255,255,
                                          0,0,0,0, 255,255,255,255, 18,52,86,255, 171,205,239,255};
 static const std::vector<uint8_t> xrgb = {10,20,30,255, 40,50,60,255, 70,80,90,255,
                                          100,110,120,255, 130,140,150,255, 160,170,180,255};
-static void wait_marker(mansion::CompositorRuntime& runtime, const std::string& path) {
+static void wait_marker(elsewhere::CompositorRuntime& runtime, const std::string& path) {
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
     while (access(path.c_str(), F_OK)) {
         check(runtime.pump(), runtime.last_error().c_str());
@@ -27,7 +27,7 @@ static void mark(const std::string& path) {
     int fd = open(path.c_str(), O_CREAT | O_WRONLY | O_CLOEXEC, 0600);
     check(fd >= 0, "barrier"); close(fd);
 }
-static void verify(const mansion::OwnedFrame& f, const std::string& stage) {
+static void verify(const elsewhere::OwnedFrame& f, const std::string& stage) {
     check(bool(f), "frame exists");
     const bool is_xrgb = stage == "replacement" || stage == "pending";
     const bool detached = stage == "detached";
@@ -47,10 +47,10 @@ static void verify(const mansion::OwnedFrame& f, const std::string& stage) {
 }
 int main(int argc, char** argv) {
     check(argc == 2, "fixture executable"); alarm(45);
-    char directory[] = "/tmp/mansion-frame-test-XXXXXX"; check(mkdtemp(directory), "temp directory");
-    mansion::CompositorRuntime runtime;
+    char directory[] = "/tmp/elsewhere-frame-test-XXXXXX"; check(mkdtemp(directory), "temp directory");
+    elsewhere::CompositorRuntime runtime;
     int64_t previous_handle = 0;
-    mansion::OwnedFrame retained;
+    elsewhere::OwnedFrame retained;
     const std::vector<std::string> stages = {"initial", "destroyed", "replacement", "pending", "scaled",
         "pending-destroyed", "detached", "remapped", "transform-0", "transform-1", "transform-2", "transform-3",
         "transform-4", "transform-5", "transform-6", "transform-7"};

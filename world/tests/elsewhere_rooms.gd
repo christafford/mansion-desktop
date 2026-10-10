@@ -17,7 +17,7 @@ func run() -> void:
 		push_error("Room acceptance requires a graphical renderer")
 		quit(1)
 		return
-	output_dir = ProjectSettings.globalize_path("res://../.tools/mansion-rooms-test")
+	output_dir = ProjectSettings.globalize_path("res://../.tools/elsewhere-rooms-test")
 	DirAccess.make_dir_recursive_absolute(output_dir)
 	study = load("res://scenes/main.tscn").instantiate()
 	root.add_child(study)
@@ -37,7 +37,7 @@ func run() -> void:
 		await terminal.shutdown()
 		quit(1)
 		return
-	check(get_nodes_in_group("mansion_rooms").size() == 6, "Six distinct destinations missing")
+	check(get_nodes_in_group("elsewhere_rooms").size() == 6, "Six distinct destinations missing")
 	check(get_nodes_in_group("room_work_surfaces").size() == 7, "A room lacks work surfaces")
 	var ids := {}
 	for room in spaces.rooms:
@@ -147,5 +147,5 @@ func run() -> void:
 		check(panel.position.distance_to(placed) < 0.02 and panel.entity_id == identity, "Other room's application moved or changed identity")
 		await capture("library-application.png")
 	await terminal.shutdown()
-	print("MANSION_ROOMS_OK rooms=6 entrances=4 failures=", failures)
+	print("ELSEWHERE_ROOMS_OK rooms=6 entrances=4 failures=", failures)
 	quit(1 if failures else 0)
