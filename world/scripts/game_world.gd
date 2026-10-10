@@ -4,6 +4,7 @@ extends CharacterBody3D
 const WALK_SPEED := 2.4
 const FAST_SPEED := 4.0
 const SLOW_SPEED := 1.0
+const JUMP_VELOCITY := 4.5
 const LOOK_SENSITIVITY := 0.002
 const DEFAULT_PITCH := -0.08
 const SPAWN := Vector3(2.4, 0.05, 3.1)
@@ -65,6 +66,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				_held[key] = true
 			else:
 				_held.erase(key)
+		elif event.pressed and key == KEY_SPACE and is_on_floor():
+			velocity.y = JUMP_VELOCITY
 		elif event.pressed and key == KEY_ESCAPE:
 			release_pointer()
 		elif event.pressed and key == KEY_HOME:
@@ -93,10 +96,7 @@ func _physics_process(delta: float) -> void:
 		speed = FAST_SPEED
 	velocity.x = direction.x * speed
 	velocity.z = direction.z * speed
-	if not is_on_floor():
-		velocity.y -= 9.8 * delta
-	else:
-		velocity.y = 0
+	velocity.y -= 9.8 * delta
 	var walking_velocity := velocity * Vector3(1, 0, 1)
 	move_and_slide()
 	for i in range(get_slide_collision_count()):
