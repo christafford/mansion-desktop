@@ -3,6 +3,29 @@
 Status: procedures unless explicitly recorded as evidence. Synthetic tests and
 screenshots are supporting evidence, not usability acceptance. Human tasks in TASKS.md remain unchecked until a person records them.
 
+## 2026-10-09 agent-run desktop extraction regression (P22-T01)
+
+From `fd36f01` plus P22-T01, the complete 21-trial Godot suite and separate
+Chrome trial passed in a private GPU Weston output. Real Weston terminal 15.0.1,
+Vim 9.2 and Chrome 154.0.8037.57 retain launch, focus, typing/pointer, resizing,
+world return and their existing panel behavior. Injected events also verify
+movement, carrying/rotation, support/gravity and mode transitions. The added
+headless test maps real clients and verifies desktop cleanup without constructing
+the study. This is a runtime extraction; the study remains the active world.
+
+Agent-inspected actual renders include
+[before](evidence/p22-t01/before-rotation.png) /
+[after](evidence/p22-t01/after-rotation.png) live-panel rotation,
+[terminal typing](evidence/p22-t01/after-typing.png),
+[selection](evidence/p22-t01/after-selection.png) and
+[Chrome input](evidence/p22-t01/after-browser.png). Application content remains
+upright and legible in the reviewed views; the before/after selection PNGs are
+byte-identical. Platform: Godot 4.7.2 Compatibility/OpenGL, Mesa 26.2.4,
+AMD Custom GPU 0405; captures above are 1280×800. See
+[handoff 39](handoffs/39-desktop-runtime-extraction.md) for commands, full scope
+and limitations. No new human physical-input/comfort, outdoor-world, restart
+persistence or general application-compatibility gate is claimed.
+
 ## 2026-10-09 agent-run Chrome and subsurfaces (P21-T65/T66)
 
 From `2cdfd15` plus T65/T66, the installed Google Chrome 154.0.8037.57 was

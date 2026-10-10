@@ -1,10 +1,16 @@
 ## Furnished study with a live, unlit Wayland terminal screen.
 extends Node3D
 
-var terminal_screen: Node
-var application_mode: CanvasLayer
-var app_launcher: CanvasLayer
-var application_objects: Node3D
+# Retain the study's test-facing accessors; the desktop node owns the services.
+@onready var desktop_runtime: Node = $DesktopRuntime
+var terminal_screen: Node:
+	get: return desktop_runtime.terminal_screen
+var application_mode: CanvasLayer:
+	get: return desktop_runtime.application_mode
+var app_launcher: CanvasLayer:
+	get: return desktop_runtime.app_launcher
+var application_objects: Node3D:
+	get: return desktop_runtime.application_objects
 
 var furniture: Array[Node3D] = []
 
@@ -128,21 +134,6 @@ func _ready() -> void:
 	text.pixel_size = 0.001
 	text.position = Vector3(0, 0.4, 0.031)
 	monitor.add_child(text)
-	terminal_screen = load("res://scripts/terminal_screen.gd").new()
-	terminal_screen.name = "TerminalScreen"
-	terminal_screen.screen = screen
-	terminal_screen.status = text
-	add_child(terminal_screen)
-	application_mode = load("res://scripts/application_mode.gd").new()
-	application_mode.terminal = terminal_screen
-	application_mode.player = get_node("Player")
-	add_child(application_mode)
-	app_launcher = preload("res://scripts/app_launcher.gd").new()
-	app_launcher.terminal = terminal_screen
-	app_launcher.app = application_mode
-	app_launcher.player = get_node("Player")
-	add_child(app_launcher)
-	get_tree().auto_accept_quit = false
 	var environment := WorldEnvironment.new()
 	var env := Environment.new()
 	env.background_mode = Environment.BG_SKY
@@ -177,28 +168,7 @@ func _ready() -> void:
 	lamp.omni_range = 1.7
 	add_child(lamp)
 	configure_shadow_distances()
-	var ui := CanvasLayer.new()
-	var help := Label.new()
-	help.text = "WASD move   •   Hold right mouse to look   •   Shift faster   •   Ctrl / M slow\nEnter use application   •   Ctrl+Alt+Esc return   •   Tab applications   •   Home reset view"
-	help.position = Vector2(22, 20)
-	help.add_theme_font_size_override("font_size", 16)
-	help.add_theme_color_override("font_shadow_color", Color.BLACK)
-	help.add_theme_constant_override("shadow_offset_x", 1)
-	help.add_theme_constant_override("shadow_offset_y", 2)
-	ui.add_child(help)
-	add_child(ui)
-	app_launcher.world_hud = ui
-	application_objects = preload("res://scripts/application_objects.gd").new()
-	application_objects.terminal = terminal_screen
-	application_objects.app = application_mode
-	application_objects.launcher = app_launcher
-	application_objects.player = get_node("Player")
-	add_child(application_objects)
-	var transition := preload("res://scripts/application_transition.gd").new()
-	transition.app = application_mode
-	transition.objects = application_objects
-	application_mode.transition = transition
-	add_child(transition)
+	desktop_runtime.initialize(get_node("Player"), screen, text, preload("res://scripts/hallway.gd").bounded_center)
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--capture="):
 			capture_views(arg.trim_prefix("--capture="))
@@ -231,10 +201,5 @@ func capture_views(directory: String) -> void:
 		var path := directory.path_join("study-%d.png" % i)
 		assert(image.save_png(path) == OK, "Could not save " + path)
 		print("CAPTURE ", path)
-	await terminal_screen.shutdown()
+	await desktop_runtime.shutdown()
 	get_tree().quit()
-
-func _notification(what: int) -> void:
-	if what == NOTIFICATION_WM_CLOSE_REQUEST and terminal_screen != null:
-		await terminal_screen.shutdown()
-		get_tree().quit()

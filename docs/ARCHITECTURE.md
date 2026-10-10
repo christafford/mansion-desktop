@@ -1,11 +1,27 @@
 # Elsewhere architecture transition
 
-Project 22 will separate (1) Linux compositor and application services,
-(2) world-independent desktop state and object/application anchoring, and
-(3) Godot physical locations and visual presentation. See
-[Decision 08](decisions/08-elsewhere-village-world.md). This is a target
-boundary, not a claim that the current `world/scripts/study.gd` is already
-separated. Preserve existing runtime behavior during extraction.
+Project 22 separates desktop services from physical locations incrementally;
+see [Decision 08](decisions/08-elsewhere-village-world.md). P22-T01 introduces
+`world/scripts/desktop_runtime.gd`, a scene-owned Node that composes the existing
+terminal/session owner, application mode, launcher, HUD, application objects and
+transition. It owns window-close shutdown; its terminal child still owns the
+native session, pump and launched application processes. No compositor or input
+policy rewrite is involved.
+
+`main.tscn` retains its study root and player and adds a DesktopRuntime child.
+After constructing its geometry, `study.gd` supplies the ready player, monitor
+mesh/status label and a world-space placement-bounds callable. Desktop services
+do not resolve room paths or import hallway geometry. The study's old service
+properties are read-only forwarding accessors for existing tests. Application
+entity IDs and runtime bindings remain unchanged and separate.
+
+This is an initialization/lifetime boundary, not scene streaming or restart
+persistence. The location still owns its geometry, collision, lighting, monitor
+presentation nodes and capture viewpoints; the controller retains the study's
+spawn defaults. The supplied presentation/player must remain alive for the
+desktop lifetime. The terminal retains its existing fixed monitor aperture and
+Filmic-compensated shader contract. A future location must provide compatible
+presentation and bounds deliberately. The active scene remains the study.
 
 ---
 

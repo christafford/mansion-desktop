@@ -35,8 +35,13 @@ seat wrapper is separate from each runtime's seat. See
 
 `tools/build-godot-runtime.sh` stages the same tested library in the world's
 `addons/elsewhere_runtime/`; the run/import helpers invoke it automatically.
+`desktop_runtime.gd` composes the desktop services independently of room
+construction and handles window-close shutdown. The location supplies a ready
+player, screen mesh/status label and placement-bounds callable. Its child
 `terminal_screen.gd` owns a session, its initial terminal and additional
-launcher-owned child processes.
+launcher-owned child processes; its existing shutdown and forced-removal cleanup
+remain the resource-lifetime authority. See the
+[P22-T01 handoff](handoffs/39-desktop-runtime-extraction.md).
 It chooses from `toplevel_handles()` and calls `snapshot(handle, after_revision)`
 to avoid unchanged pixel copies. The monitor applies inverse buffer transforms,
 fits the logical aspect ratio, and clears content on detach/destruction.

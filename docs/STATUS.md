@@ -5,8 +5,26 @@ world beginning at a village square. Project 22 and
 [Decision 08](decisions/08-elsewhere-village-world.md) supersede the Project 21
 study environment and expansion schedule. All Project 21 progress below is
 historical and should remain available as engineering evidence, not as the
-current build queue. **Next authorized implementation task: P22-T01, only when
-explicitly requested.** No P22 implementation has been verified yet.
+current build queue. **P22-T01 is complete; no further task is authorized.**
+P22-T02 is the next planned task and requires a separate explicit owner request.
+
+## P22-T01 verified (2026-10-09)
+
+From `fd36f01`, the scene's DesktopRuntime node now composes and owns the
+existing desktop services and shutdown policy. The study supplies its player,
+screen/status nodes and unchanged placement limits; application objects no
+longer import hallway geometry. The active study, controls, native compositor,
+launcher and identity semantics remain intact. See
+[handoff 39](handoffs/39-desktop-runtime-extraction.md) for the dependency audit,
+before/after commands, logs, rendered evidence and remaining boundaries.
+
+Automated: Godot import/default startup, all 21 Godot trials (including two
+real-client sessions without study construction), real Chrome interaction,
+34 Meson tests, 8 Python tests and 62 plugin/parser tests passed. The unchanged
+native binding suite also passed in the pre-extraction baseline.
+Agent-observed: before/after GPU captures preserve the study and rotated live
+panels; terminal typing/selection and Chrome content are readable in the reviewed
+views. Human physical-input feel/comfort is not newly observed or claimed.
 
 Retain Godot rendering, the C++ compositor/GDExtension, movement, input,
 launcher, application objects, and existing session-local placement behavior.
@@ -41,7 +59,7 @@ uncommitted overnight work. [Decision 06](decisions/06-godot-poly-haven.md) rema
 the direction. [Previous status](handoffs/15-status-before-frontend-recovery.md)
 is historical; its extension/visual completion claims were contradicted by tests.
 
-## Next task
+## Historical Project 21 continuation (not the current queue)
 
 The owner's initial graphical-application work passes bounded T65–T66: real
 Chrome starts, types, clicks, scrolls, resizes, returns to its room panel and opens

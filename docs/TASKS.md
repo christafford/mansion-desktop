@@ -17,7 +17,7 @@ identifiers. Each task must update STATUS and task evidence, run relevant
 checks, and stop; mark complete only
 when its own acceptance is genuinely observed. Record blockers honestly.
 
-- [ ] **P22-T01 Extract desktop services from room construction.**
+- [x] **P22-T01 Extract desktop services from room construction.**
   **Depends:** none. Inspect `world/scripts/study.gd`, `world/scenes/main.tscn`,
   the launcher, runtime bridge, application objects/modes, input and tests.
   Introduce world-neutral runtime initialization/ownership while the existing
@@ -26,6 +26,11 @@ when its own acceptance is genuinely observed. Record blockers honestly.
   focus, typing/pointer, movement, panel drag/rotation and mode transitions;
   available automated and graphical checks pass. Document before/after commands
   and any unavailable checks. Do not change active environment in this task.
+  Completed 2026-10-09 from `fd36f01`; world-neutral service composition and
+  supplied placement bounds, with the study unchanged. All 21 Godot trials,
+  real Chrome, 34 Meson tests, 8 Python tests and 62 parser/plugin tests passed;
+  before/after GPU captures inspected. See
+  [handoff 39](handoffs/39-desktop-runtime-extraction.md).
 
 - [ ] **P22-T02 Introduce minimal outdoor Godot startup scene.**
   **Depends:** P22-T01. Replace active study geometry with a simple walkable

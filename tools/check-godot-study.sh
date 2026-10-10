@@ -30,6 +30,7 @@ run() {
 run transforms 'SCREEN_TRANSFORM_OK cases=8 failures=0' --headless --script res://tests/screen_transform.gd
 run keyboard-map 'KEYBOARD_MAP_OK cases=27 failures=0' --headless --script res://tests/keyboard_map.gd
 run pointer-map 'POINTER_MAP_OK .*failures=0' --headless --script res://tests/pointer_map.gd
+run desktop-runtime 'DESKTOP_RUNTIME_OK sessions=2 failures=0' --headless --script res://tests/desktop_runtime.gd
 run controller 'STUDY_SMOKE .*failures=0' --script res://tests/study_smoke.gd -- --no-terminal
 run furniture 'FURNITURE_DRAG_OK .*failures=0' --script res://tests/furniture_drag.gd -- --no-terminal
 run hallway 'HALLWAY_OK doors=4 lamps=6 failures=0' --script res://tests/hallway.gd
