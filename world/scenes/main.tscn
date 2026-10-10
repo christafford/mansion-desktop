@@ -138,7 +138,7 @@ mesh = SubResource("selected_mesh")
 
 [node name="ApplicationStatus" type="Label3D" parent="."]
 position = Vector3(0, 1.5, 2.6)
-text = "Starting terminal…"
+text = ""
 font_size = 32
 pixel_size = 0.002
 

@@ -20,4 +20,4 @@ func _ready() -> void:
 	# Keep the existing selected-texture adapter without a second physical monitor.
 	# The independent live panels remain the visible world presentation.
 	$SelectedPreview/Screen.material_override = preload("res://scripts/screen_material.gd").create()
-	desktop_runtime.initialize($Player, $SelectedPreview/Screen, $ApplicationStatus, bounded_center)
+	# desktop_runtime.initialize($Player, $SelectedPreview/Screen, $ApplicationStatus, bounded_center)
