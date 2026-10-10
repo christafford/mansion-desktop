@@ -1,0 +1,215 @@
+diff --git a/AGENTS.md b/AGENTS.md
+index ff98e5f..da74fc4 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -1,3 +1,24 @@
++# Elsewhere: current project authority (2026-10-09)
++
++The project is **Elsewhere**: a Linux spatial desktop set in a persistent,
++explorable world. The owner has retired
++the study **physical environment**, not the working desktop runtime.
++
++**Project 22 in `docs/TASKS.md` and Decision 08 govern all new world work.**
++The study instructions further below, the Project 21 continuation
++rules, and older autonomous-run defaults are historical where they conflict.
++Do not resume Project 21's world-building tasks automatically. The technical
++rename is complete under P21-T67; preserve the `elsewhere` binaries, symbols,
++package paths, Godot class names and build entry points during the world reset.
++See `docs/handoffs/38-elsewhere-rename.md` for the verified naming baseline.
++
++**Execution boundary:** Complete only the exact P22 task ID the owner requests.
++Do not start the next task, execute a range, or invoke unattended continuation.
++An owner request for planning authorizes documentation only. A blocker means
++record evidence and stop, not pivot into another project. Preserve verified
++application interaction and nested/headless paths. Visual acceptance requires
++inspection of actual renders, never just scene serialization or a green test.
++
+ # AGENTS.md
+ 
+ ## Product and acceptance rules
+diff --git a/PROJECT-ROADMAP.md b/PROJECT-ROADMAP.md
+index d08bf9b..28bffee 100644
+--- a/PROJECT-ROADMAP.md
++++ b/PROJECT-ROADMAP.md
+@@ -1,3 +1,15 @@
++# Elsewhere: current roadmap override (2026-10-09)
++
++The project has been renamed **Elsewhere**. The owner has retired the study
++physical world and approved a small, beautiful village square as the first
++location in a persistent spatial Linux desktop. **Project 22** in
++[docs/TASKS.md](docs/TASKS.md) is the current authorized task plan. See
++[Decision 08](docs/decisions/08-elsewhere-village-world.md). Prior plans below
++are historical and do not authorize further study expansion or broad
++unattended execution. Preserve the existing desktop mechanics and integration.
++
++---
++
+ # Elsewhere: assessment and executable project roadmap
+ 
+ This plan accompanies [the concept](elsewhere-concept.md). It proposes an implementation sequence; it does not claim that any prototype has been built or tested.
+diff --git a/README.md b/README.md
+index 8bf4324..a02522b 100644
+--- a/README.md
++++ b/README.md
+@@ -1,3 +1,21 @@
++# Elsewhere
++
++**Elsewhere** is an experimental Linux spatial desktop where live applications
++inhabit a persistent, explorable 3D world.
++Current direction: replace the study physical environment with a compact,
++beautiful outdoor village square while retaining the working Godot/C++ desktop
++stack. Follow [Project 22](docs/TASKS.md) and
++[Decision 08](docs/decisions/08-elsewhere-village-world.md).
++
++**Naming baseline:** P21-T67 completed the code/package rename. Use
++`build/elsewhere`, `world/addons/elsewhere_runtime/` and `ELSEWHERE_` environment
++overrides. Preserve these tested names during P22; see
++[the rename handoff](docs/handoffs/38-elsewhere-rename.md).
++
++The former README follows for legacy build and setup context.
++
++---
++
+ # elsewhere
+ 
+ Repository: [christafford/elsewhere](https://github.com/christafford/elsewhere).
+diff --git a/docs/ARCHITECTURE.md b/docs/ARCHITECTURE.md
+index 3cbabdc..782d7e1 100644
+--- a/docs/ARCHITECTURE.md
++++ b/docs/ARCHITECTURE.md
+@@ -1,3 +1,14 @@
++# Elsewhere architecture transition
++
++Project 22 will separate (1) Linux compositor and application services,
++(2) world-independent desktop state and object/application anchoring, and
++(3) Godot physical locations and visual presentation. See
++[Decision 08](decisions/08-elsewhere-village-world.md). This is a target
++boundary, not a claim that the current `world/scripts/study.gd` is already
++separated. Preserve existing runtime behavior during extraction.
++
++---
++
+ # Architecture: current prototype and target boundaries
+ 
+ ## Current target: Decision 06
+diff --git a/docs/ART-DIRECTION.md b/docs/ART-DIRECTION.md
+index 9cfb5e9..16bdf70 100644
+--- a/docs/ART-DIRECTION.md
++++ b/docs/ART-DIRECTION.md
+@@ -1,3 +1,24 @@
++# Current art brief — Elsewhere village square
++
++The first new scene is one compact, attractive, outdoor village square in an
++alpine/temperate valley. Author a strong central landmark, distinct surrounding
++exteriors, one usable covered pavilion, coherent paving and pathways, soft
++terrain variation, trees and greenery, readable materials, balanced daylight,
++and atmospheric distant boundaries. Use licensed curated assets and the current
++Poly Haven pipeline, with license/provenance notes for any additional sources.
++
++Compose from human eye height. Prioritize memorable landmarks, walkable paths,
++scale, collision, material cohesion, and distinctive silhouettes. Avoid large
++anonymous primitive buildings, sprawling empty terrain, repetitious facades,
++and unverified screenshots. Produce and inspect actual Godot captures from
++multiple views. Leave application content unlit/readable. No additional
++functional locations, building interiors, creatures, NPCs, weather systems, or
++day/night simulation in this milestone.
++
++The former study brief below is historical for Project 21 only.
++
++---
++
+ # Art direction: a study worth spending time in
+ 
+ This is the required visual direction for Project 21, not a claim about today's
+diff --git a/docs/NAME.md b/docs/NAME.md
+new file mode 100644
+index 0000000..afb910a
+--- /dev/null
++++ b/docs/NAME.md
+@@ -0,0 +1,7 @@
++# Product name
++
++**Elsewhere** is the current product name (owner decision, 2026-10-09).
++P21-T67 completed the technical rename: maintained source identifiers, filenames,
++Godot resources, build targets and environment variables use the new name.
++Use `build/elsewhere` and `ELSEWHERE_` overrides. Preserve this tested baseline
++through Project 22; see [the rename handoff](handoffs/38-elsewhere-rename.md).
+diff --git a/docs/STATUS.md b/docs/STATUS.md
+index 5cba032..ca4ed21 100644
+--- a/docs/STATUS.md
++++ b/docs/STATUS.md
+@@ -1,3 +1,21 @@
++# Current direction — Elsewhere (2026-10-09)
++
++The owner has renamed the product **Elsewhere** and approved a fresh physical
++world beginning at a village square. Project 22 and
++[Decision 08](decisions/08-elsewhere-village-world.md) supersede the Project 21
++study environment and expansion schedule. All Project 21 progress below is
++historical and should remain available as engineering evidence, not as the
++current build queue. **Next authorized implementation task: P22-T01, only when
++explicitly requested.** No P22 implementation has been verified yet.
++
++Retain Godot rendering, the C++ compositor/GDExtension, movement, input,
++launcher, application objects, and existing session-local placement behavior.
++Do not claim restart persistence. P21-T67 already completed and verified the
++technical rename; retain the `elsewhere` commands, identifiers and paths recorded
++below. New place-specific geometry must not own the desktop runtime.
++
++---
++
+ # Project status
+ 
+ The project is now **elsewhere**, hosted at
+diff --git a/docs/decisions/08-elsewhere-village-world.md b/docs/decisions/08-elsewhere-village-world.md
+new file mode 100644
+index 0000000..d571b04
+--- /dev/null
++++ b/docs/decisions/08-elsewhere-village-world.md
+@@ -0,0 +1,47 @@
++# Decision 08 — Elsewhere village world (2026-10-09)
++
++**Status:** Accepted by owner for direction; implementation pending.
++
++## Context
++
++The existing Godot study proved useful 3D navigation, movable/rotatable
++objects, and live application panels that can be left and revisited within a
++session. Connected rooms and corridors do not provide the desired delight,
++exploration, or memorable geographic identity. We are changing the physical
++world while retaining the existing integration approach.
++
++## Decision
++
++- Product name is **Elsewhere**. P21-T67 completed the technical rename; retain
++  its tested runtime identifiers and paths. This decision changes the world,
++  not the naming baseline. See [handoff 38](../handoffs/38-elsewhere-rename.md).
++- Start with a *single compact village square* in a beautiful, explorable
++  alpine/temperate setting. One landmark, differentiated exteriors, a covered
++  workspace, vegetation, paths, and convincing distant boundaries. No whole
++  village or functional building interiors yet.
++- Retain Godot renderer, C++ Wayland compositor and GDExtension bridge, current
++  launcher, input/application modes, object manipulation, and nested/headless
++  development/test paths.
++- Decouple world-specific geometry from desktop services before replacing the
++  active study world. Keep stable application/artifact identities independent
++  of scene nodes, physical room paths, runtime handles, and PIDs.
++- Remove old study geometry from the **active** scene only after safe runtime
++  extraction and smoke tests. Preserve historical implementation or archive it
++  in a reversible manner until affected tests and references are migrated.
++- Visual acceptance requires inspecting actual Godot render captures.
++  Runtime integration must be tested with real applications. Missing GUI access
++  is an explicit blocker, not evidence of success.
++- Task creatures, extra destinations, weather, NPCs, teleportation redesign,
++  and persistence across restarts remain outside this milestone.
++- Owner controls token usage: only explicitly requested single P22 task; no
++  autonomous continuation to the next task.
++
++## Consequences and guardrails
++
++Project 21 remains history/evidence but is not the active world build plan.
++P22-T01 must document actual dependencies in `world/scripts/study.gd` and
++extract conservatively; avoid a speculative rewrite. P22-T02 establishes a
++minimal outdoor replacement and must not claim application integration is
++fully verified before P22-T06. Each task records checks and precise blockers.
++The first acceptance gate is **visual delight** after P22-T05; the second is
++**live desktop usability** after P22-T09 and owner review at P22-T10.

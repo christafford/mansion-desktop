@@ -1,3 +1,21 @@
+# Current direction — Elsewhere (2026-10-09)
+
+The owner has renamed the product **Elsewhere** and approved a fresh physical
+world beginning at a village square. Project 22 and
+[Decision 08](decisions/08-elsewhere-village-world.md) supersede the Project 21
+study environment and expansion schedule. All Project 21 progress below is
+historical and should remain available as engineering evidence, not as the
+current build queue. **Next authorized implementation task: P22-T01, only when
+explicitly requested.** No P22 implementation has been verified yet.
+
+Retain Godot rendering, the C++ compositor/GDExtension, movement, input,
+launcher, application objects, and existing session-local placement behavior.
+Do not claim restart persistence. P21-T67 already completed and verified the
+technical rename; retain the `elsewhere` commands, identifiers and paths recorded
+below. New place-specific geometry must not own the desktop runtime.
+
+---
+
 # Project status
 
 The project is now **elsewhere**, hosted at

@@ -1,3 +1,15 @@
+# Elsewhere: current roadmap override (2026-10-09)
+
+The project has been renamed **Elsewhere**. The owner has retired the study
+physical world and approved a small, beautiful village square as the first
+location in a persistent spatial Linux desktop. **Project 22** in
+[docs/TASKS.md](docs/TASKS.md) is the current authorized task plan. See
+[Decision 08](docs/decisions/08-elsewhere-village-world.md). Prior plans below
+are historical and do not authorize further study expansion or broad
+unattended execution. Preserve the existing desktop mechanics and integration.
+
+---
+
 # Elsewhere: assessment and executable project roadmap
 
 This plan accompanies [the concept](elsewhere-concept.md). It proposes an implementation sequence; it does not claim that any prototype has been built or tested.

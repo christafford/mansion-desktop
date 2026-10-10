@@ -1,10 +1,105 @@
 # Task list
 
 This is the executable form of [PROJECT-ROADMAP.md](../PROJECT-ROADMAP.md).
-Autonomous sessions work from this file: take the first eligible unchecked
-task in scope, prove its acceptance, record the evidence, and commit.
+Codex sessions work from this file. For Project 22 execute **only** the
+explicit task ID requested by the owner, verify, record evidence, and stop.
+Older automatic-first-eligible instructions apply only to historical programs.
 
-## Current execution order (2026-10-02 audit, Decision 06)
+## Project 22: Elsewhere village square (current authorized plan, 2026-10-09)
+
+Owner-approved replacement of the **physical** study, preserving the working
+desktop stack. Decision: [08-elsewhere-village-world](decisions/08-elsewhere-village-world.md).
+**Only the specifically requested P22 task may be run in a Codex session.**
+Do not auto-continue, choose the next unchecked task, or treat this list as
+permission to complete multiple tasks. Keep P21 history below intact. The
+technical rename is complete under P21-T67; preserve the tested `elsewhere`
+identifiers. Each task must update STATUS and task evidence, run relevant
+checks, and stop; mark complete only
+when its own acceptance is genuinely observed. Record blockers honestly.
+
+- [ ] **P22-T01 Extract desktop services from room construction.**
+  **Depends:** none. Inspect `world/scripts/study.gd`, `world/scenes/main.tscn`,
+  the launcher, runtime bridge, application objects/modes, input and tests.
+  Introduce world-neutral runtime initialization/ownership while the existing
+  study scene still works. Prefer small extraction over behavioral rewrite.
+  **Acceptance:** current Godot scene starts with same real-client launch,
+  focus, typing/pointer, movement, panel drag/rotation and mode transitions;
+  available automated and graphical checks pass. Document before/after commands
+  and any unavailable checks. Do not change active environment in this task.
+
+- [ ] **P22-T02 Introduce minimal outdoor Godot startup scene.**
+  **Depends:** P22-T01. Replace active study geometry with a simple walkable
+  outdoor scene, collision, safe spawn and sky/light; reuse the extracted runtime
+  and player controller. Retain legacy geometry/scripts as reversible historical
+  source until dependency and tests are handled intentionally.
+  **Acceptance:** new default scene boots, moves and collides, has no active
+  study geometry, initializes desktop runtime without errors, and documents
+  validated tests; no claim of polished art or comprehensive app integration.
+
+- [ ] **P22-T03 Author compact village landscape and circulation.**
+  **Depends:** P22-T02. Establish a navigable 70–100 m *approximate* first map,
+  gently varied terrain, paved square, walkable approach paths and intentional
+  outer boundary. Keep memorable, stable geography, not procedural sprawl.
+  **Acceptance:** capture arrival and approach views; walk paths and check
+  collision, grades, spawn, missing ground and navigation obstacles.
+
+- [ ] **P22-T04 Create landmark, architectural exteriors and pavilion.**
+  **Depends:** P22-T03. Place a recognizable central landmark, 3–4 distinctive
+  building exteriors and an outdoor covered work pavilion. Use proper models,
+  coherent scale and strong silhouettes; interiors are out of scope.
+  **Acceptance:** human-eye-level renders from at least three viewpoints show
+  recognizable structures, inviting routes and no prominent prototype boxes.
+
+- [ ] **P22-T05 Curate materials, foliage and village lighting.**
+  **Depends:** P22-T04. Reuse documented Poly Haven asset tooling and compatible
+  licensed sources; record asset provenance. Tune paving, wood, plaster, foliage,
+  daylight, contact shadows and exposure against actual captures.
+  **Acceptance:** compare multiple real Godot renders, record concrete defects,
+  fix observed issues, and demonstrate cohesive atmosphere, scale and legibility.
+  If captures cannot be visually reviewed, keep this task blocked. **Owner art
+  review checkpoint:** do not advance to P22-T06 until owner authorizes it.
+
+- [ ] **P22-T06 Verify live application integration outdoors.**
+  **Depends:** P22-T05 and owner approval. Bring the existing real app launcher,
+  multiple live panels and application/world modes into the square without new
+  compositor or window lifecycle architecture.
+  **Acceptance:** test real client launch, focus, input, return, panel drag and
+  rotation and revisiting still-running instances; record named apps, outputs,
+  screenshots and limitations, not simulated evidence.
+
+- [ ] **P22-T07 Create functional pavilion workspace.**
+  **Depends:** P22-T06. Place usable surfaces and anchors supporting existing
+  object/application interactions in a pleasant covered location.
+  **Acceptance:** leave a live application at a chosen spot, walk away and
+  return to the *same instance* with its within-session placement intact;
+  moving/rotating other supported objects continues working. Restart
+  restoration is explicitly out of scope.
+
+- [ ] **P22-T08 Add atmosphere and visual boundaries.**
+  **Depends:** P22-T07. Add distant hills/trees, path glimpses and modest
+  ambient detail to imply a larger explorable world, without introducing
+  additional functional destinations or excessive rendering cost.
+  **Acceptance:** multi-angle actual renders show a composed landscape with
+  no obvious voids, clipping, or distracting performance regressions.
+
+- [ ] **P22-T09 Verify outdoor desktop quality and performance.**
+  **Depends:** P22-T08. Run relevant automated/headless suites, real-app
+  integration, representative captured images and measured rendering tests.
+  Pursue target 1280x800 sustained 30 FPS baseline (60 preferred) where target
+  hardware is available; report platform and limits honestly.
+  **Acceptance:** documented commands/results and reviewed visual captures,
+  with regressions fixed or explicitly blocked. Do not substitute host PC
+  measurements for actual Steam Deck measurements.
+
+- [ ] **P22-T10 (human) Review and approve first Elsewhere location.**
+  **Depends:** P22-T09. Prepare precise instructions for the owner to explore,
+  try apps, and judge enjoyment, comfort and spatial recognition.
+  **Acceptance:** owner feedback is recorded and future village expansion is
+  separately authorized. Agent must not check this task for the owner.
+
+---
+
+## Former execution order (historical: 2026-10-02 audit, Decision 06)
 
 1. Project 21 below: Godot/Poly Haven study and independent compositor bridge.
 2. Its furnished live-terminal gate, then the useful two-room workspace.
@@ -16,7 +111,7 @@ Legacy Projects 5–8 are source requirements/reference work, not a competing
 autonomous scope while Project 21 is active. New integration gate P21-T19 permits
 the dependent useful-workspace features; P21-T33 prepares final owner review.
 
-## Project 21: Godot and Poly Haven workspace
+## Project 21: Godot and Poly Haven workspace (historical; superseded for world construction)
 
 - [x] **P21-T67 Rename the project to elsewhere.** Owner request 2026-10-09.
   Rename project text, source identifiers, targets, scripts, addon/resource paths,

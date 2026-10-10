@@ -1,3 +1,24 @@
+# Elsewhere: current project authority (2026-10-09)
+
+The project is **Elsewhere**: a Linux spatial desktop set in a persistent,
+explorable world. The owner has retired
+the study **physical environment**, not the working desktop runtime.
+
+**Project 22 in `docs/TASKS.md` and Decision 08 govern all new world work.**
+The study instructions further below, the Project 21 continuation
+rules, and older autonomous-run defaults are historical where they conflict.
+Do not resume Project 21's world-building tasks automatically. The technical
+rename is complete under P21-T67; preserve the `elsewhere` binaries, symbols,
+package paths, Godot class names and build entry points during the world reset.
+See `docs/handoffs/38-elsewhere-rename.md` for the verified naming baseline.
+
+**Execution boundary:** Complete only the exact P22 task ID the owner requests.
+Do not start the next task, execute a range, or invoke unattended continuation.
+An owner request for planning authorizes documentation only. A blocker means
+record evidence and stop, not pivot into another project. Preserve verified
+application interaction and nested/headless paths. Visual acceptance requires
+inspection of actual renders, never just scene serialization or a green test.
+
 # AGENTS.md
 
 ## Product and acceptance rules

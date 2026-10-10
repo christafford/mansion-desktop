@@ -1,3 +1,21 @@
+# Elsewhere
+
+**Elsewhere** is an experimental Linux spatial desktop where live applications
+inhabit a persistent, explorable 3D world.
+Current direction: replace the study physical environment with a compact,
+beautiful outdoor village square while retaining the working Godot/C++ desktop
+stack. Follow [Project 22](docs/TASKS.md) and
+[Decision 08](docs/decisions/08-elsewhere-village-world.md).
+
+**Naming baseline:** P21-T67 completed the code/package rename. Use
+`build/elsewhere`, `world/addons/elsewhere_runtime/` and `ELSEWHERE_` environment
+overrides. Preserve these tested names during P22; see
+[the rename handoff](docs/handoffs/38-elsewhere-rename.md).
+
+The former README follows for legacy build and setup context.
+
+---
+
 # elsewhere
 
 Repository: [christafford/elsewhere](https://github.com/christafford/elsewhere).

@@ -1,3 +1,14 @@
+# Elsewhere architecture transition
+
+Project 22 will separate (1) Linux compositor and application services,
+(2) world-independent desktop state and object/application anchoring, and
+(3) Godot physical locations and visual presentation. See
+[Decision 08](decisions/08-elsewhere-village-world.md). This is a target
+boundary, not a claim that the current `world/scripts/study.gd` is already
+separated. Preserve existing runtime behavior during extraction.
+
+---
+
 # Architecture: current prototype and target boundaries
 
 ## Current target: Decision 06

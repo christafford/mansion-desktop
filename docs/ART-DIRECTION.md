@@ -1,3 +1,24 @@
+# Current art brief — Elsewhere village square
+
+The first new scene is one compact, attractive, outdoor village square in an
+alpine/temperate valley. Author a strong central landmark, distinct surrounding
+exteriors, one usable covered pavilion, coherent paving and pathways, soft
+terrain variation, trees and greenery, readable materials, balanced daylight,
+and atmospheric distant boundaries. Use licensed curated assets and the current
+Poly Haven pipeline, with license/provenance notes for any additional sources.
+
+Compose from human eye height. Prioritize memorable landmarks, walkable paths,
+scale, collision, material cohesion, and distinctive silhouettes. Avoid large
+anonymous primitive buildings, sprawling empty terrain, repetitious facades,
+and unverified screenshots. Produce and inspect actual Godot captures from
+multiple views. Leave application content unlit/readable. No additional
+functional locations, building interiors, creatures, NPCs, weather systems, or
+day/night simulation in this milestone.
+
+The former study brief below is historical for Project 21 only.
+
+---
+
 # Art direction: a study worth spending time in
 
 This is the required visual direction for Project 21, not a claim about today's
